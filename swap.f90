@@ -82,7 +82,7 @@ program swap
   write (*,*) "Longitudinal Field h_z * Z"
   read (*,*) hz_coupling
   print*,""
-  !---Read below for distribution of J, V, hx, hz
+  !---Read below for distributions of J, V, hx, hz
   
   write (*,*) "Perturbation on Kick, epsilon = T1 - pi/4"
   read (*,*) kick
@@ -173,7 +173,7 @@ program swap
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim, Jint, Vint, h_z, h_z, H_MBL )
+    call buildHMBL( nspin, dim, Jint, Vint, h_x, h_z, H_MBL )
     call diagSYM( 'V', dim, H_MBL, E, W_r )
     call expSYM( dim, -C_UNIT*T0, E, W_r, U_MBL  )
 

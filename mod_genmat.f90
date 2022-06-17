@@ -237,7 +237,7 @@ contains
       enddo
       H(i+1,i+1) = H(i+1,i+1) + hz(nspin) * (1 - 2 * config(nspin))
       j = i + (1-2*config(nspin)) * 2**(nspin-1)
-      H(j+1,i+1) = H(j+1,i+1) +  hx(nspin) !Qui C_ONE * h_x è ancora c_double_complex?
+      H(j+1,i+1) = H(j+1,i+1) + hx(nspin)
     enddo
   end subroutine buildHNayak
 
@@ -327,6 +327,41 @@ contains
     UF = matmul(U_nayak, USwap)
 
   end subroutine buildUFSwap
+
+
+  subroutine buildHMBL(nspin, dim, Jint, Vint, hx, hz, H)
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hx(nspin), hz(nspin)
+    real (c_double), intent(out) :: H(dim,dim)
+
+    integer :: config(nspin)
+    integer(c_int) :: i, j, k, m
+
+    
+    H = 0
+
+    do i = 0, dim - 1
+
+      call decode(i,nspin,config)
+
+      do k = 1, nspin-1
+
+        m = i + (1-2*config(k)) * 2**(k-1)
+        j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
+
+        H(i+1,i+1) = H(i+1,i+1) + Jint(k) * (1 - 2 * config(k)) * &
+          & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
+        H(j+1,i+1) = H(j+1,i+1) + 2 * (config(k) - config(k+1))**2
+        H(m+1,i+1) = H(m+1,i+1) + hx(k)
+      enddo
+      k = nspin
+      m = i + (1-2*config(k)) * 2**(k-1)
+      H(i+1,i+1) = H(i+1,i+1) + hz(k) * (1 - 2 * config(k))
+      H(m+1,i+1) = H(m+1,i+1) + hx(k)
+    enddo
+
+  end subroutine buildHMBL
 
 
 
