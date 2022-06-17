@@ -33,13 +33,13 @@ kick = '0.05'
 
 
 ### Plot abs(AVG) vs FLUCT 
-nspin = '2'
-h_coupling = '0.30'
-kick = '0.10'
-#set title 'nspin = '.nspin.', h = '.h_coupling.', eps = '.kick
-#set output "figures/avg_fluct_nspin".nspin."_h".h_coupling."_eps".kick.".png"
-#plot  'data/magnetizations/Swap_Sz_AVG_nspin'.nspin.'_steps100000_iterations40_h'.h_coupling.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'AVG' lt 1 ,\
-     'data/magnetizations/Swap_Sz_FLUCT_nspin'.nspin.'_steps100000_iterations40_h0.30_kick0.10.txt' u 2:(abs($1)) w l title 'FLUCT' lt 2
+nspin = '4'
+h_coupling = '0.10'
+kick = '0.00'
+set title 'nspin = '.nspin.', h = '.h_coupling.', eps = '.kick
+set output "figures/avg_fluct_nspin".nspin."_h".h_coupling."_eps".kick.".png"
+plot  'data/magnetizations/Swap_Sz_AVG_nspin'.nspin.'_steps1000_iterations40_h'.h_coupling.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'AVG' lt 1 ,\
+     'data/magnetizations/Swap_Sz_FLUCT_nspin'.nspin.'_steps1000_iterations40_h'.h_coupling.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'FLUCT' lt 2
 
 
 
@@ -59,17 +59,18 @@ steps = 100
 
 
 ### Plot single iteration
-nspin = '2'
+nspin = '8'
 h_coupling = '0.15'
 kick = '0.05'
 steps = 100
 type = 'early'
-set yrange [-1.1:1.1]
-unset logscale x
-set xtics 10 format "%0.s"
-set title 'nspin = '.nspin.', h = '.h_coupling.', eps = '.kick
-set output "figures/".type."_steps".steps."_nspin".nspin."_h".h_coupling."_eps".kick.".png"
-plot [1:steps] 'data/magnetizations/Swap_Sz_nspin'.nspin.'_steps100000_iterations40_h0.30_kick0.10.txt' every ::1::steps u 2:1 w fillsteps title 'iteration = 1',\
+start = 1
+#set yrange [-1.1:1.1]
+#unset logscale x
+#set xtics 10 format "%0.s"
+#set title 'nspin = '.nspin.', h = '.h_coupling.', eps = '.kick.', start = '.sprintf("%0.f",start)
+#set output "figures/".type."_steps".steps."_nspin".nspin."_h".h_coupling."_eps".kick.".png"
+#plot [1:steps] 'data/magnetizations/Swap_Sz_nspin'.nspin.'_steps100000_iterations40_h0.30_kick0.10.txt' every ::start::start+steps u ($2-start):1 w fillsteps title 'iteration = 1',\
 #              'data/magnetizations/Swap_Sz_nspin'.nspin.'_steps100000_iterations40_h0.30_kick0.10.txt' every ::1e5+1::1e5+steps u 2:1 w fillsteps title 'iteration = 2'
 
 

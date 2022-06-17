@@ -134,7 +134,7 @@ program swap
     !Parametri
   
     call random_number(Jint)
-    Jint = (Jint + 0.5) !Jint in [1/2,3/2], J == 1
+    Jint = 3*(Jint - 0.5) !Jint in [1/2,3/2], J == 1
     !Jint = 2*pi
   
     call random_number(h_x)
