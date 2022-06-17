@@ -7,24 +7,36 @@ mv a.out $filestring
 gfortran -o mag_avg mag_avg.f90
 
 #: <<'END_COMMENT'
-nspin=4
-steps=1000
-iterations=40
+nspin=6
+steps=10000
+iterations=20
 #for nspin in 2 4 6 8
 #do
-  for kick in 0 #0.00 0.05 0.10 0.40
+  for kick in 0.00 0.05 0.10 0.20 0.40
   do
-    for h_coupling in 0.1 #0.00 0.05 0.15 0.30 0.60
+    for J in 0 0.5 1 1.5
     do
-      cat > input.txt << *
-  $nspin
-  $steps
-  $iterations
-  $h_coupling
-  $kick
+      for V in 0 0.5 1 1.5
+      do
+        for hx in 0.00 0.15 0.30 0.60 1.00
+        do
+          for hz in 0.00 0.15 0.30 0.60 1.00
+          do
+            cat > input.txt << *
+$nspin
+$steps
+$iterations
+$J
+$V
+$hx
+$hz
+$kick
 *
-      ./$filestring < input.txt
-      ./mag_avg < input.txt
+            ./$filestring < input.txt
+            ./mag_avg < input.txt
+          done
+        done
+      done
     done
   done
 #done
