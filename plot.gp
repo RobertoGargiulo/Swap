@@ -8,7 +8,7 @@ set xtics (1, 10, 1e2, 1e3, 1e4, 1e5, 1e6) format "10^{%T}"
 set margins -1,2,0,0
 set logscale x
 set yrange [0:1.1]
-set xrange [1:1e6]
+set xrange [1:1e5]
 # set key notitle invert under reverse Left left spacing 2 samplen 0.7
 # set arrow 1 filled from graph 0.4, 0.7 to graph 0.6, 0.7
 # set label 1 at graph 0.5, 0.75 "$k$" center
@@ -36,9 +36,9 @@ kick = '0.05'
 nspin = '4'
 h_coupling = '0.10'
 kick = '0.00'
-set title 'nspin = '.nspin.', h = '.h_coupling.', eps = '.kick
-set output "figures/avg_fluct_nspin".nspin."_h".h_coupling."_eps".kick.".png"
-plot  'data/magnetizations/Swap_Sz_AVG_nspin'.nspin.'_steps1000_iterations40_h'.h_coupling.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'AVG' lt 1 ,\
+#set title 'nspin = '.nspin.', h = '.h_coupling.', eps = '.kick
+#set output "figures/avg_fluct_nspin".nspin."_h".h_coupling."_eps".kick.".png"
+#plot  'data/magnetizations/Swap_Sz_AVG_nspin'.nspin.'_steps1000_iterations40_h'.h_coupling.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'AVG' lt 1 ,\
      'data/magnetizations/Swap_Sz_FLUCT_nspin'.nspin.'_steps1000_iterations40_h'.h_coupling.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'FLUCT' lt 2
 
 
@@ -75,13 +75,19 @@ start = 1
 
 
 
-### Plot at fixed 'nspin' for varying 'h' or 'eps'
-nspin = '4'
-h_coupling = '0.0'
+### Plot at fixed 'nspin' for varying parameter (J, V, hx, hz)
+nspin = '6'
+steps = '10000'
+n_iter = '20'
 kick = '0.00'
-#set title 'nspin = '.nspin.', h = '.h_coupling
-#set title 'nspin = '.nspin.', eps = '.kick
-#plot for [i in "0.00 0.05 0.15 0.30 0.60"] 'data/magnetizations/Swap_Sz_AVG_nspin'.nspin.'_steps100000_iterations40_h'.i.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'h ='.i
+Jint = '3.00'
+Vint = '1.50'
+hx = '0.00'
+hz = '0.60'
+#set output "figures/avg_nspin6_J0.00_V0.00_V0.00_h0.00_hz0.00_kick0.00.png"
+set output "figures/figure.png"
+set title 'no kick, |1010...> state, nspin = 6, J = '.Jint.', V = '.Vint.', hx = '.hx.', hz = '.hz
+plot for [hx in "0.00 0.15 0.30 0.60 1.00"] 'data/magnetizations/Swap_Sz_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J'.Jint.'_V'.Vint.'_h'.hx.'_hz'.hz.'_kick'.kick.'.txt' u 2:1 w l title 'hx ='.hx
 
 
 set output
