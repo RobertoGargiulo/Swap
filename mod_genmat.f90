@@ -38,23 +38,12 @@ contains
     do i = 0, dim - 1
       
       call decode(i, nspin, config)
-      
-      do k = 0, nspin - 1
 
-        j = i + (1-2*config(k+1)) * 2**k
-        !Conviene? 
-
-
+      do k = 1, nspin
+        j = i + (1-2*config(k)) * 2**(k-1)
         Sx(j+1,i+1) = Sx(j+1,i+1) + 1
-
-        !print *, j+1, i+1, Sx(j,i)
-    
-        !do m = 1, dim
-        !  write (*,'(*(1X,I0))') int(Sx(:,m))
-        !enddo
-        !print*,""
-
       enddo
+
     enddo
 
   end subroutine buildSx
@@ -77,10 +66,10 @@ contains
 
       call decode(i, nspin, config)
 
-      do k = 0, nspin - 1
+      do k = 1, nspin
 
-        j = i + (1-2*config(k+1)) * 2**k
-        Hx(j+1,i+1) = Hx(j+1,i+1) +  h_x(k+1)
+        j = i + (1-2*config(k)) * 2**(k-1)
+        Hx(j+1,i+1) = Hx(j+1,i+1) +  h_x(k)
 
       enddo
     enddo
@@ -96,7 +85,7 @@ contains
     integer(c_int) :: i, j, k
 
     if (dim > 2**nspin) stop "Error: Value of dimension exceeds 2^nspin"
-    if (p > nspin-1) stop "Error: Value of Spin Number 'p' exceeds totale spin number"
+    if (p > nspin) stop "Error: Value of Spin Number 'p' exceeds totale spin number"
 
 
     Sxp = 0
@@ -105,7 +94,7 @@ contains
 
       call decode(i, nspin, config)
 
-      j = i + (1-2*config(p+1)) * 2**p
+      j = i + (1-2*config(p)) * 2**(p-1)
       Sxp(j+1,i+1) = 1
 
     enddo
@@ -121,16 +110,16 @@ contains
     integer(c_int) :: i, j, k
 
     if (dim > 2**nspin) stop "Error: Value of dimension exceeds 2^nspin"
-    if (p > nspin-1) stop "Error: Value of Spin Number 'p' exceeds totale spin number"
+    if (p > nspin) stop "Error: Value of Spin Number 'p' exceeds totale spin number"
 
-    Syp = C_ZERO
+    Syp = 0
 
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
 
-      j = i + (1-2*config(p+1)) * 2**p
-      Syp(j+1,i+1) = C_UNIT * (1._c_double - 2._c_double * config(p+1))
+      j = i + (1-2*config(p)) * 2**(p-1)
+      Syp(j+1,i+1) = C_UNIT * (1._c_double - 2._c_double * config(p))
 
     enddo
 
@@ -150,11 +139,11 @@ contains
 
       call decode(i, nspin, config)
  
-      do k = 0, nspin - 1
+      do k = 1, nspin
  
-         j = i + (1-2*config(k+1)) * 2**k
+         j = i + (1-2*config(k)) * 2**(k-1)
 
-         Sy(j+1,i+1) = Sy(j+1,i+1) + C_UNIT * (1._c_double - 2._c_double * config(k+1))
+         Sy(j+1,i+1) = Sy(j+1,i+1) + C_UNIT * (1._c_double - 2._c_double * config(k))
 
       enddo
     enddo
@@ -176,8 +165,8 @@ contains
 
       call decode(i,nspin,config)
 
-      do k = 0, nspin - 1
-        Sz(i+1,i+1) = Sz(i+1,i+1) + (1 - 2 * config(k+1))
+      do k = 1, nspin
+        Sz(i+1,i+1) = Sz(i+1,i+1) + (1 - 2 * config(k))
       enddo
 
     enddo
@@ -201,9 +190,9 @@ contains
 
       call decode(i,nspin,config)
 
-      do k = 0, nspin - 2
-        HJ(i+1,i+1) = HJ(i+1,i+1) + Jint(k+1) * (1 - 2 * config(k+1)) * &
-         & (1 - 2 * config(k+2))
+      do k = 1, nspin - 1
+        HJ(i+1,i+1) = HJ(i+1,i+1) + Jint(k) * (1 - 2 * config(k)) * &
+         & (1 - 2 * config(k+1))
       enddo
     enddo
 
@@ -447,6 +436,38 @@ contains
     mag_stag_z = mag
 
   end function mag_stag_z
+  
+  real function imbalance(nspin, dim, state)
+
+    integer(c_int), intent(in) :: nspin, dim
+    complex(c_double_complex), intent(in) :: state(dim)
+    real(c_double) :: imb, imbaux, mag, magaux
+    integer :: i, j, k, config(nspin)
+
+    mag = 0
+    imb = 0
+    do i = 0, dim-1
+      call decode(i,nspin,config)
+      imbaux = 0
+      magaux = 0
+      do k = 1, nspin
+        imbaux = imbaux + (-1)**k * (1 - 2 * config(k))
+        magaux = magaux + (1 - 2*config(k))
+        !print *, i, k, config(:)
+      enddo
+      magaux = magaux * abs(state(i))**2
+      imbaux = imbaux * abs(state(i))**2
+      mag = mag + magaux
+      imb = imb + imbaux
+      !print *, i, mag, config(:)
+    enddo
+    mag = mag/nspin
+    imb = imb/nspin
+    imb = imb/(1+mag)
+    imbalance = imb
+
+
+  end function mag_stag_z
 
   subroutine buildProdState(nspin, dim, alpha, beta, state)
 
@@ -494,9 +515,9 @@ contains
 
       call decode(i-1,nspin,config)
 
-      do k = 1,nspin/2
-        state(i) = state(i) * ( (1-config(2*k)) * alpha_n + config(2*k) * beta_n ) * &
-          & ( config(2*k-1) * alpha_n + (1-config(2*k-1)) * beta_n )
+      do k = 1, nspin/2
+        state(i) = state(i) * ( (1-config(2*k-1)) * alpha_n + config(2*k-1) * beta_n ) * &
+          & ( config(2*k) * alpha_n + (1-config(2*k)) * beta_n )
       enddo
     enddo
 
