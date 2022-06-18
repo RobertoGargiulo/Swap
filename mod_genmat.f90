@@ -352,7 +352,7 @@ contains
 
         H(i+1,i+1) = H(i+1,i+1) + Jint(k) * (1 - 2 * config(k)) * &
           & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
-        H(j+1,i+1) = H(j+1,i+1) + 2 * (config(k) - config(k+1))**2
+        H(j+1,i+1) = H(j+1,i+1) + Vint(k) * 2 * (config(k) - config(k+1))**2
         H(m+1,i+1) = H(m+1,i+1) + hx(k)
       enddo
       k = nspin

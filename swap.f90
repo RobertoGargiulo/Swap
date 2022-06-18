@@ -25,7 +25,7 @@ program swap
   complex (c_double_complex) :: alpha, beta
 
   real (c_double), dimension(:), allocatable :: E
-  real (c_double), dimension(:,:), allocatable :: H, W_r
+  real (c_double), dimension(:,:), allocatable :: H, W_r, H_MBL
 
   complex(c_double_complex), dimension(:), allocatable :: PH
   complex(c_double_complex), dimension(:), allocatable :: state, init_state
@@ -99,44 +99,48 @@ program swap
 
   !Data Files
   write(filestring,92) "data/magnetizations/Swap_Sz_nspin", nspin, "_steps", steps, &
-  &  "_iterations", n_iterations, "_J", J_coupling, "_h", h_coupling, "_kick", kick, ".txt"
-  !open(newunit=unit_mag,file=filestring)
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+  open(newunit=unit_mag,file=filestring)
 
   write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
-  &  "_iterations", n_iterations, "_J", J_coupling, "_h", h_coupling, "_kick", kick, ".txt"
+  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
   !open(newunit=unit_ph, file=filestring)
   
   write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
-  &  "_iterations", n_iterations, "_J", J_coupling, "_h", h_coupling, "_kick", kick, ".txt"
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
+  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
 
   !open(newunit=unit_w, file=filestring)
  
   !------------------------------------------------
 
   !BUILD INITIAL STATE (of type staggered)
+  allocate(init_state(dim))
   call buildStaggState(nspin, dim, alpha, beta, init_state)
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
-  allocate(H(dim,dim), E(dim), W_r(dim,dim), USwap(dim,dim))
-  call buildHSwap(nspin, dim, H)
-  call diagSYM( 'V', dim, H, E, W_r)
-!  print *, "HSwap = "
-!  call printmat(dim, H, 'R')
-  deallocate(H)
-  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap) 
-  deallocate(E, W_r)
-!  print *, "USwap = "
-!  call printmat(dim, USwap, 'R')
+  !------------- NO DRIVING ---------- Uncomment following lines to use the driving
+!  allocate(H(dim,dim), E(dim), W_r(dim,dim), USwap(dim,dim))
+!  call buildHSwap(nspin, dim, H)
+!  call diagSYM( 'V', dim, H, E, W_r)
+!!  print *, "HSwap = "
+!!  call printmat(dim, H, 'R')
+!  deallocate(H)
+!  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap) 
+!  deallocate(E, W_r)
+  
+  !print *, "USwap = "
+  !call printmat(dim, USwap, 'R')
 
+  !---------------------------------------------------
   !Allocate local interactions and fields
   allocate( Jint(nspin-1), Vint(nspin-1), h_x(nspin), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
-  allocate(U(dim,dim), H_MBL(dim,dim), U_MBL(dim,dim), E(dim), W_r(dim,dim))
+  allocate(U(dim,dim), U_MBL(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
 
   !Allocate initial and generic state
-  allocate(state(dim), init_state(dim))
+  allocate(state(dim))
 
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
@@ -153,7 +157,7 @@ program swap
   
     call random_number(Jint)
     Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
-    !Jint = 2*pi
+    !Jint = pi/2
 
     call random_number(Vint)
     Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-J,J]
@@ -163,24 +167,31 @@ program swap
     h_x = 2*h_coupling*(h_x - 0.5) !h_x in [-h_coupling, h_coupling]
   
     call random_number(h_z)
-    h_z = 2*hz_coupling(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
+    h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
   
-    !write (*,*) "Jint = ", Jint(:)
-    !write (*,*) "h_x = ", h_x(:)
-    !write (*,*) "h_z = ", h_z(:)
-    !print *, ""
+!    write (*,*) "Jint = ", Jint(:)
+!    write (*,*) "Vint = ", Vint(:)
+!    write (*,*) "h_x = ", h_x(:)
+!    write (*,*) "h_z = ", h_z(:)
+!    print *, ""
   
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim, Jint, Vint, h_x, h_z, H_MBL )
-    call diagSYM( 'V', dim, H_MBL, E, W_r )
-    call expSYM( dim, -C_UNIT*T0, E, W_r, U_MBL  )
+    call buildHMBL( nspin, dim, Jint, Vint, h_x, h_z, H )
+    !print *, "H_MBL = "
+    !call printmat(dim, H,'R')
 
-    U = matmul(U_MBL, USwap)
+    call diagSYM( 'V', dim, H, E, W_r )
+    call expSYM( dim, -C_UNIT*T0, E, W_r, U_MBL  )
+    !print *, "U_MBL = "
+    !call printmat(dim, U_MBL,'C')
+
+    U = U_MBL !NO DRIVING
+    !U = matmul(U_MBL, USwap)
   
-!    print *, "UF = "
-!    call printmat(dim, U,'C')
+    !print *, "UF = "
+    !call printmat(dim, U,'C')
     !-------------------------------------------------
 
     !DIAGONALIZE FLOQUET OPERATOR
@@ -210,23 +221,27 @@ program swap
     !call printvec(dim, state, 'R')
     j = 1
     
-    !write(unit_mag,*) "iteration = ", iteration
-    !write(unit_mag,*) mag_stag_z(nspin, dim, state), j
+    write(unit_mag,*) "iteration = ", iteration
+    write(unit_mag,*) mag_stag_z(nspin, dim, state), j
     
-    print *, mag_stag_z(nspin, dim, state), j, norm
+    !print *, mag_stag_z(nspin, dim, state), j, norm
   
     do j = 2, steps
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
-      !write(unit_mag,*) mag_stag_z(nspin, dim, state), j
-      print *, mag_stag_z(nspin, dim, state), j, norm
+      write(unit_mag,*) mag_stag_z(nspin, dim, state), j
+      !print *, mag_stag_z(nspin, dim, state), j, norm
     enddo
-    print *, ""
+    !print *, ""
  
 
-  enddo 
-  deallocate(state, U, PH, W, Jint, h_x, h_z)
+  enddo
+  deallocate(Jint, Vint, h_x, h_z)
+  deallocate(E, W_r, H, U_MBL)
+  deallocate(U)
+  !deallocate(USwap)
+  !deallocate(PH, W)
 
   close(unit_mag)
   close(unit_ph)
