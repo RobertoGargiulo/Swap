@@ -446,8 +446,8 @@ contains
 
     mag = 0
     imb = 0
-    do i = 0, dim-1
-      call decode(i,nspin,config)
+    do i = 1, dim
+      call decode(i-1,nspin,config)
       imbaux = 0
       magaux = 0
       do k = 1, nspin
@@ -467,7 +467,7 @@ contains
     imbalance = imb
 
 
-  end function mag_stag_z
+  end function imbalance
 
   subroutine buildProdState(nspin, dim, alpha, beta, state)
 

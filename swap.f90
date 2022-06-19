@@ -66,6 +66,10 @@ program swap
   h_coupling = 0.3
   kick = 0.1
   T1 = pi/4 + kick
+
+  write (*,*) "Time Step/Period T0"
+  read (*,*) T0
+  print*,""
   
   write (*,*) "Longitudinal Interaction Constant J * ZZ"
   read (*,*) J_coupling
@@ -97,20 +101,22 @@ program swap
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
 
-  !Data Files
-  write(filestring,92) "data/magnetizations/Swap_Sz_nspin", nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+  !DATA FILES
+  write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, &
+    & "_no_kick", kick, ".txt"
   open(newunit=unit_mag,file=filestring)
 
-  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
-  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-  !open(newunit=unit_ph, file=filestring)
-  
-  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
-  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+  !EIGENVALUES/EIGENVECTORS
+!  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
+!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+!  !open(newunit=unit_ph, file=filestring)
+!  
+!  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
+!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
   92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
-
-  !open(newunit=unit_w, file=filestring)
+!
+!  !open(newunit=unit_w, file=filestring)
  
   !------------------------------------------------
 
@@ -155,16 +161,19 @@ program swap
     !-------------------------------------------------
     !PARAMETERS
   
-    call random_number(Jint)
-    Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
+    !call random_number(Jint)
+    !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
     !Jint = pi/2
+    Jint = -J_coupling
 
-    call random_number(Vint)
-    Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-J,J]
+    !call random_number(Vint)
+    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-J,J]
     !Vint = Jint
+    Vint = -V_coupling
   
-    call random_number(h_x)
-    h_x = 2*h_coupling*(h_x - 0.5) !h_x in [-h_coupling, h_coupling]
+    !call random_number(h_x)
+    !h_x = 2*h_coupling*(h_x - 0.5) !h_x in [-h_coupling, h_coupling]
+    h_x = h_coupling
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
@@ -222,7 +231,7 @@ program swap
     j = 1
     
     write(unit_mag,*) "iteration = ", iteration
-    write(unit_mag,*) mag_stag_z(nspin, dim, state), j
+    write(unit_mag,*) mag_stag_z(nspin, dim, state), j*T0
     
     !print *, mag_stag_z(nspin, dim, state), j, norm
   
@@ -230,7 +239,7 @@ program swap
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
-      write(unit_mag,*) mag_stag_z(nspin, dim, state), j
+      write(unit_mag,*) mag_stag_z(nspin, dim, state), j*T0
       !print *, mag_stag_z(nspin, dim, state), j, norm
     enddo
     !print *, ""
