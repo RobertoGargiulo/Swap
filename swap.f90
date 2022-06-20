@@ -36,7 +36,7 @@ program swap
 
   integer(c_int) :: count_beginning, count_end, count_rate, day, month, year, date(8), time_min
   real (c_double) :: time_s
-  character(len=100) :: filestring
+  character(len=200) :: filestring
   character(len=8) :: time_string
 
 
