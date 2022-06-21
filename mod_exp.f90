@@ -13,6 +13,7 @@ module exponentiate
   REAL(KIND=idp), PRIVATE, PARAMETER       :: Pi = 3.141592653589793D0
   COMPLEX(KIND=idp), PRIVATE, PARAMETER    :: II = DCMPLX(0.D0,1.D0)
   COMPLEX(KIND=idp), PRIVATE, PARAMETER    :: ZZERO = DCMPLX(0.D0,0.D0)
+  integer (c_int), private :: i, j, M
 
 
 contains
@@ -41,7 +42,7 @@ contains
     implicit none
 
     character, intent(in) :: JOBZ*1
-    integer, intent(in) :: N !Dimension of Hilbert Space
+    integer (c_int), intent(in) :: N !Dimension of Hilbert Space
     real(c_double), intent(in) :: H(N,N)
     real(c_double), intent(out) :: E(N), W(N,N) !Siccome H non ci serve più, non possiamo usare solo H come matrice iniziale
     !e poi ci inseriamo gli autovettori?
@@ -51,7 +52,6 @@ contains
     integer :: iwork(5*N), ifail(N), info
     real(c_double) :: work(8*N), HP(N*(N+1)/2), VL, VU, DLAMCH
 
-    integer :: i, j, M
     !Variabili intermedie necessarie per DSPEVX. Eliminarle tramite (de)allocateWork?
     M = N
 
@@ -83,13 +83,12 @@ contains
 
   subroutine expSYM( dim, const, E, W, U )
 
-    integer, intent(in) :: dim
+    integer (c_int), intent(in) :: dim
     real(c_double), intent(in) :: E(dim), W(dim,dim)
     complex(c_double_complex), intent(in) :: const
     complex(c_double_complex), intent(out) :: U(dim,dim)
 
     complex(c_double_complex) :: Udiag(dim,dim), Uaux(dim,dim)
-    integer :: i
 
     Udiag = 0
     do i = 1, dim
@@ -119,7 +118,6 @@ contains
     complex(c_double_complex) :: work(8*N), Uaux(N,N)
     real(c_double) :: rwork(2*N)
 
-    integer :: i
     !Variabili intermedie necessarie per DSPEVX. Eliminarle tramite (de)allocateWork?
     Uaux = U
     !Check per simmetria?
@@ -153,7 +151,6 @@ contains
     complex(c_double_complex) :: work(3*N), Uaux(N,N)
     real(c_double) :: rwork(N)
 
-    integer :: i
     logical :: bwork(N), SELECT
     external :: SELECT
     Uaux = U
