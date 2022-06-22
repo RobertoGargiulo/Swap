@@ -3,6 +3,7 @@ program swap
   use exponentiate
   use genmat
   use printing
+  use omp_lib
   use iso_c_binding
   !use general
   implicit none
@@ -14,9 +15,9 @@ program swap
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
-  integer (c_int)     ::  i, j, k, p
+  integer (c_int)     ::  i, j, k, p, tid, nthreads
   integer (c_int)     ::  unit_mag, unit_ph, unit_w
-  integer (c_int), dimension(:), allocatable  :: base_state, config
+  integer (c_short), dimension(:), allocatable  :: base_state, config
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_x, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, h_coupling, hz_coupling, kick 
@@ -50,13 +51,15 @@ program swap
   print*,""
   dim = 2**nspin
 
+  write (*,*) "Number of Iterations"
+  read (*,*) n_iterations
+  print*,""
+
   write (*,*) "Number of Steps"
   read (*,*) steps
   print*,""
 
-  write (*,*) "Number of Iterations"
-  read (*,*) n_iterations
-  print*,""
+
 
   !Standard Values
   T0 = 1
@@ -101,25 +104,6 @@ program swap
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
 
-  !DATA FILES
-  write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, &
-    & "_no_kick", kick, ".txt"
-  open(newunit=unit_mag,file=filestring)
-
-  !EIGENVALUES/EIGENVECTORS
-!  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-!  !open(newunit=unit_ph, file=filestring)
-!  
-!  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
-!
-!  !open(newunit=unit_w, file=filestring)
- 
-  !------------------------------------------------
-
   !BUILD INITIAL STATE (of type staggered)
   allocate(init_state(dim))
   call buildStaggState(nspin, dim, alpha, beta, init_state)
@@ -143,7 +127,7 @@ program swap
   allocate( Jint(nspin-1), Vint(nspin-1), h_x(nspin), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
-  allocate(U(dim,dim), U_MBL(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
+  allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
 
   !Allocate initial and generic state
   allocate(state(dim))
@@ -151,103 +135,59 @@ program swap
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
-
+  !$OMP PARALLEL DO private(h_x, H, E, W_r, U, state, norm, j )
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
       print *, "iteration = ", iteration
     endif
 
+    !print *, "Max size of thread team: ", omp_get_max_threads()
+    !print *, "Size of Thread team: ", omp_get_num_threads()
+    !print *, "Thread ID: ", omp_get_thread_num()
+    !print *, "Number of processors: ", omp_get_num_procs()
+    !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+
     !-------------------------------------------------
     !PARAMETERS
   
-    !call random_number(Jint)
-    !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
-    !Jint = pi/2
     Jint = -J_coupling
 
-    !call random_number(Vint)
-    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-J,J]
-    !Vint = Jint
     Vint = -V_coupling
   
-    !call random_number(h_x)
-    !h_x = 2*h_coupling*(h_x - 0.5) !h_x in [-h_coupling, h_coupling]
     h_x = h_coupling
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
-  
-!    write (*,*) "Jint = ", Jint(:)
-!    write (*,*) "Vint = ", Vint(:)
-!    write (*,*) "h_x = ", h_x(:)
-!    write (*,*) "h_z = ", h_z(:)
-!    print *, ""
-  
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildHMBL( nspin, dim, Jint, Vint, h_x, h_z, H )
-    !print *, "H_MBL = "
-    !call printmat(dim, H,'R')
 
     call diagSYM( 'V', dim, H, E, W_r )
-    call expSYM( dim, -C_UNIT*T0, E, W_r, U_MBL  )
-    !print *, "U_MBL = "
-    !call printmat(dim, U_MBL,'C')
-
-    U = U_MBL !NO DRIVING
-    !U = matmul(U_MBL, USwap)
-  
-    !print *, "UF = "
-    !call printmat(dim, U,'C')
-    !-------------------------------------------------
-
-    !DIAGONALIZE FLOQUET OPERATOR
-!    call diagUN( SELECT, dim, U, PH, W)
-  
-!    print *, "Eigenvalues of U_F "
-!    print "(*(/f15.10spf15.10' i'))", PH(:)
-!    print *,""
-!  
-!    print *, "Eigenvectors of U_F "
-!    do i = 1,dim
-!      write (*,"(*('|',f5.2spf5.2' i'))") W(i,:)
-!    enddo
-!    print *,""
-    !------------------------------------------------
-  
-    !PRINT Eigenvalues/Eigenvectors to file
-    !call writevec(unit_ph,dim,PH,'C')
-    !call writemat(unit_w,dim,W,'C')
-  
-    !-----------------------------------------------
+    call expSYM( dim, -C_UNIT*T0, E, W_r, U )
   
     !EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 
  
     state = init_state
     norm = dot_product(state,state)
-    !call printvec(dim, state, 'R')
-    j = 1
-    
-    write(unit_mag,*) "iteration = ", iteration
-    write(unit_mag,*) imbalance(nspin, dim, state), j*T0
-    
-    !print *, mag_stag_z(nspin, dim, state), j, norm
+    j = 1 
+    print *, imbalance(nspin, dim, state), j, norm
   
     do j = 2, steps
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
-      write(unit_mag,*) imbalance(nspin, dim, state), j*T0
-      !print *, mag_stag_z(nspin, dim, state), j, norm
+      print *, imbalance(nspin, dim, state), j, norm
     enddo
     !print *, ""
  
 
   enddo
+  !$OMP END PARALLEL DO
+
   deallocate(Jint, Vint, h_x, h_z)
-  deallocate(E, W_r, H, U_MBL)
+  deallocate(E, W_r, H)
   deallocate(U)
   !deallocate(USwap)
   !deallocate(PH, W)
