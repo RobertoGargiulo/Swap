@@ -51,13 +51,14 @@ program swap
   print*,""
   dim = 2**nspin
 
+  write (*,*) "Number of Iterations"
+  read (*,*) n_iterations
+  print*,""
+
   write (*,*) "Number of Steps"
   read (*,*) steps
   print*,""
 
-  write (*,*) "Number of Iterations"
-  read (*,*) n_iterations
-  print*,""
 
 
   !Standard Values
@@ -134,18 +135,18 @@ program swap
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
-  !$OMP PARALLEL DO PRIVATE(h_z, H, E, W_r, U, state, norm)
+  !$OMP PARALLEL DO private(h_x, H, E, W_r, U, state, norm, j )
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
       print *, "iteration = ", iteration
     endif
 
-    print *, "Max size of thread team: ", omp_get_max_threads()
-    print *, "Size of Thread team: ", omp_get_num_threads()
-    print *, "Thread ID: ", omp_get_thread_num()
-    print *, "Number of processors: ", omp_get_num_procs()
-    print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+    !print *, "Max size of thread team: ", omp_get_max_threads()
+    !print *, "Size of Thread team: ", omp_get_num_threads()
+    !print *, "Thread ID: ", omp_get_thread_num()
+    !print *, "Number of processors: ", omp_get_num_procs()
+    !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
 
     !-------------------------------------------------
     !PARAMETERS
@@ -183,7 +184,7 @@ program swap
  
 
   enddo
-  !$OMP PARALLEL ENDO DO
+  !$OMP END PARALLEL DO
 
   deallocate(Jint, Vint, h_x, h_z)
   deallocate(E, W_r, H)
