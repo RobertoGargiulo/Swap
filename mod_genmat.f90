@@ -352,6 +352,28 @@ contains
 
   end subroutine buildHMBL
 
+  subroutine zero_mag_states(nspin, dim, states)
+    integer (c_int), intent(in) :: nspin, dim
+    integer (c_int), intent(out) :: states(dim)
+
+    integer :: i, j, k, p, config(nspin)
+
+    p = 0
+    do i = 0, dim-1
+
+      call decode(i, nspin, config)
+
+      if (sum(config)==nspin/2) then
+        p = p+1
+        states(p) = i
+        !print *, states(p), p
+        !print '(1X,I0)', config(:)
+      endif
+    enddo
+
+
+  end subroutine zero_mag_states
+
 
 
   subroutine magntz(i, nspin, mag)

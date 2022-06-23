@@ -16,12 +16,12 @@ program average_magnetization
   read (*,*) nspin
   print*,""
 
-  write (*,*) "Number of Steps"
-  read (*,*) steps
-  print*,""
-
   write (*,*) "Number of Iterations"
   read (*,*) n_iterations
+  print*,""
+
+  write (*,*) "Number of Steps"
+  read (*,*) steps
   print*,""
 
   write (*,*) "Time Step/Period"

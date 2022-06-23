@@ -36,14 +36,20 @@ kick = '0.05'
 
 
 ### Plot abs(AVG) vs FLUCT 
-nspin = '4'
-h_coupling = '0.10'
+nspin = '8'
+steps = '4000'
+n_iter = '30'
 kick = '0.00'
-set yrange[-1.1:1.1]
-#set title 'nspin = '.nspin.', h = '.h_coupling.', eps = '.kick
-#set output "figures/avg_fluct_nspin".nspin."_h".h_coupling."_eps".kick.".png"
-#plot  'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps1000_iterations40_h'.h_coupling.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'AVG' lt 1 ,\
-     'data/magnetizations/'.filetype.'_FLUCT_nspin'.nspin.'_steps1000_iterations40_h'.h_coupling.'_kick'.kick.'.txt' u 2:(abs($1)) w l title 'FLUCT' lt 2
+Jint = '0.00'
+Vint = '1.00'
+hx = '0.00'
+hz = '3.01'
+set xrange [0.05:2e2]
+set yrange [-0.2:1.1]
+set title 'nspin = '.nspin.', hz = '.hz.', J = '.Jint
+set output "figures/avg_fluct_nspin".nspin."_hz".hz."_J".Jint."_Vint".Vint.".png"
+plot  'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J'.Jint.'_V'.Vint.'_h'.hx.'_hz'.hz.'_no_kick'.kick.'.txt' u 2:(-$1) w l title 'AVG',\
+      'data/magnetizations/'.filetype.'_FLUCT_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J'.Jint.'_V'.Vint.'_h'.hx.'_hz'.hz.'_no_kick'.kick.'.txt' u 2:1 w l title 'FLUCT'
 
 
 
@@ -80,37 +86,40 @@ start = 1
 
 
 ### Plot at fixed 'nspin' for varying parameter (J, V, hx, hz)
-nspin = '6'
-steps = '20000'
-n_iter = '40'
+nspin = '8'
+steps = '4000'
+n_iter = '30'
 kick = '0.00'
 Jint = '2.00'
-Vint = '1.00'
+Vint = '2.00'
 hx = '0.00'
 hz = '0.60'
-set yrange [0:1.1]
-set xrange [0.2:2e2]
+#set yrange [0:1.1]
+#set xrange [0.05:2e2]
 set xtics (0.1, 1, 10, 1e2, 1e3, 1e4, 1e5, 1e6) format "10^{%T}"
-#set output "figures/avg_imbalance_nspin6_MBL_phase.png"
-set output "figures/figure.png"
-set title 'no kick, |1010...> state, nspin = 6, n_{iter} = '.n_iter.', V = '.Vint
+#set output "figures/avg_imbalance_nspin".nspin."_Vint".Vint."_Dense_MBL_phase.png"
+#set output "figures/figure.png"
+set title 'no kick, |1010...> state, nspin = '.nspin.', n_{iter} = '.n_iter.', V = '.Vint
+set ylabel 'I(t)'
+set xlabel 't(in units of hbar/V)'
 #plot for [hz in "1.00 2.00 3.00 4.00 6.00"] 'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J'.Jint.'_V'.Vint.'_h'.hx.'_hz'.hz.'_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz ='.hz
 
-#hz = '3.00'
-#Jint = '1.00'
 #plot  'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J1.00_V'.Vint.'_h'.hx.'_hz3.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 3, J = 1',\
       'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J0.50_V'.Vint.'_h'.hx.'_hz3.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 3, J = 0.5',\
       'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J1.00_V'.Vint.'_h'.hx.'_hz4.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 4, J = 1',\
       'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J2.00_V'.Vint.'_h'.hx.'_hz6.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 6, J = 2'
 
-set yrange [-1.1:1.1]
-plot  'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J2.00_V'.Vint.'_h'.hx.'_hz3.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 3, J = 2',\
-      'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J2.00_V'.Vint.'_h'.hx.'_hz2.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 2, J = 2',\
-      'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J2.00_V'.Vint.'_h'.hx.'_hz1.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 1, J = 2',\
-      'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J2.00_V'.Vint.'_h'.hx.'_hz0.50_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 0.5, J = 2',\
-#      'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J2.00_V'.Vint.'_h'.hx.'_hz0.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 0, J = 2'
+#set xrange [0.05:2e1]
+#set yrange [-0.2:1.1]
+#set output "figures/avg_imbalance_nspin".nspin."_Vint".Vint."_Dense_Ergodic_phase.png"
+#plot  'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J1.50_V'.Vint.'_h'.hx.'_hz3.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 3, J = 1.5',\
+      'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J2.00_V'.Vint.'_h'.hx.'_hz0.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 0, J = 2'
 
-
+Vint = '1.00'
+Jint = '0.00'
+#set title 'no kick, |1010...> state, nspin = '.nspin.', n_{iter} = '.n_iter.', V = '.Vint.', Jint = '.Jint
+#set output "figures/avg_imbalance_nspin".nspin."_Vint".Vint."_Dense_AL_phase.png"
+#plot for [ hz in "2.50 3.00 4.00" ] 'data/magnetizations/'.filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J'.Jint.'_V'.Vint.'_h'.hx.'_hz'.hz.'_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = '.hz
 
 
 set output
