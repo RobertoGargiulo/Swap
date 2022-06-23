@@ -50,12 +50,12 @@ program swap
   print*,""
   dim = 2**nspin
 
-  write (*,*) "Number of Steps"
-  read (*,*) steps
-  print*,""
-
   write (*,*) "Number of Iterations"
   read (*,*) n_iterations
+  print*,""
+
+  write (*,*) "Number of Steps"
+  read (*,*) steps
   print*,""
 
   !Standard Values
