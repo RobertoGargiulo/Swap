@@ -1,6 +1,5 @@
 module genmat
 
-  use exponentiate
   use iso_c_binding
   implicit none
 
@@ -8,6 +7,7 @@ module genmat
   complex (c_double_complex), private, parameter :: C_ONE = dcmplx(1._c_double, 0._c_double) 
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
+  integer (c_int), private :: i, j, k, m
 
 
 contains
@@ -30,7 +30,6 @@ contains
     real (c_double):: Sx(dim,dim)
 
     integer (c_int) :: config(nspin)
-    integer (c_int) :: i, j, k
 
     Sx = 0
     !print*, "Start Sx"
@@ -55,13 +54,9 @@ contains
     real (c_double), intent(out) :: Hx(dim,dim)
 
     integer (c_int) :: config(nspin)
-    integer(c_int) :: i, j, k
 
-    !print*,"Start buildHx"
 
     Hx = 0
-    !print*,"Start buildHx2"
-
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
@@ -82,14 +77,8 @@ contains
     real (c_double), intent(out) :: Sxp(dim,dim)
 
     integer (c_int) :: config(nspin)
-    integer(c_int) :: i, j, k
-
-    if (dim > 2**nspin) stop "Error: Value of dimension exceeds 2^nspin"
-    if (p > nspin) stop "Error: Value of Spin Number 'p' exceeds totale spin number"
-
 
     Sxp = 0
-
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
@@ -107,13 +96,8 @@ contains
     complex (c_double_complex), intent(out) :: Syp(dim,dim)
 
     integer (c_int) :: config(nspin)
-    integer(c_int) :: i, j, k
-
-    if (dim > 2**nspin) stop "Error: Value of dimension exceeds 2^nspin"
-    if (p > nspin) stop "Error: Value of Spin Number 'p' exceeds totale spin number"
 
     Syp = 0
-
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
@@ -131,10 +115,8 @@ contains
     complex (c_double_complex), intent(out) :: Sy(dim,dim)
 
     integer :: config(nspin)
-    integer(c_int) :: i, j, k
 
-    Sy = C_ZERO
-
+    Sy = 0
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
@@ -157,10 +139,8 @@ contains
     real (c_double), intent(out) :: Sz(dim,dim)
 
     integer :: config(nspin)
-    integer(c_int) :: i, j, k
 
     Sz = 0
-
     do i = 0, dim - 1
 
       call decode(i,nspin,config)
@@ -179,13 +159,8 @@ contains
     real (c_double), intent(out) :: HJ(dim,dim)
 
     integer :: config(nspin)
-    integer(c_int) :: i, j, k
-
-    if (nspin < 2) stop "Error: Can't construct interaction without at least 2 spspins"
-    !print*,"Start buildHJ"
 
     HJ = 0
-
     do i = 0, dim - 1
 
       call decode(i,nspin,config)
@@ -207,10 +182,8 @@ contains
     real (c_double), intent(out) :: H(dim,dim)
 
     integer :: config(nspin)
-    integer(c_int) :: i, j, k
 
     H = 0
-    
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
@@ -230,34 +203,6 @@ contains
     enddo
   end subroutine buildHNayak
 
-  subroutine buildUFNayak(nspin, dim, Jint, h_x, h_z, T0, T1, UF )
-
-    integer (c_int), intent(in) :: nspin, dim
-    real(c_double), intent(in)  :: Jint(nspin-1), h_x(nspin), h_z(nspin), T0, T1
-    complex(c_double_complex), intent(out)  :: UF(dim,dim)
-
-    real (c_double) :: H(dim,dim), E(dim), W(dim,dim)
-    complex (c_double_complex) :: Ux(dim,dim), U_nayak(dim,dim)
-
-    !Sx si può leggere da file invece che essere generato
-    !filestring = 'matrices/spin/Sx_nspin...'
-    !open(newunit = u_int, file=filestring)
-    !read (u_int, *) Sx
-    !close(u_int)
-
-    call buildSx(nspin, dim, H)
-    call diagSYM( 'V', dim, H, E, W )
-    call expSYM( dim, C_UNIT*T1, E, W, Ux )
-
-    call buildHNayak( nspin, dim, Jint, h_x, h_z, H  )
-    call diagSYM( 'V', dim, H, E, W )
-    call expSYM( dim, -C_UNIT*T0, E, W, U_nayak )
-
-    UF = matmul(U_nayak, Ux)
-
-  end subroutine buildUFNayak
-
-
 
   subroutine buildHSwap(nspin, dim, HSwap)
 
@@ -265,13 +210,10 @@ contains
     real (c_double), intent(out) :: HSwap(dim,dim)
 
     integer :: config(nspin)
-    integer(c_int) :: i, j, k
 
     if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
-    !print*,"Start buildHJ"
     
     HSwap = 0
-
     do i = 0, dim - 1
 
       call decode(i,nspin,config)
@@ -290,87 +232,164 @@ contains
 
   end subroutine buildHSwap
 
-  subroutine buildUFSwap(nspin, dim, Jint, h_x, h_z, T0, T1, UF )
+
+  subroutine buildHMBL(nspin, dim, Jint, Vint, hz, H)
 
     integer (c_int), intent(in) :: nspin, dim
-    real(c_double), intent(in)  :: Jint(nspin-1), h_x(nspin), h_z(nspin), T0, T1
-    complex(c_double_complex), intent(out)  :: UF(dim,dim)
-
-    real (c_double) :: H(dim,dim), E(dim), W(dim,dim)
-    complex (c_double_complex) :: USwap(dim,dim), U_nayak(dim,dim)
-
-    !Sx si può leggere da file invece che essere generato
-    !filestring = 'matrices/spin/Sx_nspin...'
-    !open(newunit = u_int, file=filestring)
-    !read (u_int, *) Sx
-    !close(u_int)
-
-    call buildHSwap(nspin, dim, H)
-    call diagSYM( 'V', dim, H, E, W )
-    call expSYM( dim, -C_UNIT*T1, E, W, USwap )
-
-    call buildHNayak( nspin, dim, Jint, h_x, h_z, H )
-    call diagSYM( 'V', dim, H, E, W )
-    call expSYM( dim, -C_UNIT*T0, E, W, U_nayak )
-
-    UF = matmul(U_nayak, USwap)
-
-  end subroutine buildUFSwap
-
-
-  subroutine buildHMBL(nspin, dim, Jint, Vint, hx, hz, H)
-
-    integer (c_int), intent(in) :: nspin, dim
-    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hx(nspin), hz(nspin)
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H(dim,dim)
 
     integer :: config(nspin)
-    integer(c_int) :: i, j, k, m
-
     
     H = 0
-
     do i = 0, dim - 1
 
       call decode(i,nspin,config)
 
       do k = 1, nspin-1
 
-        m = i + (1-2*config(k)) * 2**(k-1)
         j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
 
-        H(i+1,i+1) = H(i+1,i+1) + Jint(k) * (1 - 2 * config(k)) * &
+        H(i+1,i+1) = H(i+1,i+1) + Vint(k) * (1 - 2 * config(k)) * &
           & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
-        H(j+1,i+1) = H(j+1,i+1) + Vint(k) * 2 * (config(k) - config(k+1))**2
-        H(m+1,i+1) = H(m+1,i+1) + hx(k)
+        H(j+1,i+1) = H(j+1,i+1) + Jint(k) * 2 * (config(k) - config(k+1))**2
       enddo
       k = nspin
-      m = i + (1-2*config(k)) * 2**(k-1)
       H(i+1,i+1) = H(i+1,i+1) + hz(k) * (1 - 2 * config(k))
-      H(m+1,i+1) = H(m+1,i+1) + hx(k)
     enddo
 
   end subroutine buildHMBL
+
+
+
+  subroutine buildSPARSE_HMBL(nspin, dim, Jint, Vint, hz, H, ROWS, COLS)
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(out) :: H((nspin+1)*dim/2)
+    integer (c_int), intent(out) :: ROWS((nspin+1)*dim/2), COLS((nspin+1)*dim/2)
+
+    integer :: config(nspin)
+    
+    H = 0
+    ROWS = 0
+    COLS = 0
+    m = 0
+    do i = 1, dim
+
+    call decode(i-1,nspin,config)
+
+      m = m+1
+      do k = 1, nspin-1
+        H(m) = H(m) + Vint(k) * (1 - 2 * config(k)) * &
+          & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
+      enddo
+      k = nspin
+      H(m) = H(m) + hz(k) * (1 - 2 * config(k))
+
+      ROWS(m) = i
+      COLS(m) = i
+      !print *, H(m), i, i, m
+
+      do k = 1, nspin-1
+
+        if (config(k)/=config(k+1)) then
+          m = m+1
+          j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
+          H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
+          COLS(m) = i
+          ROWS(m) = j
+          !print *, H(m), j, i, m
+        endif
+      enddo
+
+    enddo
+    print *, m
+    print *, "H_MBL_SPARSE ="
+    do m = 1, (nspin+1)*dim/2
+      if(abs(H(m))<0e-10)  print *, H(m), ROWS(m), COLS(m), m
+    enddo
+
+  end subroutine buildSPARSE_HMBL
+
+
+  subroutine buildHESPARSE_HMBL(nspin, dim, Jint, Vint, hz, H, ROWS, COLS)
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(out) :: H(nspin*dim)
+    integer (c_int), intent(out) :: ROWS(nspin*dim), COLS(nspin*dim)
+
+    integer :: config(nspin)
+    
+    H = 0
+    ROWS = 0
+    COLS = 0
+    m = 0
+    do i = 1, dim
+
+    call decode(i-1,nspin,config)
+
+      m = m+1
+      do k = 1, nspin-1
+        H(m) = H(m) + Vint(k) * (1 - 2 * config(k)) * &
+          & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
+      enddo
+      k = nspin
+      H(m) = H(m) + hz(k) * (1 - 2 * config(k))
+
+      ROWS(m) = i
+      COLS(m) = i
+      print *, H(m), i, i, m
+
+      do k = 1, nspin-1
+
+        if (config(k)/=config(k+1)) then
+          m = m+1
+          j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
+          H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
+          COLS(m) = i
+          ROWS(m) = j
+          print *, H(m), j, i, m
+        endif
+      enddo
+
+    enddo
+
+    !print *, "H_MBL_SPARSE ="
+    !do i = 1, nspin*dim
+    !  print *, H(i), ROWS(i), COLS(i), i
+    !enddo
+
+  end subroutine buildHESPARSE_HMBL
+
+
+
+
+
+
+
+
+
 
   subroutine zero_mag_states(nspin, dim, states)
     integer (c_int), intent(in) :: nspin, dim
     integer (c_int), intent(out) :: states(dim)
 
-    integer :: i, j, k, p, config(nspin)
+    integer :: config(nspin)
 
-    p = 0
+    k = 0
     do i = 0, dim-1
 
       call decode(i, nspin, config)
 
       if (sum(config)==nspin/2) then
-        p = p+1
-        states(p) = i
+        k = k+1
+        states(k) = i
         !print *, states(p), p
         !print '(1X,I0)', config(:)
       endif
     enddo
-
 
   end subroutine zero_mag_states
 
@@ -381,7 +400,6 @@ contains
     integer(c_int), intent(in) :: i, nspin
     integer(c_int) :: config(nspin)
     real(c_double) :: mag
-    integer :: k
 
     call decode(i, nspin, config)
 
@@ -397,9 +415,8 @@ contains
 
     integer(c_int), intent(in) :: nspin, dim
     complex(c_double_complex), intent(in) :: state(dim)
-    real(c_double) :: mag
-    real(c_double) :: magaux
-    integer :: i, j, k, config(nspin)
+    real(c_double) :: mag, magaux
+    integer :: config(nspin)
 
     mag = 0
     do i = 1, dim
@@ -423,7 +440,7 @@ contains
     integer(c_int), intent(in) :: nspin, dim, p
     complex(c_double_complex), intent(in) :: state(dim)
     real(c_double) :: mag
-    integer :: i, config(nspin)
+    integer :: config(nspin)
 
     mag = 0
     do i = 1, dim
@@ -440,7 +457,7 @@ contains
     complex(c_double_complex), intent(in) :: state(dim)
     real(c_double) :: mag
     real(c_double) :: magaux
-    integer :: i, j, k, config(nspin)
+    integer :: config(nspin)
 
     mag = 0
     do i = 1, dim
@@ -464,7 +481,7 @@ contains
     integer(c_int), intent(in) :: nspin, dim
     complex(c_double_complex), intent(in) :: state(dim)
     real(c_double) :: imb, imbaux, mag, magaux
-    integer :: i, j, k, config(nspin)
+    integer :: config(nspin)
 
     mag = 0
     imb = 0
@@ -498,7 +515,7 @@ contains
     integer (c_int), intent(in) :: nspin, dim
     complex (c_double_complex), intent(in) :: alpha, beta
     complex (c_double_complex), intent(out) :: state(dim)
-    integer :: i, config(nspin), un_vec(nspin), n_down
+    integer :: config(nspin), un_vec(nspin), n_down
     complex (c_double_complex) :: alpha_n, beta_n
     real (c_double) :: norm
 
@@ -523,7 +540,7 @@ contains
     complex (c_double_complex), intent(in) :: alpha, beta
     complex (c_double_complex), intent(out) :: state(dim)
     
-    integer :: i, k, config(nspin)
+    integer :: config(nspin)
     complex (c_double_complex) :: alpha_n, beta_n
     real (c_double) :: norm
 

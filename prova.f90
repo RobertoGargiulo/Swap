@@ -19,8 +19,8 @@ program swap
   integer (c_int)     ::  unit_mag, unit_ph, unit_w
   integer (c_short), dimension(:), allocatable  :: base_state, config
 
-  real(c_double), dimension(:), allocatable :: Jint, Vint, h_x, h_z
-  real(c_double) :: T0, T1, J_coupling, V_coupling, h_coupling, hz_coupling, kick 
+  real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
+  real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
   real (c_double) :: mag, norm
   complex (c_double_complex) :: alpha, beta
@@ -41,7 +41,7 @@ program swap
   character(len=8) :: time_string
 
 
-  !Parametri Modello: J, h_x, h_z, T0, T1/epsilon, nspin/L
+  !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine, Steps di Evoluzione, Stato Iniziale
 
   !Parametri Iniziali
@@ -66,7 +66,6 @@ program swap
   J_coupling = 1
   V_coupling = J_coupling
   hz_coupling = J_coupling
-  h_coupling = 0.3
   kick = 0.1
   T1 = pi/4 + kick
 
@@ -80,10 +79,6 @@ program swap
 
   write (*,*) "Transverse Interaction Constant V * (XX + YY)"
   read (*,*) V_coupling
-  print*,""
-
-  write (*,*) "Transverse Field h_x * X"
-  read (*,*) h_coupling
   print*,""
 
   write (*,*) "Longitudinal Field h_z * Z"
@@ -124,7 +119,7 @@ program swap
 
   !---------------------------------------------------
   !Allocate local interactions and fields
-  allocate( Jint(nspin-1), Vint(nspin-1), h_x(nspin), h_z(nspin))
+  allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
   allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
@@ -135,7 +130,7 @@ program swap
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
-  !$OMP PARALLEL DO private(h_x, H, E, W_r, U, state, norm, j )
+  !$OMP PARALLEL DO private(h_z, H, E, W_r, U, state, norm, j )
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -155,14 +150,13 @@ program swap
 
     Vint = -V_coupling
   
-    h_x = h_coupling
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim, Jint, Vint, h_x, h_z, H )
+    call buildHMBL( nspin, dim, Jint, Vint, h_z, H )
 
     call diagSYM( 'V', dim, H, E, W_r )
     call expSYM( dim, -C_UNIT*T0, E, W_r, U )
@@ -186,7 +180,7 @@ program swap
   enddo
   !$OMP END PARALLEL DO
 
-  deallocate(Jint, Vint, h_x, h_z)
+  deallocate(Jint, Vint, h_z)
   deallocate(E, W_r, H)
   deallocate(U)
   !deallocate(USwap)
