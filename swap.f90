@@ -72,16 +72,12 @@ program swap
   read (*,*) T0
   print*,""
   
-  write (*,*) "Longitudinal Interaction Constant J * ZZ"
+  write (*,*) "Longitudinal Interaction Constant -V * ZZ"
   read (*,*) J_coupling
   print*,""
 
-  write (*,*) "Transverse Interaction Constant V * (XX + YY)"
+  write (*,*) "Transverse Interaction Constant -J * (XX + YY)"
   read (*,*) V_coupling
-  print*,""
-
-  write (*,*) "Transverse Field h_x * X"
-  read (*,*) h_coupling
   print*,""
 
   write (*,*) "Longitudinal Field h_z * Z"
@@ -172,23 +168,18 @@ program swap
     !Vint = Jint
     Vint = -V_coupling
   
-    !call random_number(h_x)
-    !h_x = 2*h_coupling*(h_x - 0.5) !h_x in [-h_coupling, h_coupling]
-    h_x = h_coupling
-  
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
   
 !    write (*,*) "Jint = ", Jint(:)
 !    write (*,*) "Vint = ", Vint(:)
-!    write (*,*) "h_x = ", h_x(:)
 !    write (*,*) "h_z = ", h_z(:)
 !    print *, ""
   
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim, Jint, Vint, h_x, h_z, H )
+    call buildHMBL( nspin, dim, Jint, Vint, h_z, H )
     !print *, "H_MBL = "
     !call printmat(dim, H,'R')
 
