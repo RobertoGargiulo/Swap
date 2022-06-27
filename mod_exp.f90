@@ -13,7 +13,7 @@ module exponentiate
   REAL(KIND=idp), PRIVATE, PARAMETER       :: Pi = 3.141592653589793D0
   COMPLEX(KIND=idp), PRIVATE, PARAMETER    :: II = DCMPLX(0.D0,1.D0)
   COMPLEX(KIND=idp), PRIVATE, PARAMETER    :: ZZERO = DCMPLX(0.D0,0.D0)
-  integer (c_int), private :: i, j, M
+  !integer (c_int), private :: i, j, !M
 
 
 contains
@@ -49,7 +49,7 @@ contains
 
     real(c_double) :: err
     
-    integer :: iwork(5*N), ifail(N), info
+    integer :: iwork(5*N), ifail(N), info, M, i, j
     real(c_double) :: work(8*N), HP(N*(N+1)/2), VL, VU, DLAMCH
 
     !Variabili intermedie necessarie per DSPEVX. Eliminarle tramite (de)allocateWork?
@@ -89,6 +89,7 @@ contains
     complex(c_double_complex), intent(out) :: U(dim,dim)
 
     complex(c_double_complex) :: Udiag(dim,dim), Uaux(dim,dim)
+    integer (c_int) :: i
 
     Udiag = 0
     do i = 1, dim

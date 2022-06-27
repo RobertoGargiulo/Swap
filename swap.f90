@@ -18,7 +18,7 @@ program swap
   integer (c_int)     ::  unit_mag, unit_ph, unit_w
   integer (c_int), dimension(:), allocatable  :: base_state, config
 
-  real(c_double), dimension(:), allocatable :: Jint, Vint, h_x, h_z
+  real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, h_coupling, hz_coupling, kick 
   
   real (c_double) :: mag, norm
@@ -40,7 +40,7 @@ program swap
   character(len=8) :: time_string
 
 
-  !Parametri Modello: J, h_x, h_z, T0, T1/epsilon, nspin/L
+  !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine, Steps di Evoluzione, Stato Iniziale
 
   !Parametri Iniziali
@@ -64,7 +64,6 @@ program swap
   J_coupling = 1
   V_coupling = J_coupling
   hz_coupling = J_coupling
-  h_coupling = 0.3
   kick = 0.1
   T1 = pi/4 + kick
 
@@ -72,18 +71,18 @@ program swap
   read (*,*) T0
   print*,""
   
-  write (*,*) "Longitudinal Interaction Constant -V * ZZ"
+  write (*,*) "Transverse Interaction Constant -J * (XX + YY)"
   read (*,*) J_coupling
   print*,""
 
-  write (*,*) "Transverse Interaction Constant -J * (XX + YY)"
+  write (*,*) "Longitudinal Interaction Constant -V * ZZ"
   read (*,*) V_coupling
   print*,""
 
   write (*,*) "Longitudinal Field h_z * Z"
   read (*,*) hz_coupling
   print*,""
-  !---Read below for distributions of J, V, hx, hz
+  !---Read below for distributions of J, V, hz
   
   write (*,*) "Perturbation on Kick, epsilon = T1 - pi/4"
   read (*,*) kick
@@ -99,19 +98,20 @@ program swap
   !---------------------------------------------
 
   !DATA FILES
+  
   write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, &
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, &
     & "_no_kick", kick, ".txt"
   open(newunit=unit_mag,file=filestring)
 
   !EIGENVALUES/EIGENVECTORS
 !  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
 !  !open(newunit=unit_ph, file=filestring)
 !  
 !  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
+!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
 !
 !  !open(newunit=unit_w, file=filestring)
  
@@ -137,10 +137,10 @@ program swap
 
   !---------------------------------------------------
   !Allocate local interactions and fields
-  allocate( Jint(nspin-1), Vint(nspin-1), h_x(nspin), h_z(nspin))
+  allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
-  allocate(U(dim,dim), U_MBL(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
+  allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
 
   !Allocate initial and generic state
   allocate(state(dim))
@@ -184,11 +184,11 @@ program swap
     !call printmat(dim, H,'R')
 
     call diagSYM( 'V', dim, H, E, W_r )
-    call expSYM( dim, -C_UNIT*T0, E, W_r, U_MBL  )
+    call expSYM( dim, -C_UNIT*T0, E, W_r, U )
     !print *, "U_MBL = "
     !call printmat(dim, U_MBL,'C')
 
-    U = U_MBL !NO DRIVING
+    !U = U_MBL !NO DRIVING
     !U = matmul(U_MBL, USwap)
   
     !print *, "UF = "
@@ -219,27 +219,26 @@ program swap
  
     state = init_state
     norm = dot_product(state,state)
-    !call printvec(dim, state, 'R')
     j = 1
     
     write(unit_mag,*) "iteration = ", iteration
     write(unit_mag,*) imbalance(nspin, dim, state), j*T0
     
-    !print *, mag_stag_z(nspin, dim, state), j, norm
+    !print *, imbalance(nspin, dim, state), j, norm
   
     do j = 2, steps
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
       write(unit_mag,*) imbalance(nspin, dim, state), j*T0
-      !print *, mag_stag_z(nspin, dim, state), j, norm
+      !print *, imbalance(nspin, dim, state), j, norm
     enddo
     !print *, ""
  
 
   enddo
-  deallocate(Jint, Vint, h_x, h_z)
-  deallocate(E, W_r, H, U_MBL)
+  deallocate(Jint, Vint, h_z)
+  deallocate(E, W_r, H)
   deallocate(U)
   !deallocate(USwap)
   !deallocate(PH, W)

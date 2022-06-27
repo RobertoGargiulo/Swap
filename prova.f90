@@ -130,18 +130,20 @@ program swap
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
-  !$OMP PARALLEL DO private(h_z, H, E, W_r, U, state, norm, j )
+  !$OMP PARALLEL
+  call init_random_seed() 
+  !$OMP do private(iteration, h_z, H, E, W_r, U, state, norm, j )
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
       print *, "iteration = ", iteration
     endif
 
-    !print *, "Max size of thread team: ", omp_get_max_threads()
-    !print *, "Size of Thread team: ", omp_get_num_threads()
-    !print *, "Thread ID: ", omp_get_thread_num()
-    !print *, "Number of processors: ", omp_get_num_procs()
-    !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+    print *, "Max size of thread team: ", omp_get_max_threads()
+    print *, "Size of Thread team: ", omp_get_num_threads()
+    print *, "Thread ID: ", omp_get_thread_num()
+    print *, "Number of processors: ", omp_get_num_procs()
+    print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
 
     !-------------------------------------------------
     !PARAMETERS
@@ -149,7 +151,6 @@ program swap
     Jint = -J_coupling
 
     Vint = -V_coupling
-  
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
@@ -178,7 +179,9 @@ program swap
  
 
   enddo
-  !$OMP END PARALLEL DO
+  !$OMP END DO
+  !$OMP END PARALLEL 
+
 
   deallocate(Jint, Vint, h_z)
   deallocate(E, W_r, H)

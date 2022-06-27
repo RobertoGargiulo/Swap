@@ -16,14 +16,14 @@ program swap
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
-  integer (c_int)     ::  i, j, k, p, tid, nthreads, nz_dim
+  integer (c_int)     ::  i, j, k, p, tid, nthreads, nz_dim, krylov_dim
   integer (c_int)     ::  unit_mag, unit_ph, unit_w
   integer (c_short), dimension(:), allocatable  :: base_state, config
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: mag, norm
+  real (c_double) :: mag, norm, time
   complex (c_double_complex) :: alpha, beta
 
   integer (c_int), dimension(:), allocatable :: ROWS, COLS
@@ -61,6 +61,9 @@ program swap
   read (*,*) steps
   print*,""
 
+  write (*,*) "Maximum Krylov Dimension"
+  read (*,*) krylov_dim
+  print*,""
 
 
   !Standard Values
@@ -79,7 +82,7 @@ program swap
   read (*,*) J_coupling
   print*,""
 
-  write (*,*) "Transverse Interaction Constant - J * ZZ"
+  write (*,*) "Transverse Interaction Constant -V * ZZ"
   read (*,*) V_coupling
   print*,""
 
@@ -94,7 +97,7 @@ program swap
 
   T1 = pi/4 + kick
 
-    !Coefficienti dello stato iniziale |psi> = (alpha|up>+beta|down>)^L
+  !Coefficienti dello stato iniziale |psi> = (alpha|up>+beta|down>)^L
   alpha = 1
   beta = 0
 
@@ -110,8 +113,8 @@ program swap
 !  allocate(H(dim,dim), E(dim), W_r(dim,dim), USwap(dim,dim))
 !  call buildHSwap(nspin, dim, H)
 !  call diagSYM( 'V', dim, H, E, W_r)
-!!  print *, "HSwap = "
-!!  call printmat(dim, H, 'R')
+!  print *, "HSwap = "
+!  call printmat(dim, H, 'R')
 !  deallocate(H)
 !  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap) 
 !  deallocate(E, W_r)
@@ -124,12 +127,13 @@ program swap
   allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
-  allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim), H_MBL(dim,dim))
+  !allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim), H_MBL(dim,dim))
   nz_dim = (nspin+1)*dim/2
   allocate(H_sparse(nz_dim), ROWS(nz_dim), COLS(nz_dim))
 
   !Allocate initial and generic state
-  allocate(state(dim), state_i(dim), state_f(dim))
+  !allocate(state(dim))
+  allocate(state_i(dim), state_f(dim))
 
   state_i = init_state
   state_f = 0
@@ -137,42 +141,41 @@ program swap
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
-  !!$OMP PARALLEL DO private(h_z, H, E, W_r, U, state, norm, j )
+  !$OMP PARALLEL 
+  call init_random_seed()
+  print *, "Max size of thread team: ", omp_get_max_threads()
+  print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+  !$OMP DO private(h_z, H_sparse, ROWS, COLS, state_i, state_f, norm, j, time )
   do iteration = 1, n_iterations
     
-    if (mod(iteration,10)==0) then 
-      print *, "iteration = ", iteration
-    endif
+    !if (mod(iteration,10)==0) then 
+    !  print *, "iteration = ", iteration
+    !endif
 
-    !print *, "Max size of thread team: ", omp_get_max_threads()
     !print *, "Size of Thread team: ", omp_get_num_threads()
     !print *, "Thread ID: ", omp_get_thread_num()
     !print *, "Number of processors: ", omp_get_num_procs()
-    !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
 
     !-------------------------------------------------
     !PARAMETERS
   
     !call random_number(Jint)
-    Jint = 1
-    Jint = -J_coupling*Jint
+    Jint = -J_coupling
 
     !call random_number(Vint)
-    Vint = 1
-    Vint = -V_coupling*Vint
+    Vint = -V_coupling
   
-    !call random_number(h_z)
-    h_z = 1
+    call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
       
     call buildSPARSE_HMBL(nspin, dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
-    print *, "H_sparse built"
-    print *, "state_f computed"
+
+
+
     !call buildHMBL( nspin, dim, Jint, Vint, h_z, H_MBL )
-    !print *, "H_MBL built"
 
     !call printmat(dim, H_MBL, 'R')
 
@@ -198,15 +201,20 @@ program swap
     state_i = init_state
     norm = dot_product(state_i, state_i)
     j = 1
-    print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
+    time = j*T0
+    !print *, "Imbalance", "Magnetization", "Time", "Norm"
+    !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
     do j = 2, steps
-      call evolve(dim, (nspin+1)*dim/2, 1000, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
+      call evolve(dim, nz_dim, krylov_dim, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
       state_i = state_f
+      norm = dot_product(state_i, state_i)
+      time = j*T0
       state_i = state_i / sqrt( dot_product(state_i, state_i) )
-      print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
+      !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
     enddo
   enddo
-  !!$OMP END PARALLEL DO
+  !$OMP END DO
+  !$OMP END PARALLEL
 
   !deallocate(Jint, Vint, h_z)
   !deallocate(E, W_r, H)

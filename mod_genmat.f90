@@ -7,7 +7,6 @@ module genmat
   complex (c_double_complex), private, parameter :: C_ONE = dcmplx(1._c_double, 0._c_double) 
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
-  integer (c_int), private :: i, j, k, m
 
 
 contains
@@ -16,7 +15,7 @@ contains
 
     integer (c_int), intent(in) :: decimal, nbits
     integer (c_int), intent(out) :: bitstring(nbits)
-    integer(c_int) :: i
+    integer (c_int) :: i, j, k, m
 
     bitstring = 0
     do i = 1, nbits
@@ -24,12 +23,65 @@ contains
     enddo
   end subroutine decode
 
+  subroutine init_random_seed()
+   use iso_fortran_env, only: int64
+   implicit none
+   integer, allocatable :: seed(:)
+   integer :: i, n, un, istat, dt(8), pid
+   integer(int64) :: t
+ 
+   call random_seed(size = n)
+   allocate(seed(n))
+   ! First try if the OS provides a random number generator
+   open(newunit=un, file="/dev/urandom", access="stream", &
+        form="unformatted", action="read", status="old", iostat=istat)
+   if (istat == 0) then
+      read(un) seed
+      close(un)
+   else
+      ! Fallback to XOR:ing the current time and pid. The PID is
+      ! useful in case one launches multiple instances of the same
+      ! program in parallel.
+      call system_clock(t)
+      if (t == 0) then
+         call date_and_time(values=dt)
+         t = (dt(1) - 1970) * 365_int64 * 24 * 60 * 60 * 1000 &
+              + dt(2) * 31_int64 * 24 * 60 * 60 * 1000 &
+              + dt(3) * 24_int64 * 60 * 60 * 1000 &
+              + dt(5) * 60 * 60 * 1000 &
+              + dt(6) * 60 * 1000 + dt(7) * 1000 &
+              + dt(8)
+      end if
+      pid = getpid()
+      t = ieor(t, int(pid, kind(t)))
+      do i = 1, n
+         seed(i) = lcg(t)
+      end do
+   end if
+   call random_seed(put=seed)
+ contains
+   ! This simple PRNG might not be good enough for real work, but is
+   ! sufficient for seeding a better PRNG.
+   function lcg(s)
+     integer :: lcg
+     integer(int64) :: s
+     if (s == 0) then
+        s = 104729
+     else
+        s = mod(s, 4294967296_int64)
+     end if
+     s = mod(s * 279470273_int64, 4294967291_int64)
+     lcg = int(mod(s, int(huge(0), int64)), kind(0))
+   end function lcg
+ end subroutine init_random_seed
+
   subroutine buildSx(nspin, dim, Sx)
 
     integer (c_int) :: nspin, dim
     real (c_double):: Sx(dim,dim)
 
     integer (c_int) :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     Sx = 0
     !print*, "Start Sx"
@@ -54,6 +106,7 @@ contains
     real (c_double), intent(out) :: Hx(dim,dim)
 
     integer (c_int) :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
 
     Hx = 0
@@ -77,6 +130,7 @@ contains
     real (c_double), intent(out) :: Sxp(dim,dim)
 
     integer (c_int) :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     Sxp = 0
     do i = 0, dim - 1
@@ -96,6 +150,7 @@ contains
     complex (c_double_complex), intent(out) :: Syp(dim,dim)
 
     integer (c_int) :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     Syp = 0
     do i = 0, dim - 1
@@ -115,6 +170,7 @@ contains
     complex (c_double_complex), intent(out) :: Sy(dim,dim)
 
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     Sy = 0
     do i = 0, dim - 1
@@ -137,6 +193,7 @@ contains
 
     integer (c_int), intent(in) :: nspin, dim
     real (c_double), intent(out) :: Sz(dim,dim)
+    integer (c_int) :: i, j, k, m
 
     integer :: config(nspin)
 
@@ -159,6 +216,7 @@ contains
     real (c_double), intent(out) :: HJ(dim,dim)
 
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     HJ = 0
     do i = 0, dim - 1
@@ -182,6 +240,7 @@ contains
     real (c_double), intent(out) :: H(dim,dim)
 
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     H = 0
     do i = 0, dim - 1
@@ -210,6 +269,7 @@ contains
     real (c_double), intent(out) :: HSwap(dim,dim)
 
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
     
@@ -240,6 +300,7 @@ contains
     real (c_double), intent(out) :: H(dim,dim)
 
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
     
     H = 0
     do i = 0, dim - 1
@@ -270,6 +331,7 @@ contains
     integer (c_int), intent(out) :: ROWS((nspin+1)*dim/2), COLS((nspin+1)*dim/2)
 
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
     
     H = 0
     ROWS = 0
@@ -289,7 +351,6 @@ contains
 
       ROWS(m) = i
       COLS(m) = i
-      !print *, H(m), i, i, m
 
       do k = 1, nspin-1
 
@@ -299,16 +360,15 @@ contains
           H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
           COLS(m) = i
           ROWS(m) = j
-          !print *, H(m), j, i, m
         endif
       enddo
 
     enddo
-    print *, m
-    print *, "H_MBL_SPARSE ="
-    do m = 1, (nspin+1)*dim/2
-      if(abs(H(m))<0e-10)  print *, H(m), ROWS(m), COLS(m), m
-    enddo
+    !print *, m
+    !print *, "H_MBL_SPARSE ="
+    !do m = 1, (nspin+1)*dim/2
+    !  if(abs(H(m))<0e-10)  print *, H(m), ROWS(m), COLS(m), m
+    !enddo
 
   end subroutine buildSPARSE_HMBL
 
@@ -317,10 +377,11 @@ contains
 
     integer (c_int), intent(in) :: nspin, dim
     real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
-    real (c_double), intent(out) :: H(nspin*dim)
-    integer (c_int), intent(out) :: ROWS(nspin*dim), COLS(nspin*dim)
+    real (c_double), intent(out) :: H((nspin+3)*dim/4)
+    integer (c_int), intent(out) :: ROWS((nspin+3)*dim/4), COLS((nspin+3)*dim/4)
 
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
     
     H = 0
     ROWS = 0
@@ -340,26 +401,27 @@ contains
 
       ROWS(m) = i
       COLS(m) = i
-      print *, H(m), i, i, m
 
       do k = 1, nspin-1
 
         if (config(k)/=config(k+1)) then
-          m = m+1
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
-          H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
-          COLS(m) = i
-          ROWS(m) = j
-          print *, H(m), j, i, m
+          if(j>i) then
+            m = m+1
+            H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
+            COLS(m) = i
+            ROWS(m) = j
+          endif
         endif
       enddo
 
     enddo
-
-    !print *, "H_MBL_SPARSE ="
-    !do i = 1, nspin*dim
-    !  print *, H(i), ROWS(i), COLS(i), i
-    !enddo
+    print *, m
+    print *, "H_MBL_SPARSE ="
+    do m = 1, (nspin+1)*dim/2
+      !if(abs(H(m))<0e-10)  print *, H(m), ROWS(m), COLS(m), m
+      print *, H(m), ROWS(m), COLS(m), m
+    enddo
 
   end subroutine buildHESPARSE_HMBL
 
@@ -377,6 +439,7 @@ contains
     integer (c_int), intent(out) :: states(dim)
 
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     k = 0
     do i = 0, dim-1
@@ -400,6 +463,7 @@ contains
     integer(c_int), intent(in) :: i, nspin
     integer(c_int) :: config(nspin)
     real(c_double) :: mag
+    integer (c_int) :: j, k, m
 
     call decode(i, nspin, config)
 
@@ -417,6 +481,7 @@ contains
     complex(c_double_complex), intent(in) :: state(dim)
     real(c_double) :: mag, magaux
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     mag = 0
     do i = 1, dim
@@ -441,6 +506,7 @@ contains
     complex(c_double_complex), intent(in) :: state(dim)
     real(c_double) :: mag
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     mag = 0
     do i = 1, dim
@@ -458,6 +524,7 @@ contains
     real(c_double) :: mag
     real(c_double) :: magaux
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     mag = 0
     do i = 1, dim
@@ -482,6 +549,7 @@ contains
     complex(c_double_complex), intent(in) :: state(dim)
     real(c_double) :: imb, imbaux, mag, magaux
     integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
 
     mag = 0
     imb = 0
@@ -518,6 +586,7 @@ contains
     integer :: config(nspin), un_vec(nspin), n_down
     complex (c_double_complex) :: alpha_n, beta_n
     real (c_double) :: norm
+    integer (c_int) :: i, j, k, m
 
     norm = sqrt(abs(alpha)**2 + abs(beta)**2)
     alpha_n = alpha/norm
@@ -540,7 +609,7 @@ contains
     complex (c_double_complex), intent(in) :: alpha, beta
     complex (c_double_complex), intent(out) :: state(dim)
     
-    integer :: config(nspin)
+    integer :: config(nspin), i, k
     complex (c_double_complex) :: alpha_n, beta_n
     real (c_double) :: norm
 

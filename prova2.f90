@@ -1,7 +1,7 @@
 program swap
 
-  use genmat
-  use exponentiate
+  !use genmat
+  !use exponentiate
   use omp_lib
   use iso_c_binding
   !use general
@@ -56,16 +56,18 @@ program swap
 
 
   !iteration = 1
-  !$OMP PARALLEL DO PRIVATE(H, E, W_r, two_norm, nspin, dim)
+  !$OMP PARALLEL
+  !$OMP DO 
+  !PRIVATE(H, E, W_r, two_norm, nspin, dim)
   do iteration = 1, n_iterations
     
 
     call random_number(H)
     H = (H + transpose(H))/2
-    call diagSYM( 'V', dim, H, E, W_r )
-    call expSYM(dim, -C_UNIT, E, W_r, U )
-    call random_number(rand)
-    two_norm = rand * norm2(H)
+    !call diagSYM( 'V', dim, H, E, W_r )
+    !call expSYM(dim, -C_UNIT, E, W_r, U )
+    !call random_number(rand)
+    two_norm = norm2(H)
 
  
     !!$OMP ordered
@@ -78,7 +80,8 @@ program swap
     !!$omp end ordered
 
   enddo
-  !$OMP END PARALLEL DO
+  !$OMP END DO
+  !$OMP END PARALLEL
 
   deallocate(H)
   
