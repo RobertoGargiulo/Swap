@@ -92,7 +92,7 @@ program average_magnetization
   enddo
   avg = avg/real(n_iterations)
   fluct = fluct/real(n_iterations)
-  fluct = fluct - avg**2
+  fluct = sqrt(fluct - avg**2)/sqrt(n_iterations)
   close(u_int)
   !-------------------------
 
