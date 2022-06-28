@@ -16,13 +16,15 @@ program swap
 
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
   integer (c_int)     ::  i, j, k, p, tid, nthreads
-  integer (c_int)     ::  unit_mag, unit_ph, unit_w
+  integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
   integer (c_short), dimension(:), allocatable  :: base_state, config
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
   real (c_double) :: mag, norm, time
+  real (c_double), dimension(:), allocatable :: avg, sigma
+  real (c_double), dimension(:,:), allocatable :: imb
   complex (c_double_complex) :: alpha, beta
 
   real (c_double), dimension(:), allocatable :: E
@@ -84,11 +86,8 @@ program swap
   write (*,*) "Longitudinal Field h_z * Z"
   read (*,*) hz_coupling
   print*,""
-  !---Read below for distributions of J, V, hx, hz
+  !---Read below for distributions of J, V, hz
   
-  write (*,*) "Perturbation on Kick, epsilon = T1 - pi/4"
-  read (*,*) kick
-  print*,""
 
   T1 = pi/4 + kick
 
@@ -98,24 +97,18 @@ program swap
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
+  write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  open(newunit=unit_mag,file=filestring)
+
+  write(filestring,92) "data/magnetizations/Clean_MBL_OMP_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  open(newunit=unit_avg,file=filestring)
+  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
 
   !BUILD INITIAL STATE (of type staggered)
   allocate(init_state(dim))
   call buildStaggState(nspin, dim, alpha, beta, init_state)
-
-  !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
-  !------------- NO DRIVING ---------- Uncomment following lines to use the driving
-!  allocate(H(dim,dim), E(dim), W_r(dim,dim), USwap(dim,dim))
-!  call buildHSwap(nspin, dim, H)
-!  call diagSYM( 'V', dim, H, E, W_r)
-!!  print *, "HSwap = "
-!!  call printmat(dim, H, 'R')
-!  deallocate(H)
-!  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap) 
-!  deallocate(E, W_r)
-  
-  !print *, "USwap = "
-  !call printmat(dim, USwap, 'R')
 
   !---------------------------------------------------
   !Allocate local interactions and fields
@@ -127,23 +120,25 @@ program swap
   !Allocate initial and generic state
   allocate(state(dim))
 
+  !Allocate observables and averages
+  allocate( avg(steps), sigma(steps), imb(n_iterations,steps) )
+
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
+  imb = 0
+  avg = 0
+  sigma = 0
   !$OMP PARALLEL
   call init_random_seed() 
-  !$OMP do private(iteration, h_z, H, E, W_r, U, state, norm, j, time )
+  print *, "Size of Thread team: ", omp_get_num_threads()
+  print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, H, E, W_r, U, state, norm, j, time)
   do iteration = 1, n_iterations
     
     !if (mod(iteration,10)==0) then 
     !  print *, "iteration = ", iteration
     !endif
-
-    !print *, "Max size of thread team: ", omp_get_max_threads()
-    print *, "Size of Thread team: ", omp_get_num_threads()
-    !print *, "Thread ID: ", omp_get_thread_num()
-    !print *, "Number of processors: ", omp_get_num_procs()
-    print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
 
     !-------------------------------------------------
     !PARAMETERS
@@ -168,14 +163,20 @@ program swap
     norm = dot_product(state,state)
     j = 1 
     time = j*T0
-    !print *, imbalance(nspin, dim, state), time, norm
-  
+    imb(iteration,j) = imbalance(nspin, dim, state) 
+    print *, imbalance(nspin, dim, state), time, norm
+    avg(j) = avg(j) + imbalance(nspin, dim, state)
+    sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
+
     do j = 2, steps
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
       time = j*T0
-      !print *, imbalance(nspin, dim, state), time, norm
+      imb(iteration,j) = imbalance(nspin, dim, state) 
+      print *, imbalance(nspin, dim, state), time, norm
+      avg(j) = avg(j) + imbalance(nspin, dim, state) 
+      sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
     enddo
     !print *, ""
  
@@ -183,6 +184,23 @@ program swap
   enddo
   !$OMP END DO
   !$OMP END PARALLEL 
+
+  avg = avg/n_iterations
+  sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
+  do j = 1, steps
+    write(unit_avg,*) avg(j), sigma(j), j*T0
+  enddo
+  do iteration = 1, n_iterations
+    j = 1
+    time = j*T0
+    write(unit_mag,*) "iteration = ", iteration
+    write(unit_mag,*) imb(iteration,j), time
+    do j = 2, steps
+      time = j*T0
+      write(unit_mag,*) imb(iteration,j), time
+    enddo
+  enddo
+
 
 
   deallocate(Jint, Vint, h_z)
@@ -192,8 +210,6 @@ program swap
   !deallocate(PH, W)
 
   close(unit_mag)
-  close(unit_ph)
-  close(unit_w)
 
   call system_clock(count_end)
 

@@ -3,6 +3,7 @@ program swap
   use exponentiate
   use genmat
   use printing
+  use omp_lib
   use iso_c_binding
   !use general
   implicit none
@@ -19,7 +20,7 @@ program swap
   integer (c_int), dimension(:), allocatable  :: base_state, config
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
-  real(c_double) :: T0, T1, J_coupling, V_coupling, h_coupling, hz_coupling, kick 
+  real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
   real (c_double) :: mag, norm
   complex (c_double_complex) :: alpha, beta

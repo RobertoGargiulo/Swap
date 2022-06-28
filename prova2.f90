@@ -1,89 +1,72 @@
 program swap
 
-  !use genmat
-  !use exponentiate
+  use genmat
+  use exponentiate
+  use printing
   use omp_lib
   use iso_c_binding
-  !use general
   implicit none
 
-  complex (c_double_complex), parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
-  complex (c_double_complex), parameter :: C_ONE = dcmplx(1._c_double, 0._c_double)
-  complex (c_double_complex), parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
-  integer (c_int)     ::  nspin, dim, iteration, n_iterations
-  integer (c_int)     ::  i, j, k, p, tid, nthreads
+  integer (c_int)     ::  iteration, n_iterations, steps
+  integer (c_int)     ::  i, j, k, p, nthreads
 
   
-  real (c_double) :: rand, mag, two_norm
+  real (c_double) :: rand, two_norm
+  real (c_double), dimension(:), allocatable :: mag, avg, sigma
 
-  real (c_double), dimension(:,:), allocatable :: H, W_r
-  real (c_double), dimension(:), allocatable :: E
-  complex (c_double_complex), dimension(:,:), allocatable :: U
-
-
-  logical :: SELECT
-  EXTERNAL SELECT
 
   integer(c_int) :: count_beginning, count_end, count_rate, day, month, year, date(8), time_min
   real (c_double) :: time_s
   character(len=200) :: filestring
   character(len=8) :: time_string
 
-
-  !Parametri Modello: J, h_x, h_z, T0, T1/epsilon, nspin/L
-  !Parametri Simulazione: Iterazioni di Disordine, Steps di Evoluzione, Stato Iniziale
-
-  !Parametri Iniziali
-
-  write (*,*) "Number of Spins"
-  read (*,*) nspin
-  print*,""
-  dim = 2**nspin
-
-
   write (*,*) "Number of Iterations"
   read (*,*) n_iterations
   print*,""
 
+  write (*,*) "Number of Steps"
+  read (*,*) steps
+  print*,""
 
   call system_clock(count_beginning, count_rate)
 
   !Allocate Floquet and MBL Operators
-  allocate(H(dim,dim), E(dim), W_r(dim, dim), U(dim,dim))
+  allocate(mag(steps), avg(steps), sigma(steps))
 
 
+  avg = 0
+  sigma = 0
   !iteration = 1
   !$OMP PARALLEL
-  !$OMP DO 
-  !PRIVATE(H, E, W_r, two_norm, nspin, dim)
+  call init_random_seed()
+  print *, "Size of Thread team: ", omp_get_num_threads()
+  print *, "In parallel? ", omp_in_parallel()
+  !$OMP DO REDUCTION(+: avg, sigma) PRIVATE(mag)
   do iteration = 1, n_iterations
     
-
-    call random_number(H)
-    H = (H + transpose(H))/2
-    !call diagSYM( 'V', dim, H, E, W_r )
-    !call expSYM(dim, -C_UNIT, E, W_r, U )
-    !call random_number(rand)
-    two_norm = norm2(H)
-
- 
-    !!$OMP ordered
-    print *,  "Norm of H = ", two_norm
-    !print *, "Max size of thread team: ", omp_get_max_threads()
-    !print *, "Size of Thread team: ", omp_get_num_threads()
-    !print *, "Thread ID: ", omp_get_thread_num()
-    print *, "In parallel? ", omp_in_parallel()
-    print *, ""
-    !!$omp end ordered
+    do j = 1, steps
+      !call random_number(rand)
+      mag(j) = iteration
+      !p_avg(j) = mag(j)
+      avg(j) = avg(j) + mag(j)
+      sigma(j) = sigma(j) + mag(j)**2
+      print "(3X,I0,2X,I0,2X,F5.2,2X,F5.2,2X,F5.2,2X,I0)", iteration, j, mag(j), avg(j), sigma(j), omp_get_thread_num()
+    enddo
 
   enddo
   !$OMP END DO
   !$OMP END PARALLEL
+  !avg = avg/n_iterations
+  !sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
+  print *, ""
+  
+  do j = 1, steps
+    print *, avg(j), sigma(j)
+  enddo
 
-  deallocate(H)
   
   call system_clock(count_end)
 

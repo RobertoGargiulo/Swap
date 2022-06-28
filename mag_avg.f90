@@ -5,7 +5,7 @@ program average_magnetization
   implicit none
 
   integer (c_int) :: i, j, k, u_int, u_fluct, iteration, steps, nspin, n_iterations
-  real (c_double) :: J_coupling, V_coupling, h_coupling, hz_coupling, kick
+  real (c_double) :: J_coupling, V_coupling, hz_coupling, kick
   real (c_double) :: mag, T0, time
   real (c_double), allocatable, dimension(:) :: avg, fluct
   character(len=200) :: filestring, string, commandstring
@@ -36,25 +36,17 @@ program average_magnetization
   read (*,*) V_coupling
   print*,""
 
-  write (*,*) "Transverse Field h_x * X"
-  read (*,*) h_coupling
-  print*,""
-
   write (*,*) "Longitudinal Field h_z * Z"
   read (*,*) hz_coupling
   print*,""
 
-  write (*,*) "Perturbation on Kick, epsilon = T1 - pi/4"
-  read (*,*) kick
-  print*,""
 
 
   !----------------------------
   !write(filestring,91) "data/magnetizations/Swap_Sz_nspin", nspin, "_steps", steps    , &
   !&  "_iterations", n_iterations, ".txt"
   write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, &
-   & "_no_kick", kick, ".txt"
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
 
   
   !  commandstring = "awk 'BEGIN{m=0}{m=$2}END{print m}' " // trim(filestring) // " > steps"
@@ -92,28 +84,20 @@ program average_magnetization
   enddo
   avg = avg/real(n_iterations)
   fluct = fluct/real(n_iterations)
-  fluct = sqrt(fluct - avg**2)/sqrt(n_iterations)
+  fluct = sqrt(fluct - avg**2)/sqrt(real(n_iterations))
   close(u_int)
   !-------------------------
 
   !Write data to file
-  !write(filestring,91) "data/magnetizations/Swap_Sz_AVG_nspin", nspin, "_steps", steps    , &
-  !&  "_iterations", n_iterations, ".txt"
 
   write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_AVG_nspin", nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, &
-   & "_no_kick", kick, ".txt"
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
 
-!  write(filestring,92) "data/magnetizations/Swap_Sz_AVG_nspin", nspin, "_steps", steps, &
-!    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
   open(newunit=u_int, file=filestring)
 
   write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_FLUCT_nspin", nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, &
-   & "_no_kick", kick, ".txt"
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
 
-!  write(filestring,92) "data/magnetizations/Swap_Sz_FLUCT_nspin", nspin, "_steps", steps, &
-!    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling,"_h", h_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
   open(newunit=u_fluct, file=filestring)
 
   do j = 1, steps
