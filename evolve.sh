@@ -7,8 +7,8 @@ make $filestring
 #read ncores
 #read nspin
 #ncores=4
-nspin=12
-steps=10000
+nspin=10
+steps=400
 iterations=100
 time_step=0.5
 #for nspin in 2 4 6 8

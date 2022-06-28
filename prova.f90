@@ -22,7 +22,7 @@ program swap
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: mag, norm
+  real (c_double) :: mag, norm, time
   complex (c_double_complex) :: alpha, beta
 
   real (c_double), dimension(:), allocatable :: E
@@ -132,17 +132,17 @@ program swap
 
   !$OMP PARALLEL
   call init_random_seed() 
-  !$OMP do private(iteration, h_z, H, E, W_r, U, state, norm, j )
+  !$OMP do private(iteration, h_z, H, E, W_r, U, state, norm, j, time )
   do iteration = 1, n_iterations
     
-    if (mod(iteration,10)==0) then 
-      print *, "iteration = ", iteration
-    endif
+    !if (mod(iteration,10)==0) then 
+    !  print *, "iteration = ", iteration
+    !endif
 
-    print *, "Max size of thread team: ", omp_get_max_threads()
+    !print *, "Max size of thread team: ", omp_get_max_threads()
     print *, "Size of Thread team: ", omp_get_num_threads()
-    print *, "Thread ID: ", omp_get_thread_num()
-    print *, "Number of processors: ", omp_get_num_procs()
+    !print *, "Thread ID: ", omp_get_thread_num()
+    !print *, "Number of processors: ", omp_get_num_procs()
     print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
 
     !-------------------------------------------------
@@ -167,13 +167,15 @@ program swap
     state = init_state
     norm = dot_product(state,state)
     j = 1 
-    print *, imbalance(nspin, dim, state), j, norm
+    time = j*T0
+    !print *, imbalance(nspin, dim, state), time, norm
   
     do j = 2, steps
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
-      print *, imbalance(nspin, dim, state), j, norm
+      time = j*T0
+      !print *, imbalance(nspin, dim, state), time, norm
     enddo
     !print *, ""
  
