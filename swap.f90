@@ -16,13 +16,14 @@ program swap
 
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
   integer (c_int)     ::  i, j, k, p
-  integer (c_int)     ::  unit_mag, unit_ph, unit_w
+  integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
   integer (c_int), dimension(:), allocatable  :: base_state, config
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: mag, norm
+  real (c_double) :: norm, time
+  real (c_double), dimension(:), allocatable :: avg, sigma
   complex (c_double_complex) :: alpha, beta
 
   real (c_double), dimension(:), allocatable :: E
@@ -85,10 +86,6 @@ program swap
   print*,""
   !---Read below for distributions of J, V, hz
   
-  write (*,*) "Perturbation on Kick, epsilon = T1 - pi/4"
-  read (*,*) kick
-  print*,""
-
   T1 = pi/4 + kick
 
     !Coefficienti dello stato iniziale |psi> = (alpha|up>+beta|down>)^L
@@ -100,10 +97,14 @@ program swap
 
   !DATA FILES
   
-  write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, &
-    & "_no_kick", kick, ".txt"
-  open(newunit=unit_mag,file=filestring)
+  !write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
+  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, &
+  !  & "_no_kick", kick, ".txt"
+  !open(newunit=unit_mag,file=filestring)
+
+  write(filestring,92) "data/magnetizations/Clean_MBL_OMP_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  open(newunit=unit_avg,file=filestring)
 
   !EIGENVALUES/EIGENVECTORS
 !  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
@@ -146,10 +147,19 @@ program swap
   !Allocate initial and generic state
   allocate(state(dim))
 
+  !Allocate observables and averages
+  allocate( avg(steps), sigma(steps) )
+
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
-
+  avg = 0
+  sigma = 0
+  !$OMP PARALLEL
+  call init_random_seed() 
+  print *, "Size of Thread team: ", omp_get_num_threads()
+  print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, H, E, W_r, U, state, norm, j, time)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -161,12 +171,10 @@ program swap
   
     !call random_number(Jint)
     !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
-    !Jint = pi/2
     Jint = -J_coupling
 
     !call random_number(Vint)
-    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-J,J]
-    !Vint = Jint
+    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-V,V]
     Vint = -V_coupling
   
     call random_number(h_z)
@@ -221,32 +229,41 @@ program swap
     state = init_state
     norm = dot_product(state,state)
     j = 1
-    
-    write(unit_mag,*) "iteration = ", iteration
-    write(unit_mag,*) imbalance(nspin, dim, state), j*T0
-    
+    time = j*T0
+    avg(j) = avg(j) + imbalance(nspin, dim, state)
+    sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
     !print *, imbalance(nspin, dim, state), j, norm
   
     do j = 2, steps
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
-      write(unit_mag,*) imbalance(nspin, dim, state), j*T0
+      time = j*T0
+      avg(j) = avg(j) + imbalance(nspin, dim, state) 
+      sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
       !print *, imbalance(nspin, dim, state), j, norm
     enddo
     !print *, ""
  
 
   enddo
+  !$OMP END DO
+  !$OMP END PARALLEL 
+
+  avg = avg/n_iterations
+  sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
+  do j = 1, steps
+    write(unit_avg,*) avg(j), sigma(j), j*T0
+  enddo
+
   deallocate(Jint, Vint, h_z)
   deallocate(E, W_r, H)
   deallocate(U)
+  deallocate(avg, sigma)
   !deallocate(USwap)
   !deallocate(PH, W)
 
-  close(unit_mag)
-  close(unit_ph)
-  close(unit_w)
+  close(unit_avg)
 
   call system_clock(count_end)
 

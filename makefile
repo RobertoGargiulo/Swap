@@ -10,7 +10,7 @@ MOD = ${SRC:.f90=.o} #substitute .f90 with .o
 	$(FC) $(FFLAGS) $(PFLAGS) -c $<
 
 swap: $(MOD) swap.o
-	$(FC) $(FFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 prova: $(MOD) prova.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)

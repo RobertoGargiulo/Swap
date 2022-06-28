@@ -22,7 +22,7 @@ program swap
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: mag, norm, time
+  real (c_double) :: norm, time
   real (c_double), dimension(:), allocatable :: avg, sigma
   real (c_double), dimension(:,:), allocatable :: imb
   complex (c_double_complex) :: alpha, beta
@@ -164,9 +164,9 @@ program swap
     j = 1 
     time = j*T0
     imb(iteration,j) = imbalance(nspin, dim, state) 
-    print *, imbalance(nspin, dim, state), time, norm
     avg(j) = avg(j) + imbalance(nspin, dim, state)
     sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
+    print *, imbalance(nspin, dim, state), time, norm
 
     do j = 2, steps
       state = matmul(U,state)
@@ -174,9 +174,9 @@ program swap
       state = state / sqrt(norm)
       time = j*T0
       imb(iteration,j) = imbalance(nspin, dim, state) 
-      print *, imbalance(nspin, dim, state), time, norm
       avg(j) = avg(j) + imbalance(nspin, dim, state) 
       sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
+      print *, imbalance(nspin, dim, state), time, norm
     enddo
     !print *, ""
  
