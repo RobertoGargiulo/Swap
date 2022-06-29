@@ -91,9 +91,6 @@ program swap
   print*,""
   !---Read below for distributions of J, V, hx, hz
   
-  write (*,*) "Perturbation on Kick, epsilon = T1 - pi/4"
-  read (*,*) kick
-  print*,""
 
   T1 = pi/4 + kick
 

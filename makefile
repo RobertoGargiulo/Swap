@@ -1,5 +1,5 @@
 FC = gfortran
-FFLAGS = -O3 -Wall -Wextra #-fbacktrace -fcheck=all #-fsyntax-only 
+FFLAGS = -O3 -Wall -Wextra -fbacktrace -fcheck=all #-fsyntax-only 
 SRC = mod_print.f90 mod_genmat.f90 mod_exp.f90 mataid.f90 expokit.f90 exp_sparse.f90 
 LIBS = -llapack -lblas
 PFLAGS = -fopenmp

@@ -1,5 +1,5 @@
 ##!/bin/bash
-filestring="prova3"
+filestring="prova2"
 
 make $filestring
 
@@ -8,22 +8,19 @@ make $filestring
 #read nspin
 #ncores=4
 nspin=10
-steps=400
-iterations=100
+steps=4000
+iterations=30
 time_step=0.5
 #for nspin in 2 4 6 8
 #do
 kdim=100
-for n_threads in 1 2 4 8
-do
-  export OMP_NUM_THREADS=$n_threads 
-  for kick in 0.00 #0.05 0.10 0.20 0.40
-  do
-    for J in 0.5 #1 2 #1 1.5 2
+n_threads=2
+export OMP_NUM_THREADS=$n_threads 
+    for J in 0.5 #1 2
     do
-      for V in 0.5 #1 #0 0.5 1 1.5 2 3
+      for V in 1 #0 0.13 0.38 0.5 1 2
       do
-        for hz in 3 #0 1 2.5 3 4 6
+        for hz in 3 #0 1.25 1.5 2 2.5 3 4 6
         do
           cat > input.txt << *
 $nspin
@@ -34,12 +31,8 @@ $time_step
 $J
 $V
 $hz
-$kick
 *
 	        ./$filestring < input.txt
-          #./mag_avg < input.txt
         done
       done
     done
-  done
-done
