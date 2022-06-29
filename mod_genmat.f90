@@ -645,7 +645,7 @@ contains
       t_sigma = t_sigma + sigma(j)**2
     enddo
     t_avg = t_avg/(steps-start)
-    t_sigma = sqrt(sigma(j)**2/real(steps-start))
+    t_sigma = sqrt(t_sigma/real(steps-start))
 
   end subroutine time_avg
 

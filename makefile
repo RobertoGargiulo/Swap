@@ -24,7 +24,10 @@ prova3: $(MOD) prova3.o
 mag_avg: mag_avg.f90
 	$(FC) $(FFLAGS) -o $@ $@.f90
 
-all: swap mag_avg prova prova2 prova3
+min_time_avg: $(MOD) min_time_avg.o
+	$(FC) $(FFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+all: swap mag_avg prova prova2 prova3 min_time_avg
 
 
 clean:
