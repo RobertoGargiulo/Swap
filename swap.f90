@@ -14,7 +14,7 @@ program swap
 
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
-  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
+  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations, start
   integer (c_int)     ::  i, j, k, p
   integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
   integer (c_int), dimension(:), allocatable  :: base_state, config
@@ -22,7 +22,7 @@ program swap
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: norm, time
+  real (c_double) :: norm, time, t_avg, t_sigma
   real (c_double), dimension(:), allocatable :: avg, sigma
   complex (c_double_complex) :: alpha, beta
 
@@ -255,6 +255,11 @@ program swap
   do j = 1, steps
     write(unit_avg,*) avg(j), sigma(j), j*T0
   enddo
+
+  write(unit_avg,*) "Time Averages "
+  start = int(100/T0)
+  call time_avg(steps, start, avg, sigma, t_avg, t_sigma)
+  write(unit_avg,*) start, t_avg, t_sigma
 
   deallocate(Jint, Vint, h_z)
   deallocate(E, W_r, H)

@@ -7,15 +7,17 @@ make $filestring
 #read ncores
 #read nspin
 #ncores=4
-nspin=10
+nspin=8
 steps=4000
-iterations=30
+iterations=20
 time_step=0.5
 #for nspin in 2 4 6 8
 #do
-kdim=100
-n_threads=2
+#kdim=100
+n_threads=8
 export OMP_NUM_THREADS=$n_threads 
+  for kdim in 20 50 100 200
+  do
     for J in 0.5 #1 2
     do
       for V in 1 #0 0.13 0.38 0.5 1 2
@@ -36,3 +38,4 @@ $hz
         done
       done
     done
+  done

@@ -632,6 +632,27 @@ contains
 
   end subroutine buildStaggState
 
+  subroutine time_avg(steps, start, avg, sigma, t_avg, t_sigma)
+    integer (c_int), intent(in) :: steps, start
+    real (c_double), intent(in) :: avg(steps), sigma(steps)
+    real (c_double), intent(out) :: t_avg, t_sigma
+    integer (c_int) :: i, j, k
+    
+    t_avg = 0
+    t_sigma = 0
+    do j = start, steps
+      t_avg = t_avg + avg(j)
+      t_sigma = t_sigma + sigma(j)**2
+    enddo
+    t_avg = t_avg/(steps-start)
+    t_sigma = sqrt(sigma(j)**2/real(steps-start))
+
+  end subroutine time_avg
+
+
+
+
+
 
 
 

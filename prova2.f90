@@ -109,7 +109,7 @@ program swap
   !open(newunit=unit_mag,file=filestring)
 
   write(filestring,92) "data/magnetizations/Clean_MBL_OMP_vs_SERIAL_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
   open(newunit=unit_avg,file=filestring)
 
   !EIGENVALUES/EIGENVECTORS
@@ -119,7 +119,7 @@ program swap
 !  
 !  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
 !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
+  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
 !
 !  !open(newunit=unit_w, file=filestring)
  
@@ -171,7 +171,8 @@ program swap
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma, avg2, sigma2) private(iteration, h_z, H, E, W_r, U, state, norm, j, time, ROWS, COLS, H_sparse)
+  !$OMP do reduction(+:avg, sigma, avg2, sigma2) private(iteration, h_z, H, E, W_r, U, state, norm, j, time, ROWS, COLS, H_sparse, &
+  !$OMP & state_i, state_f)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -272,6 +273,7 @@ program swap
       avg2(j) = avg2(j) + imbalance(nspin, dim, state_i)
       sigma2(j) = sigma2(j) + imbalance(nspin, dim, state_i)**2
       !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
+      !print*, avg(j), sigma(j), avg2(j), sigma2(j), j*T0
     enddo
     !print *, ""
  
