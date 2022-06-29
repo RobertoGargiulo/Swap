@@ -37,6 +37,8 @@ program min_time_avg
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
   open(newunit=unit_avg,file=filestring)
   92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
+
+  print *, filestring
   
   !Allocate observables and averages
   allocate( avg(steps), sigma(steps) )

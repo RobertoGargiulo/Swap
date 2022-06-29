@@ -24,44 +24,44 @@ contains
 !	w	   : (output) computed approximation of exp(t*A)*v.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 SUBROUTINE evolve(n, nz, m, ia, ja, a, v, t, w)
-	integer, intent(in):: n, nz, m
-	integer, intent(in):: ia(nz), ja(nz)
-	complex*16, intent(in):: a(nz), v(n)
-	complex*16, intent(out) :: w(n)
-	real*8, intent(in):: t
-	integer, dimension(:), allocatable:: iwsp
-	double precision tol, anorm
-	complex*16, dimension(:), allocatable::  wsp
-	integer i, itrace, iflag
-	complex*16 ZERO, ONE
-	parameter( ZERO=(0.0d0,0.0d0), ONE=(1.0d0,0.0d0) )
-	!common /CMAT/ a, ia, ja, nz, n
-	!	  arguments variables ...
-	integer lwsp, liwsp
-	lwsp = n*(m+2)+5*(m+2)**2+7
-	liwsp = m+2
-	allocate(iwsp(liwsp))
-	allocate(wsp(lwsp))
-	
-	do i = 1,n
-		wsp(i) = ZERO
-	enddo
-	do i = 1,nz
-		wsp(ia(i)) = wsp(ia(i)) + ABS( a(i) )
-	enddo
-	anorm = wsp(1)
-	do i = 2,n
-		if ( anorm.lt.DBLE(wsp(i)) ) anorm =  wsp(i)
-	enddo
-
-	
-	
-	!intrinsic ABS, CMPLX, CONJG, DBLE
-	
-	tol = 1.0d-7
-    itrace = 0
-!    WRITE(*,*) 'Orcomeno'
-    call ZGEXPV( n,a,ia,ja,nz, m, t,v,w, tol, anorm, wsp,lwsp, iwsp,liwsp, zgcoov, itrace, iflag )
+  integer, intent(in):: n, nz, m
+  integer, intent(in):: ia(nz), ja(nz)
+  complex*16, intent(in):: a(nz), v(n)
+  complex*16, intent(out) :: w(n)
+  real*8, intent(in):: t
+  integer, dimension(:), allocatable:: iwsp
+  double precision tol, anorm
+  complex*16, dimension(:), allocatable::  wsp
+  integer i, itrace, iflag
+  complex*16 ZERO
+  parameter( ZERO=(0.0d0,0.0d0) )
+  !common /CMAT/ a, ia, ja, nz, n
+  !	  arguments variables ...
+  integer lwsp, liwsp
+  lwsp = n*(m+2)+5*(m+2)**2+7
+  liwsp = m+2
+  allocate(iwsp(liwsp))
+  allocate(wsp(lwsp))
+  
+  do i = 1,n
+    wsp(i) = ZERO
+  enddo
+  do i = 1,nz
+    wsp(ia(i)) = wsp(ia(i)) + ABS( a(i) )
+  enddo
+  anorm = dreal(wsp(1))
+  do i = 2,lwsp
+    if ( anorm.lt.DBLE(wsp(i)) ) anorm =  dreal(wsp(i))
+  enddo
+  
+  
+  
+  !intrinsic ABS, CMPLX, CONJG, DBLE
+  
+  tol = 1.0d-7
+  itrace = 1
+  !WRITE(*,*) 'Orcomeno'
+  call ZGEXPV( n,a,ia,ja,nz, m, t,v,w, tol, anorm, wsp,lwsp, iwsp,liwsp, zgcoov, itrace, iflag )
      
 end subroutine evolve
 

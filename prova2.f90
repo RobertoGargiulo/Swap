@@ -18,22 +18,18 @@ program swap
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
   integer (c_int)     ::  i, j, k, p, nz_dim, krylov_dim
   integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
-  integer (c_int), dimension(:), allocatable  :: base_state, config
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
   real (c_double) :: norm, time
-  real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2
+  real (c_double), dimension(:), allocatable :: avg, sigma
   complex (c_double_complex) :: alpha, beta
 
   integer (c_int), dimension(:), allocatable :: ROWS, COLS
-  real (c_double), dimension(:), allocatable :: E, H_sparse
-  real (c_double), dimension(:,:), allocatable :: H, W_r, H_MBL
+  real (c_double), dimension(:), allocatable :: H_sparse
 
-  complex(c_double_complex), dimension(:), allocatable :: PH
-  complex(c_double_complex), dimension(:), allocatable :: state, init_state, state_i, state_f
-  complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap, U_MBL
+  complex(c_double_complex), dimension(:), allocatable :: init_state, state_i, state_f
 
   logical :: SELECT
   EXTERNAL SELECT
@@ -108,7 +104,7 @@ program swap
   !  & "_no_kick", kick, ".txt"
   !open(newunit=unit_mag,file=filestring)
 
-  write(filestring,92) "data/magnetizations/Clean_MBL_OMP_vs_SERIAL_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
+  write(filestring,92) "data/magnetizations/Clean_MBL_SPARSE_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
   open(newunit=unit_avg,file=filestring)
 
@@ -148,15 +144,14 @@ program swap
   allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
-  allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
   nz_dim = (nspin+1)*dim/2
   allocate(H_sparse(nz_dim), ROWS(nz_dim), COLS(nz_dim))
 
   !Allocate initial and generic state
-  allocate( state(dim), state_i(dim), state_f(dim))
+  allocate( state_i(dim), state_f(dim))
 
   !Allocate observables and averages
-  allocate( avg(steps), sigma(steps), avg2(steps), sigma2(steps) )
+  allocate( avg(steps), sigma(steps))
 
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
@@ -165,13 +160,11 @@ program swap
   state_f = 0
   avg = 0
   sigma = 0
-  avg2 = 0
-  sigma2 = 0
   !$OMP PARALLEL
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma, avg2, sigma2) private(iteration, h_z, H, E, W_r, U, state, norm, j, time, ROWS, COLS, H_sparse, &
+  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, time, ROWS, COLS, H_sparse, &
   !$OMP & state_i, state_f)
   do iteration = 1, n_iterations
     
@@ -201,14 +194,6 @@ program swap
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim, Jint, Vint, h_z, H )
-    !print *, "H_MBL = "
-    !call printmat(dim, H,'R')
-
-    call diagSYM( 'V', dim, H, E, W_r )
-    call expSYM( dim, -C_UNIT*T0, E, W_r, U )
-    !print *, "U_MBL = "
-    !call printmat(dim, U_MBL,'C')
     call buildSPARSE_HMBL(nspin, dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
 
     !U = U_MBL !NO DRIVING
@@ -239,30 +224,12 @@ program swap
     !-----------------------------------------------
   
     !EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 
- 
-    state = init_state
-    norm = dot_product(state,state)
-    j = 1
-    time = j*T0
-    avg(j) = avg(j) + imbalance(nspin, dim, state)
-    sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
-    !print *, imbalance(nspin, dim, state), j, norm
-  
-    do j = 2, steps
-      state = matmul(U,state)
-      norm = dot_product(state,state)
-      state = state / sqrt(norm)
-      time = j*T0
-      avg(j) = avg(j) + imbalance(nspin, dim, state) 
-      sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
-      !print *, imbalance(nspin, dim, state), j, norm
-    enddo
     
     state_i = init_state
     norm = dot_product(state_i, state_i)
     j = 1
-    avg2(j) = avg2(j) + imbalance(nspin, dim, state_i)
-    sigma2(j) = sigma2(j) + imbalance(nspin, dim, state_i)**2
+    avg(j) = avg(j) + imbalance(nspin, dim, state_i)
+    sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
     !print *, "Imbalance", "Magnetization", "Time", "Norm"
     !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
     do j = 2, steps
@@ -270,10 +237,10 @@ program swap
       state_i = state_f
       norm = dot_product(state_i, state_i)
       state_i = state_i / sqrt( dot_product(state_i, state_i) )
-      avg2(j) = avg2(j) + imbalance(nspin, dim, state_i)
-      sigma2(j) = sigma2(j) + imbalance(nspin, dim, state_i)**2
+      avg(j) = avg(j) + imbalance(nspin, dim, state_i)
+      sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
       !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
-      !print*, avg(j), sigma(j), avg2(j), sigma2(j), j*T0
+      !print*, avg(j), sigma(j), j*T0
     enddo
     !print *, ""
  
@@ -284,16 +251,14 @@ program swap
 
   avg = avg/n_iterations
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
-  avg2 = avg2/n_iterations
-  sigma2 = sqrt(sigma2/n_iterations - avg2**2)/sqrt(real(n_iterations))
   do j = 1, steps
-    write(unit_avg,*) avg(j), sigma(j), avg2(j), sigma2(j), j*T0
+    write(unit_avg,*) avg(j), sigma(j), j*T0
+    !print *, avg(j), sigma(j), j*T0
   enddo
 
   deallocate(Jint, Vint, h_z)
-  deallocate(E, W_r, H)
-  deallocate(U)
-  deallocate(avg, sigma, avg2, sigma2)
+  deallocate(H_sparse,ROWS,COLS)
+  deallocate(avg, sigma)
   !deallocate(USwap)
   !deallocate(PH, W)
 
