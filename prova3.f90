@@ -15,29 +15,28 @@ program swap
 
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
-  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
-  integer (c_int)     ::  i, j, k, p, tid, nthreads, nz_dim, krylov_dim
-  integer (c_int)     ::  unit_mag, unit_ph, unit_w
-  integer (c_short), dimension(:), allocatable  :: base_state, config
+  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations, dim_eff
+  integer (c_int)     ::  i, j, k, p, nz_dim, krylov_dim
+  integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: mag, norm, time
+  real (c_double) :: norm
+  real (c_double), dimension(:), allocatable :: avg, sigma
   complex (c_double_complex) :: alpha, beta
 
   integer (c_int), dimension(:), allocatable :: ROWS, COLS
-  real (c_double), dimension(:), allocatable :: E, H_sparse
-  real (c_double), dimension(:,:), allocatable :: H, W_r, H_MBL
+  real (c_double), dimension(:), allocatable :: H_sparse, E
+  real (c_double), dimension(:,:), allocatable :: H, W_r
+  complex(c_double_complex), dimension(:,:), allocatable :: U
 
-  complex(c_double_complex), dimension(:), allocatable :: PH
-  complex(c_double_complex), dimension(:), allocatable :: state, init_state, state_i, state_f
-  complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap, U_MBL
+  complex(c_double_complex), dimension(:), allocatable :: init_state, state_i, state_f
 
   logical :: SELECT
   EXTERNAL SELECT
 
-  integer(c_int) :: count_beginning, count_end, count_rate, day, month, year, date(8), time_min
+  integer(c_int) :: count_beginning, count_end, count_rate, time_min
   real (c_double) :: time_s
   character(len=200) :: filestring
   character(len=8) :: time_string
@@ -52,6 +51,7 @@ program swap
   read (*,*) nspin
   print*,""
   dim = 2**nspin
+  dim_eff = binom(nspin,nspin/2)
 
   write (*,*) "Number of Iterations"
   read (*,*) n_iterations
@@ -78,28 +78,51 @@ program swap
   read (*,*) T0
   print*,""
   
-  write (*,*) "Longitudinal Interaction Constant -J * (XX + YY)"
+  write (*,*) "Transverse Interaction Constant -J * (XX + YY)"
   read (*,*) J_coupling
   print*,""
 
-  write (*,*) "Transverse Interaction Constant -V * ZZ"
+  write (*,*) "Longitudinal Interaction Constant -V * ZZ"
   read (*,*) V_coupling
   print*,""
 
   write (*,*) "Longitudinal Field h_z * Z"
   read (*,*) hz_coupling
   print*,""
-  !---Read below for distributions of J, V, hx, hz
+  !---Read below for distributions of J, V, hz
   
-
   T1 = pi/4 + kick
 
-  !Coefficienti dello stato iniziale |psi> = (alpha|up>+beta|down>)^L
+    !Coefficienti dello stato iniziale |psi> = (alpha|up>+beta|down>)^L
   alpha = 1
   beta = 0
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
+
+  !DATA FILES
+  
+  !write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
+  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, &
+  !  & "_no_kick", kick, ".txt"
+  !open(newunit=unit_mag,file=filestring)
+
+  write(filestring,92) "data/magnetizations/Clean_MBL_SPARSE_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
+  !open(newunit=unit_avg,file=filestring)
+
+  !EIGENVALUES/EIGENVECTORS
+!  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
+!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+!  !open(newunit=unit_ph, file=filestring)
+!  
+!  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
+!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
+!
+!  !open(newunit=unit_w, file=filestring)
+ 
+  !------------------------------------------------
 
   !BUILD INITIAL STATE (of type staggered)
   allocate(init_state(dim))
@@ -110,8 +133,8 @@ program swap
 !  allocate(H(dim,dim), E(dim), W_r(dim,dim), USwap(dim,dim))
 !  call buildHSwap(nspin, dim, H)
 !  call diagSYM( 'V', dim, H, E, W_r)
-!  print *, "HSwap = "
-!  call printmat(dim, H, 'R')
+!!  print *, "HSwap = "
+!!  call printmat(dim, H, 'R')
 !  deallocate(H)
 !  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap) 
 !  deallocate(E, W_r)
@@ -122,106 +145,109 @@ program swap
   !---------------------------------------------------
   !Allocate local interactions and fields
   allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
+  print *, "check 1"
 
   !Allocate Floquet and MBL Operators
-  !allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim), H_MBL(dim,dim))
-  nz_dim = (nspin+1)*dim/2
+  !nz_dim = (nspin+1)*dim!/2
+  nz_dim = dim**2
   allocate(H_sparse(nz_dim), ROWS(nz_dim), COLS(nz_dim))
+  print *, "check 2"
+  !allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
 
   !Allocate initial and generic state
-  !allocate(state(dim))
-  allocate(state_i(dim), state_f(dim))
+  allocate( state_i(dim), state_f(dim))
 
-  state_i = init_state
-  state_f = 0
+  !Allocate observables and averages
+  allocate( avg(steps), sigma(steps))
+  print *, "check 3"
 
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
-  !$OMP PARALLEL 
-  call init_random_seed()
-  print *, "Max size of thread team: ", omp_get_max_threads()
-  print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP DO private(h_z, H_sparse, ROWS, COLS, state_i, state_f, norm, j, time )
+  state_i = init_state
+  state_f = 0
+  avg = 0
+  sigma = 0
+  !$OMP PARALLEL
+  call init_random_seed() 
+  !print *, "Size of Thread team: ", omp_get_num_threads()
+  !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, ROWS, COLS, H_sparse, &
+  !$OMP & state_i, state_f, H, E, W_r, U)
   do iteration = 1, n_iterations
     
-    !if (mod(iteration,10)==0) then 
-    !  print *, "iteration = ", iteration
-    !endif
-
-    !print *, "Size of Thread team: ", omp_get_num_threads()
-    !print *, "Thread ID: ", omp_get_thread_num()
-    !print *, "Number of processors: ", omp_get_num_procs()
+    if (mod(iteration,10)==0) then 
+      print *, "iteration = ", iteration
+    endif
 
     !-------------------------------------------------
     !PARAMETERS
   
     !call random_number(Jint)
+    !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
     Jint = -J_coupling
 
     !call random_number(Vint)
+    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-V,V]
     Vint = -V_coupling
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
+    print *, "check 4"
+  
+!    write (*,*) "Jint = ", Jint(:)
+!    write (*,*) "Vint = ", Vint(:)
+!    write (*,*) "h_z = ", h_z(:)
+!    print *, ""
+  
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-      
-    call buildSPARSE_HMBL(nspin, dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
+    call buildSz0_SPARSE_HMBL(nspin, dim_eff, Jint, Vint, h_z, H_sparse, ROWS, COLS)
+    print *, "check 5"
+    !call buildHMBL( nspin, dim, Jint, Vint, h_z, H )
+    !call printmat(dim, H, 'R')
 
-
-
-    !call buildHMBL( nspin, dim, Jint, Vint, h_z, H_MBL )
-
-    !call printmat(dim, H_MBL, 'R')
-
-    !call diagSYM('V', dim, H_MBL, E, W_r)
-    !call expSYM(dim, -C_UNIT*T0, E, W_r, U)
-
-  
     !EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 
- 
-    !state = init_state
-    !norm = dot_product(state,state)
-    !j = 1 
-    !print *, imbalance(nspin, dim, state), mag_z(nspin, dim, state),  j*T0, norm
-  
+    
+    !state_i = init_state
+    !norm = dot_product(state_i, state_i)
+    !j = 1
+    !avg(j) = avg(j) + imbalance(nspin, dim, state_i)
+    !sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
+    !!print *, "Imbalance", "Magnetization", "Time", "Norm"
+    !!print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
     !do j = 2, steps
-    !  state = matmul(U,state)
-    !  norm = dot_product(state,state)
-    !  state = state / sqrt(norm)
-    !  print *, imbalance(nspin, dim, state), mag_z(nspin, dim, state), j*T0, norm
+    !  call evolve(dim, nz_dim, krylov_dim, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
+    !  state_i = state_f
+    !  norm = dot_product(state_i, state_i)
+    !  state_i = state_i / sqrt( dot_product(state_i, state_i) )
+    !  avg(j) = avg(j) + imbalance(nspin, dim, state_i)
+    !  sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
+    !  !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
+    !  !print*, avg(j), sigma(j), j*T0
     !enddo
     !print *, ""
  
-    state_i = init_state
-    norm = dot_product(state_i, state_i)
-    j = 1
-    time = j*T0
-    !print *, "Imbalance", "Magnetization", "Time", "Norm"
-    !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
-    do j = 2, steps
-      call evolve(dim, nz_dim, krylov_dim, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
-      state_i = state_f
-      norm = dot_product(state_i, state_i)
-      time = j*T0
-      state_i = state_i / sqrt( dot_product(state_i, state_i) )
-      !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
-    enddo
+
   enddo
   !$OMP END DO
-  !$OMP END PARALLEL
+  !$OMP END PARALLEL 
 
-  !deallocate(Jint, Vint, h_z)
-  !deallocate(E, W_r, H)
-  !deallocate(U)
+  !avg = avg/n_iterations
+  !sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
+  !do j = 1, steps
+  !  write(unit_avg,*) avg(j), sigma(j), j*T0
+  !  !print *, avg(j), sigma(j), j*T0
+  !enddo
+
+  deallocate(Jint, Vint, h_z)
+  deallocate(H_sparse,ROWS,COLS)
+  deallocate(avg, sigma)
   !deallocate(USwap)
   !deallocate(PH, W)
 
-  !close(unit_mag)
-  !close(unit_ph)
-  !close(unit_w)
+  close(unit_avg)
 
   call system_clock(count_end)
 

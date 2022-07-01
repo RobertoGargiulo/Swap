@@ -1,5 +1,6 @@
 module genmat
-
+  
+  !use ifport
   use iso_c_binding
   implicit none
 
@@ -74,6 +75,23 @@ contains
      lcg = int(mod(s, int(huge(0), int64)), kind(0))
    end function lcg
  end subroutine init_random_seed
+
+
+  integer function binom(n,k)
+    integer(c_int), intent(in) :: n,k
+    integer, parameter :: i8 = selected_int_kind(18)
+    integer, parameter :: dp = selected_real_kind(15)
+
+    if (k == n) then
+        binom = 1
+    else if (k == 1) then
+        binom = n
+    else if ((k /= 1) .and. (k /= n)) then
+      binom = nint(exp(log_gamma(n+1.0_dp)-log_gamma(n-k+1.0_dp)-log_gamma(k+1.0_dp)),kind=i8)
+    end if 
+  end function
+
+
 
   subroutine buildSx(nspin, dim, Sx)
 
@@ -426,7 +444,110 @@ contains
   end subroutine buildHESPARSE_HMBL
 
 
+  subroutine buildSz0_SPARSE_HMBL(nspin, dim, Jint, Vint, hz, H, ROWS, COLS)
 
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(out) :: H(dim**2)
+    integer (c_int), intent(out) :: ROWS(dim**2), COLS(dim**2)
+    
+
+    integer :: config(nspin), states(dim)
+    integer (c_int) :: i, j, k, m, n, l, r
+
+
+    H = 0
+    ROWS = 0
+    COLS = 0
+    m = 0
+    call zero_mag_states(nspin, dim, states)
+    print *, states
+    do l = 1, dim
+
+      i = states(l)
+      call decode(i,nspin,config)
+      print *, " states(l) =", i, "Dimensions =", dim**2, (nspin+1)*dim/2
+
+      m = m+1
+      do k = 1, nspin-1
+        H(m) = H(m) + Vint(k) * (1 - 2 * config(k)) * &
+          & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
+      enddo
+      k = nspin
+      H(m) = H(m) + hz(k) * (1 - 2 * config(k))
+
+      ROWS(m) = l
+      COLS(m) = l
+      print *, "(First cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
+      print *, ""
+
+      do k = 1, nspin-1
+
+        if (config(k)/=config(k+1)) then
+          m = m+1
+          print *, "m = m+1 done", m
+          print *, ""
+          j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
+          H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
+          do r = 1, dim
+            if(states(r) == j) then
+              n = r
+              exit
+            endif
+          enddo
+          COLS(m) = l
+          ROWS(m) = n
+          print *, "(Second cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
+          print *, ""
+        endif
+      enddo
+
+    enddo
+    n = m
+    print *, "Dimensions =", m, dim**2, (nspin+1)*dim/2
+    print *, "H_MBL_SPARSE ="
+    do m = 1, n
+      !print *, H(m), ROWS(m), COLS(m), m
+    enddo
+
+  end subroutine buildSz0_SPARSE_HMBL
+
+
+  subroutine buildSz0_HMBL(nspin, dim, Jint, Vint, hz, H)
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(out) :: H(dim,dim)
+
+    integer :: config(nspin), states(dim)
+    integer (c_int) :: i, j, k, m, n, l, r
+    
+    H = 0
+    call zero_mag_states(nspin, dim, states)
+    do l = 1, dim
+
+      i = states(l)
+      call decode(i,nspin,config)
+
+      do k = 1, nspin-1
+
+        j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
+        do r = 1, dim
+          if(states(r) == j) then
+            n = r
+            exit
+          endif
+        enddo
+
+        H(l,l) = H(l,l) + Vint(k) * (1 - 2 * config(k)) * &
+          & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
+        H(r,l) = H(r,l) + Jint(k) * 2 * (config(k) - config(k+1))**2
+      enddo
+      k = nspin
+      H(l,l) = H(l,l) + hz(k) * (1 - 2 * config(k))
+    enddo
+
+  end subroutine buildSz0_HMBL
 
 
 
@@ -442,7 +563,7 @@ contains
     integer (c_int) :: i, j, k, m
 
     k = 0
-    do i = 0, dim-1
+    do i = 0, 2**nspin-1
 
       call decode(i, nspin, config)
 
