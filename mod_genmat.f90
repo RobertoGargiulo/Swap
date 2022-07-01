@@ -444,29 +444,36 @@ contains
   end subroutine buildHESPARSE_HMBL
 
 
-  subroutine buildSz0_SPARSE_HMBL(nspin, dim, Jint, Vint, hz, H, ROWS, COLS)
+  subroutine buildSz0_SPARSE_HMBL(nspin, dim_eff, dim, nz_dim, Jint, Vint, hz, H, ROWS, COLS)
 
-    integer (c_int), intent(in) :: nspin, dim
+    integer (c_int), intent(in) :: nspin, dim, dim_eff, nz_dim
     real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
-    real (c_double), intent(out) :: H(dim**2)
-    integer (c_int), intent(out) :: ROWS(dim**2), COLS(dim**2)
+    real (c_double), intent(out) :: H(nz_dim)
+    integer (c_int), intent(out) :: ROWS(nz_dim), COLS(nz_dim)
     
 
     integer :: config(nspin), states(dim)
     integer (c_int) :: i, j, k, m, n, l, r
 
-
+    !print *, nspin, dim, dim_eff, nz_dim
+    !print *, "Start buildSz0_Sparse"
     H = 0
     ROWS = 0
     COLS = 0
     m = 0
+    !print *, "Call to build states"
     call zero_mag_states(nspin, dim, states)
-    print *, states
+    do i = 1, dim
+      !print *, i, states(i)
+    enddo
+
+
+    !print *, states
     do l = 1, dim
 
       i = states(l)
       call decode(i,nspin,config)
-      print *, " states(l) =", i, "Dimensions =", dim**2, (nspin+1)*dim/2
+      !print *, " states(l) =", i, "Dimensions =", dim**2, (nspin+1)*dim/2
 
       m = m+1
       do k = 1, nspin-1
@@ -478,15 +485,16 @@ contains
 
       ROWS(m) = l
       COLS(m) = l
-      print *, "(First cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
-      print *, ""
+      !print *, "(First cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
+      !print *, ""
+      !print *, H(m), ROWS(m), COLS(m), m, i+1, i+1
 
       do k = 1, nspin-1
 
         if (config(k)/=config(k+1)) then
           m = m+1
-          print *, "m = m+1 done", m
-          print *, ""
+          !print *, "m = m+1 done", m
+          !print *, ""
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
           H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
           do r = 1, dim
@@ -497,18 +505,20 @@ contains
           enddo
           COLS(m) = l
           ROWS(m) = n
-          print *, "(Second cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
-          print *, ""
+          !print *, "(Second cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
+          !print *, H(m), ROWS(m), COLS(m), m, j+1, i+1
+          !print *, ""
         endif
       enddo
 
     enddo
     n = m
-    print *, "Dimensions =", m, dim**2, (nspin+1)*dim/2
-    print *, "H_MBL_SPARSE ="
+    !print *, "Dimensions =", m, dim**2, (nspin+1)*dim/2
+    !print *, "H_MBL_SPARSE ="
     do m = 1, n
       !print *, H(m), ROWS(m), COLS(m), m
     enddo
+    print *, nspin, dim, dim_eff, nz_dim, n
 
   end subroutine buildSz0_SPARSE_HMBL
 
@@ -523,6 +533,7 @@ contains
     integer (c_int) :: i, j, k, m, n, l, r
     
     H = 0
+    print *, nspin, dim
     call zero_mag_states(nspin, dim, states)
     do l = 1, dim
 
@@ -563,15 +574,19 @@ contains
     integer (c_int) :: i, j, k, m
 
     k = 0
+    states = 0
+    !print *, "Start building states"
     do i = 0, 2**nspin-1
 
       call decode(i, nspin, config)
+      !print *, "Decoding states"
 
       if (sum(config)==nspin/2) then
         k = k+1
         states(k) = i
         !print *, states(p), p
         !print '(1X,I0)', config(:)
+        !print *, "Building states(k)"
       endif
     enddo
 

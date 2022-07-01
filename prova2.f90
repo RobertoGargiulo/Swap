@@ -106,7 +106,7 @@ program swap
 
   write(filestring,92) "data/magnetizations/Clean_MBL_SPARSE_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
-  open(newunit=unit_avg,file=filestring)
+  !open(newunit=unit_avg,file=filestring)
 
   !EIGENVALUES/EIGENVECTORS
 !  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
@@ -252,7 +252,7 @@ program swap
   avg = avg/n_iterations
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
   do j = 1, steps
-    write(unit_avg,*) avg(j), sigma(j), j*T0
+    !write(unit_avg,*) avg(j), sigma(j), j*T0
     !print *, avg(j), sigma(j), j*T0
   enddo
 
@@ -262,7 +262,7 @@ program swap
   !deallocate(USwap)
   !deallocate(PH, W)
 
-  close(unit_avg)
+  !close(unit_avg)
 
   call system_clock(count_end)
 

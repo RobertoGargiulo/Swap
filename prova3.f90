@@ -125,8 +125,8 @@ program swap
   !------------------------------------------------
 
   !BUILD INITIAL STATE (of type staggered)
-  allocate(init_state(dim))
-  call buildStaggState(nspin, dim, alpha, beta, init_state)
+  !allocate(init_state(dim))
+  !call buildStaggState(nspin, dim, alpha, beta, init_state)
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
   !------------- NO DRIVING ---------- Uncomment following lines to use the driving
@@ -148,32 +148,31 @@ program swap
   print *, "check 1"
 
   !Allocate Floquet and MBL Operators
-  !nz_dim = (nspin+1)*dim!/2
-  nz_dim = dim**2
+  nz_dim = (nspin+3)*dim_eff/2
   allocate(H_sparse(nz_dim), ROWS(nz_dim), COLS(nz_dim))
   print *, "check 2"
+  !allocate(H(dim,dim))
   !allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
 
   !Allocate initial and generic state
-  allocate( state_i(dim), state_f(dim))
+  !allocate( state_i(dim), state_f(dim))
 
   !Allocate observables and averages
-  allocate( avg(steps), sigma(steps))
-  print *, "check 3"
+  !allocate( avg(steps), sigma(steps))
 
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
 
-  state_i = init_state
-  state_f = 0
-  avg = 0
-  sigma = 0
-  !$OMP PARALLEL
+  !state_i = init_state
+  !state_f = 0
+  !avg = 0
+  !sigma = 0
+  !!$OMP PARALLEL
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, ROWS, COLS, H_sparse, &
-  !$OMP & state_i, state_f, H, E, W_r, U)
+  !!$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, ROWS, COLS, H_sparse, &
+  !!$OMP & state_i, state_f, H, E, W_r, U)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -193,7 +192,6 @@ program swap
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
-    print *, "check 4"
   
 !    write (*,*) "Jint = ", Jint(:)
 !    write (*,*) "Vint = ", Vint(:)
@@ -203,8 +201,9 @@ program swap
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildSz0_SPARSE_HMBL(nspin, dim_eff, Jint, Vint, h_z, H_sparse, ROWS, COLS)
-    print *, "check 5"
+    print *, "Call to build_Sz0_Sparse"
+    call buildSz0_SPARSE_HMBL(nspin, dim, dim_eff, nz_dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
+    print *, "Sz0_Sparse Built"
     !call buildHMBL( nspin, dim, Jint, Vint, h_z, H )
     !call printmat(dim, H, 'R')
 
@@ -231,8 +230,8 @@ program swap
  
 
   enddo
-  !$OMP END DO
-  !$OMP END PARALLEL 
+  !!$OMP END DO
+  !!$OMP END PARALLEL 
 
   !avg = avg/n_iterations
   !sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
@@ -243,7 +242,7 @@ program swap
 
   deallocate(Jint, Vint, h_z)
   deallocate(H_sparse,ROWS,COLS)
-  deallocate(avg, sigma)
+  !deallocate(avg, sigma)
   !deallocate(USwap)
   !deallocate(PH, W)
 
