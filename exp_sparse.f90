@@ -59,7 +59,7 @@ SUBROUTINE evolve(n, nz, m, ia, ja, a, v, t, w)
   !intrinsic ABS, CMPLX, CONJG, DBLE
   
   tol = 1.0d-7
-  itrace = 1
+  itrace = 0
   !WRITE(*,*) 'Orcomeno'
   call ZGEXPV( n,a,ia,ja,nz, m, t,v,w, tol, anorm, wsp,lwsp, iwsp,liwsp, zgcoov, itrace, iflag )
      

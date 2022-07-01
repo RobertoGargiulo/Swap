@@ -22,7 +22,7 @@ program swap
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: norm, time
+  real (c_double) :: norm
   real (c_double), dimension(:), allocatable :: avg, sigma
   real (c_double), dimension(:,:), allocatable :: imb
   complex (c_double_complex) :: alpha, beta
@@ -37,7 +37,7 @@ program swap
   logical :: SELECT
   EXTERNAL SELECT
 
-  integer(c_int) :: count_beginning, count_end, count_rate, day, month, year, date(8), time_min
+  integer(c_int) :: count_beginning, count_end, count_rate, time_min
   real (c_double) :: time_s
   character(len=200) :: filestring
   character(len=8) :: time_string
@@ -133,7 +133,7 @@ program swap
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, H, E, W_r, U, state, norm, j, time)
+  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, H, E, W_r, U, state, norm, j)
   do iteration = 1, n_iterations
     
     !if (mod(iteration,10)==0) then 
@@ -162,21 +162,19 @@ program swap
     state = init_state
     norm = dot_product(state,state)
     j = 1 
-    time = j*T0
     imb(iteration,j) = imbalance(nspin, dim, state) 
     avg(j) = avg(j) + imbalance(nspin, dim, state)
     sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
-    print *, imbalance(nspin, dim, state), time, norm
+    print *, imbalance(nspin, dim, state), j*T0, norm
 
     do j = 2, steps
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
-      time = j*T0
       imb(iteration,j) = imbalance(nspin, dim, state) 
       avg(j) = avg(j) + imbalance(nspin, dim, state) 
       sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
-      print *, imbalance(nspin, dim, state), time, norm
+      print *, imbalance(nspin, dim, state), j*T0, norm
     enddo
     !print *, ""
  
@@ -192,12 +190,10 @@ program swap
   enddo
   do iteration = 1, n_iterations
     j = 1
-    time = j*T0
     write(unit_mag,*) "iteration = ", iteration
-    write(unit_mag,*) imb(iteration,j), time
+    write(unit_mag,*) imb(iteration,j), j*T0
     do j = 2, steps
-      time = j*T0
-      write(unit_mag,*) imb(iteration,j), time
+      write(unit_mag,*) imb(iteration,j), j*T0
     enddo
   enddo
 

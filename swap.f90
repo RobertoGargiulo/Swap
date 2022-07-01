@@ -22,7 +22,7 @@ program swap
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: norm, time, t_avg, t_sigma
+  real (c_double) :: norm, t_avg, t_sigma
   real (c_double), dimension(:), allocatable :: avg, sigma
   complex (c_double_complex) :: alpha, beta
 
@@ -36,7 +36,7 @@ program swap
   logical :: SELECT
   EXTERNAL SELECT
 
-  integer(c_int) :: count_beginning, count_end, count_rate, day, month, year, date(8), time_min
+  integer(c_int) :: count_beginning, count_end, count_rate, time_min
   real (c_double) :: time_s
   character(len=200) :: filestring
   character(len=8) :: time_string
@@ -159,7 +159,7 @@ program swap
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, H, E, W_r, U, state, norm, j, time)
+  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, H, E, W_r, U, state, norm, j)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -192,8 +192,6 @@ program swap
     !print *, "H_MBL = "
     !call printmat(dim, H,'R')
 
-    call diagSYM( 'V', dim, H, E, W_r )
-    call expSYM( dim, -C_UNIT*T0, E, W_r, U )
     !print *, "U_MBL = "
     !call printmat(dim, U_MBL,'C')
 
@@ -229,16 +227,16 @@ program swap
     state = init_state
     norm = dot_product(state,state)
     j = 1
-    time = j*T0
     avg(j) = avg(j) + imbalance(nspin, dim, state)
     sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
     !print *, imbalance(nspin, dim, state), j, norm
   
     do j = 2, steps
+      call diagSYM( 'V', dim, H, E, W_r )
+      call expSYM( dim, -C_UNIT*T0, E, W_r, U )
       state = matmul(U,state)
       norm = dot_product(state,state)
       state = state / sqrt(norm)
-      time = j*T0
       avg(j) = avg(j) + imbalance(nspin, dim, state) 
       sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
       !print *, imbalance(nspin, dim, state), j, norm

@@ -7,20 +7,19 @@ make $filestring
 #read ncores
 #read nspin
 #ncores=4
-nspin=12
+nspin=8
 steps=4000
-iterations=30
+iterations=1
 time_step=0.5
-n_threads=8
+n_threads=1
 j=0
 export OMP_NUM_THREADS=$n_threads 
-  for kdim in 50 100 500
-  do    
-    for J in 0.5 1 2
+kdim=50
+    for J in 0.5 #1 2
     do
-      for V in 0 0.5 1 1.5 2 2.5 3
+      for V in 1 #1 #0 0.5 1 1.5 2 2.5 3
       do
-        for hz in 0 1 2 3 4 5 6
+        for hz in 3 #0 1 2 3 4 5 6
         do
           cat > input.txt << *
 $nspin
@@ -39,4 +38,3 @@ $hz
         done
       done
     done
-  done

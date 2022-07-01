@@ -1,8 +1,8 @@
-FC = gfortran
-FFLAGS = -O3 -Wall -Wextra -fbacktrace -fcheck=all #-fsyntax-only 
+FC =  gfortran
+FFLAGS = -O3 -Wall -Wextra -fbacktrace -fcheck=all -fopenmp #-fpp -D IFORT -qopenmp 
 SRC = mod_print.f90 mod_genmat.f90 mod_exp.f90 mataid.f90 expokit.f90 exp_sparse.f90 
 LIBS = -llapack -lblas
-PFLAGS = -fopenmp
+PFLAGS = #-qopenmp #-fopenmp
 MOD = ${SRC:.f90=.o} #substitute .f90 with .o
 
 #This is the first command, which is always executed. If any '.f90' files have been modified, it compiles them. 
@@ -19,6 +19,9 @@ prova2: $(MOD) prova2.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 prova3: $(MOD) prova3.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+prova4: $(MOD) prova4.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 mag_avg: mag_avg.f90

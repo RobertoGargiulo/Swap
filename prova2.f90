@@ -22,7 +22,7 @@ program swap
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
-  real (c_double) :: norm, time
+  real (c_double) :: norm
   real (c_double), dimension(:), allocatable :: avg, sigma
   complex (c_double_complex) :: alpha, beta
 
@@ -34,7 +34,7 @@ program swap
   logical :: SELECT
   EXTERNAL SELECT
 
-  integer(c_int) :: count_beginning, count_end, count_rate, day, month, year, date(8), time_min
+  integer(c_int) :: count_beginning, count_end, count_rate, time_min
   real (c_double) :: time_s
   character(len=200) :: filestring
   character(len=8) :: time_string
@@ -162,9 +162,9 @@ program swap
   sigma = 0
   !$OMP PARALLEL
   call init_random_seed() 
-  print *, "Size of Thread team: ", omp_get_num_threads()
-  print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, time, ROWS, COLS, H_sparse, &
+  !print *, "Size of Thread team: ", omp_get_num_threads()
+  !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, ROWS, COLS, H_sparse, &
   !$OMP & state_i, state_f)
   do iteration = 1, n_iterations
     
@@ -231,7 +231,7 @@ program swap
     avg(j) = avg(j) + imbalance(nspin, dim, state_i)
     sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
     !print *, "Imbalance", "Magnetization", "Time", "Norm"
-    !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
+    !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
     do j = 2, steps
       call evolve(dim, nz_dim, krylov_dim, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
       state_i = state_f
@@ -239,7 +239,7 @@ program swap
       state_i = state_i / sqrt( dot_product(state_i, state_i) )
       avg(j) = avg(j) + imbalance(nspin, dim, state_i)
       sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
-      !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), time, norm
+      !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
       !print*, avg(j), sigma(j), j*T0
     enddo
     !print *, ""
