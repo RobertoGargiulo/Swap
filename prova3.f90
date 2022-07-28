@@ -102,26 +102,12 @@ program swap
   !---------------------------------------------
 
   !DATA FILES
-  
-  !write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
-  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, &
-  !  & "_no_kick", kick, ".txt"
-  !open(newunit=unit_mag,file=filestring)
 
-  !write(filestring,92) "data/magnetizations/Sz0_vs_Full_MBL_Sz0_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
-  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
-  !open(newunit=unit_avg,file=filestring)
-
-  !EIGENVALUES/EIGENVECTORS
-!  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-!  !open(newunit=unit_ph, file=filestring)
-!  
-!  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
+  write(filestring,92) "data/magnetizations/Sz0_vs_Full_MBL_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
+  open(newunit=unit_avg,file=filestring)
   92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
-!
-!  !open(newunit=unit_w, file=filestring)
+
  
   !------------------------------------------------
 
@@ -173,8 +159,8 @@ program swap
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
   !$OMP do reduction(+:avg, sigma, avg2, sigma2) private(iteration, h_z, norm, j, &
-  !$OMP & ROWS, COLS, H_sparse, &
-  !$OMP & state_i, state_f, H_Sz0_sparse, ROWS_Sz0, COLS_Sz0)
+  !$OMP & ROWS, COLS, H_sparse, state_i, state_f, &
+  !$OMP & state_i_Sz0, state_f_Sz0, H_Sz0_sparse, ROWS_Sz0, COLS_Sz0)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -263,14 +249,14 @@ program swap
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
   avg2 = avg2/n_iterations
   sigma2 = sqrt(sigma2/n_iterations - avg2**2)/sqrt(real(n_iterations))
+  write(unit_avg,*) "  avg sparse                   sigma sparse                avg Sz0 sparse &
+    &              sigma Sz0 sparse            time"
   do j = 1, steps
-    !write(unit_avg,*) avg(j), sigma(j), avg2(j), sigma2(j), j*T0
+    write(unit_avg,*) avg(j), sigma(j), avg2(j), sigma2(j), j*T0
     !if (mod(j,steps/10)==0) then
-      print *, avg(j), sigma(j), avg2(j), sigma2(j), j*T0
+      !print *, avg(j), sigma(j), avg2(j), sigma2(j), j*T0
     !endif
   enddo
-  print *, "  avg sparse                   sigma sparse                avg Sz0 sparse &
-    &              sigma Sz0 sparse            time"
 
 
   deallocate(Jint, Vint, h_z)

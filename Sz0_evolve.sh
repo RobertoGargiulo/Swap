@@ -8,10 +8,10 @@ make $filestring
 #read nspin
 #ncores=4
 #nspin=8
-steps=10
-iterations=1
+steps=4000
+iterations=30
 #time_step=0.5
-n_threads=1
+n_threads=3
 #j=0
 export OMP_NUM_THREADS=$n_threads 
 #kdim=50
