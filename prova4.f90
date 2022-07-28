@@ -31,12 +31,12 @@ program swap
   real (c_double), dimension(:,:), allocatable :: H, W_r
   complex(c_double_complex), dimension(:,:), allocatable :: U
 
-  complex(c_double_complex), dimension(:), allocatable :: init_state, state_i, state_f
+  complex(c_double_complex), dimension(:), allocatable :: init_state, state_i, state_f, state
 
   logical :: SELECT
   EXTERNAL SELECT
 
-  integer(c_int) :: count_beginning, count_end, count_rate, time_min
+  integer(c_int) :: count_beginning, count_end, count_rate, time_min, count1, count2
   real (c_double) :: time_s
   character(len=200) :: filestring
   character(len=8) :: time_string
@@ -125,8 +125,8 @@ program swap
   !------------------------------------------------
 
   !BUILD INITIAL STATE (of type staggered)
-  !allocate(init_state(dim))
-  !call buildStaggState(nspin, dim, alpha, beta, init_state)
+  allocate(init_state(dim))
+  call buildStaggState(nspin, dim, alpha, beta, init_state)
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
   !------------- NO DRIVING ---------- Uncomment following lines to use the driving
@@ -145,20 +145,19 @@ program swap
   !---------------------------------------------------
   !Allocate local interactions and fields
   allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
-  print *, "check 1"
 
   !Allocate Floquet and MBL Operators
-  nz_dim = (nspin+3)*dim_eff/2
+  !nz_dim = (nspin+3)*dim_eff/2
+  nz_dim = (nspin+1)*dim/2
   allocate(H_sparse(nz_dim), ROWS(nz_dim), COLS(nz_dim))
-  print *, "check 2"
   !allocate(H(dim,dim))
-  !allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
+  allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
 
   !Allocate initial and generic state
-  !allocate( state_i(dim), state_f(dim))
+  allocate( state_i(dim), state_f(dim), state(dim))
 
   !Allocate observables and averages
-  !allocate( avg(steps), sigma(steps))
+  allocate( avg(steps), sigma(steps))
 
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
@@ -199,34 +198,60 @@ program swap
 !    print *, ""
   
     !---------------------------------------------------
-  
+    call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    print *, "Call to build_Sz0_Sparse"
-    call buildSz0_SPARSE_HMBL(nspin, dim, dim_eff, nz_dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
-    print *, "Sz0_Sparse Built"
-    !call buildHMBL( nspin, dim, Jint, Vint, h_z, H )
-    !call printmat(dim, H, 'R')
+    print *, "Building Sparse Operator"  
+    call buildSPARSE_HMBL(nspin, dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
 
     !EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 
     
-    !state_i = init_state
-    !norm = dot_product(state_i, state_i)
-    !j = 1
-    !avg(j) = avg(j) + imbalance(nspin, dim, state_i)
-    !sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
-    !!print *, "Imbalance", "Magnetization", "Time", "Norm"
-    !!print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
-    !do j = 2, steps
-    !  call evolve(dim, nz_dim, krylov_dim, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
-    !  state_i = state_f
-    !  norm = dot_product(state_i, state_i)
-    !  state_i = state_i / sqrt( dot_product(state_i, state_i) )
-    !  avg(j) = avg(j) + imbalance(nspin, dim, state_i)
-    !  sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
-    !  !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
-    !  !print*, avg(j), sigma(j), j*T0
-    !enddo
+    state_i = init_state
+    norm = dot_product(state_i, state_i)
+    j = 1
+    avg(j) = avg(j) + imbalance(nspin, dim, state_i)
+    sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
+    !print *, "Imbalance", "Magnetization", "Time", "Norm"
+    !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
+    do j = 2, steps
+      call evolve(dim, nz_dim, krylov_dim, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
+      state_i = state_f
+      norm = dot_product(state_i, state_i)
+      state_i = state_i / sqrt( dot_product(state_i, state_i) )
+      avg(j) = avg(j) + imbalance(nspin, dim, state_i)
+      sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
+      !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
+      !print*, avg(j), sigma(j), j*T0
+    enddo
     !print *, ""
+    call take_time(count_rate, count1, count2, 'T', "Sparse Evolution")
+    print *, "End of Sparse Evolution"
+    print *, ""
+
+    print *, "Building Dense Operator"
+    call buildHMBL( nspin, dim, Jint, Vint, h_z, H )
+    call diagSYM( 'V', dim, H, E, W_r )
+    call expSYM( dim, -C_UNIT*T0, E, W_r, U )
+    state = init_state
+    norm = dot_product(state,state)
+    j = 1
+    avg(j) = avg(j) + imbalance(nspin, dim, state)
+    sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
+    !print *, imbalance(nspin, dim, state), j, norm
+  
+    do j = 2, steps
+      state = matmul(U,state)
+      norm = dot_product(state,state)
+      state = state / sqrt(norm)
+      avg(j) = avg(j) + imbalance(nspin, dim, state) 
+      sigma(j) = sigma(j) + imbalance(nspin, dim, state)**2
+      !print *, imbalance(nspin, dim, state), j, norm
+    enddo
+    !print *, ""
+    call take_time(count_rate, count2, count1, 'T', "Dense Evolution")
+    print *, "End of Dense Evolution"
+    print *, ""
+    print "(A,4(2X,A,I0),2X,A,F5.2)", "Parameters: ", "nspin = ", nspin, "k_dim = ", krylov_dim, "steps = ", steps, & 
+      & "n_iter = ", n_iterations, "time_step = ", T0
  
 
   enddo
@@ -246,15 +271,9 @@ program swap
   !deallocate(USwap)
   !deallocate(PH, W)
 
-  close(unit_avg)
+  !close(unit_avg)
 
-  call system_clock(count_end)
-
-  time_s = real(count_end - count_beginning) / real(count_rate)
-  time_min = int(time_s/60)
-
-  print "(A,1X,I4,A,2X,F15.10,A)", "Elapsed Time: ", time_min, "min", time_s - 60*time_min, "sec"
-  print *, ""
+  !call take_time(count_rate, count_beginning, count_end)
 
 end program swap
 
@@ -268,3 +287,25 @@ logical function SELECT(z)
   RETURN
 
 end
+
+subroutine take_time(count_rate, count_start, count_end, opt, filestring)
+  implicit none
+  integer, intent(in) :: count_rate, count_start
+  integer, intent(out) :: count_end
+  character :: opt*1
+  character (*) :: filestring
+
+  real :: time_s
+  integer :: time_min
+
+  call system_clock(count_end)
+
+  time_s = real(count_end - count_start) / real(count_rate)
+  time_min = int(time_s/60)
+  if(opt == 'T') then
+    print "(A,A,A,1X,I4,A,2X,F15.10,A)", "Elapsed Time for ", filestring, ": ", time_min, "min", time_s - 60*time_min, "sec"
+  else if(opt == 'F') then
+    print *, ""
+  endif
+  !print *, ""
+end subroutine

@@ -196,31 +196,6 @@ program swap
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildSPARSE_HMBL(nspin, dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
 
-    !U = U_MBL !NO DRIVING
-    !U = matmul(U_MBL, USwap)
-  
-    !print *, "UF = "
-    !call printmat(dim, U,'C')
-    !-------------------------------------------------
-
-    !DIAGONALIZE FLOQUET OPERATOR
-!    call diagUN( SELECT, dim, U, PH, W)
-  
-!    print *, "Eigenvalues of U_F "
-!    print "(*(/f15.10spf15.10' i'))", PH(:)
-!    print *,""
-!  
-!    print *, "Eigenvectors of U_F "
-!    do i = 1,dim
-!      write (*,"(*('|',f5.2spf5.2' i'))") W(i,:)
-!    enddo
-!    print *,""
-    !------------------------------------------------
-  
-    !PRINT Eigenvalues/Eigenvectors to file
-    !call writevec(unit_ph,dim,PH,'C')
-    !call writemat(unit_w,dim,W,'C')
-  
     !-----------------------------------------------
   
     !EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 

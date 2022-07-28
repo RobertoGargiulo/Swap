@@ -1,5 +1,5 @@
 ##!/bin/bash
-filestring="prova4"
+filestring="prova3"
 
 make $filestring
 
@@ -8,18 +8,18 @@ make $filestring
 #read nspin
 #ncores=4
 #nspin=8
-steps=4000
+steps=10
 iterations=1
 #time_step=0.5
 n_threads=1
 #j=0
 export OMP_NUM_THREADS=$n_threads 
 #kdim=50
-for time_step in 0.05 0.5 1 2
+for time_step in 0.5 #0.05 0.5 1 2
 do
-for nspin in 8 10 12 14
+for nspin in 10 #{2..18..2}
 do
-  for kdim in 30 50 100 200
+  for kdim in 30 #50 100 200
   do
     for J in 0.5 #1 2
     do
