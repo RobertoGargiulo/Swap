@@ -444,15 +444,17 @@ contains
   end subroutine buildHESPARSE_HMBL
 
 
-  subroutine buildSz0_SPARSE_HMBL(nspin, dim_eff, dim, nz_dim, Jint, Vint, hz, H, ROWS, COLS)
+  subroutine buildSz0_SPARSE_HMBL(nspin, dim_Sz0, nz_dim, Jint, Vint, hz, H, ROWS, COLS)
 
-    integer (c_int), intent(in) :: nspin, dim, dim_eff, nz_dim
+    !
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0, nz_dim
     real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H(nz_dim)
     integer (c_int), intent(out) :: ROWS(nz_dim), COLS(nz_dim)
     
 
-    integer :: config(nspin), states(dim)
+    integer :: config(nspin), states(dim_Sz0)
     integer (c_int) :: i, j, k, m, n, l, r
 
     !print *, nspin, dim, dim_eff, nz_dim
@@ -462,14 +464,14 @@ contains
     COLS = 0
     m = 0
     !print *, "Call to build states"
-    call zero_mag_states(nspin, dim, states)
-    do i = 1, dim
-      !print *, i, states(i)
-    enddo
+    call zero_mag_states(nspin, dim_Sz0, states)
+    !do i = 1, dim
+    !  print *, i, states(i)
+    !enddo
 
 
     !print *, states
-    do l = 1, dim
+    do l = 1, dim_Sz0
 
       i = states(l)
       call decode(i,nspin,config)
@@ -497,7 +499,7 @@ contains
           !print *, ""
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
           H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
-          do r = 1, dim
+          do r = 1, dim_Sz0
             if(states(r) == j) then
               n = r
               exit
@@ -515,44 +517,57 @@ contains
     n = m
     !print *, "Dimensions =", m, dim**2, (nspin+1)*dim/2
     !print *, "H_MBL_SPARSE ="
-    do m = 1, n
-      !print *, H(m), ROWS(m), COLS(m), m
-    enddo
-    print *, nspin, dim, dim_eff, nz_dim, n
+    !do m = 1, n
+    !  print *, H(m), ROWS(m), COLS(m), m
+    !enddo
+    !print *, nspin, 2**nspin, dim_Sz0
+    !print *, nspin, 2**(2*nspin), dim_Sz0**2, nz_dim, n, &
+    ! & real(n)/real(dim_Sz0**2)*100, real(n)/real(2**(2*nspin))*100
 
   end subroutine buildSz0_SPARSE_HMBL
 
 
-  subroutine buildSz0_HMBL(nspin, dim, Jint, Vint, hz, H)
+  subroutine buildSz0_HMBL(nspin, dim_Sz0, Jint, Vint, hz, H)
 
-    integer (c_int), intent(in) :: nspin, dim
+    !dim_Sz0 is the dimensione of the Sz=0 subsapce
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
     real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
-    real (c_double), intent(out) :: H(dim,dim)
+    real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
-    integer :: config(nspin), states(dim)
-    integer (c_int) :: i, j, k, m, n, l, r
+    integer :: config(nspin), states(dim_Sz0)
+    integer (c_int) :: i, j, k, m, n, l, r, rflag
     
     H = 0
-    print *, nspin, dim
-    call zero_mag_states(nspin, dim, states)
-    do l = 1, dim
+    print *, nspin, dim_Sz0
+    call zero_mag_states(nspin, dim_Sz0, states)
+    do l = 1, dim_Sz0
 
       i = states(l)
       call decode(i,nspin,config)
 
       do k = 1, nspin-1
 
-        j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
-        do r = 1, dim
-          if(states(r) == j) then
-            n = r
-            exit
-          endif
-        enddo
-
         H(l,l) = H(l,l) + Vint(k) * (1 - 2 * config(k)) * &
           & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
-        H(r,l) = H(r,l) + Jint(k) * 2 * (config(k) - config(k+1))**2
+
+        if (config(k)/=config(k+1)) then
+          j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
+          do r = 1, dim_Sz0
+            if(states(r) == j) then
+              n = r
+              rflag = 0
+              exit
+            else
+              rflag = 1
+            endif
+          enddo
+          if(rflag==1) then 
+            print*, "rflag = ", rflag
+          endif
+
+          H(r,l) = H(r,l) + Jint(k) * 2 * (config(k) - config(k+1))**2
+        endif
       enddo
       k = nspin
       H(l,l) = H(l,l) + hz(k) * (1 - 2 * config(k))
@@ -562,13 +577,49 @@ contains
 
 
 
+  integer function non_zero_HMBL_Sz0(L)
+
+    integer, intent(in) :: L
+    integer :: nz
+
+    if (L==2) then
+      nz = 4
+    else if (L==4) then
+      nz = 18
+    else if (L==6) then
+      nz = 80
+    else if (L==8) then
+      nz = 350
+    else if (L==10) then
+      nz = 1512
+    else if (L==12) then
+      nz = 6468
+    else if (L==14) then
+      nz = 27456
+    else if (L==16) then
+      nz = 115830
+    else if (L==18) then
+      nz = 486200
+    else if (L==20) then 
+      nz = 2032316
+    else if (L==22) then
+      nz= 8465184
+    else
+      print *, "Chain Length is odd or too large"
+      nz = 0
+    endif
+    
+    non_zero_HMBL_Sz0 = nz
+
+  end function non_zero_HMBL_Sz0
 
 
 
+  subroutine zero_mag_states(nspin, dim_Sz0, states)
 
-  subroutine zero_mag_states(nspin, dim, states)
-    integer (c_int), intent(in) :: nspin, dim
-    integer (c_int), intent(out) :: states(dim)
+    !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    integer (c_int), intent(out) :: states(dim_Sz0)
 
     integer :: config(nspin)
     integer (c_int) :: i, j, k, m
@@ -712,6 +763,36 @@ contains
 
   end function imbalance
 
+  real function imbalance_Sz0(nspin, dim_Sz0, state)
+
+    integer(c_int), intent(in) :: nspin, dim_Sz0
+    complex(c_double_complex), intent(in) :: state(dim_Sz0)
+    real(c_double) :: imb, imbaux
+    integer :: config(nspin)
+    integer (c_int) :: i, j, k, m, l, indx(dim_Sz0)
+
+    imb = 0
+    call zero_mag_states(nspin, dim_Sz0, indx)
+
+    do i = 1, dim_Sz0
+
+      l = indx(i)
+      call decode(l,nspin,config)
+      imbaux = 0
+      do k = 1, nspin
+        imbaux = imbaux + (-1)**k * (1 - 2 * config(k))
+        !print *, i, k, config(:)
+      enddo
+      imbaux = imbaux * abs(state(i))**2
+      imb = imb + imbaux
+      !print *, i, mag, config(:)
+    enddo
+    imb = imb/nspin
+    imbalance_Sz0 = imb
+
+  end function imbalance_Sz0
+
+
   subroutine buildProdState(nspin, dim, alpha, beta, state)
 
     !Builds a product state of the form: (alpha|up> + beta|down) \otimes (alpha|up> + beta|down) \otimes ...
@@ -767,6 +848,32 @@ contains
 
 
   end subroutine buildStaggState
+
+  subroutine buildStaggState_Sz0(nspin, dim_Sz0, state)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(out) :: state(dim_Sz0)
+    
+    integer :: config(nspin), i, k, indx(dim_Sz0), l
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+    call zero_mag_states(nspin, dim_Sz0, indx)
+
+    state = 0
+    l = 0
+    do k = 1, nspin/2
+      l = l + 2**(2*k-1)
+    enddo
+    print *, l
+    
+    do i = 1, dim_Sz0
+      if(indx(i)==l) then
+        state(i) = 1
+        exit
+      endif
+    enddo
+
+  end subroutine buildStaggState_Sz0
 
   subroutine time_avg(steps, start, avg, sigma, t_avg, t_sigma)
     integer (c_int), intent(in) :: steps, start
