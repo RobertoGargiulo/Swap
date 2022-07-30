@@ -44,11 +44,11 @@ SUBROUTINE evolve(n, nz, m, ia, ja, a, v, t, w)
   allocate(iwsp(liwsp))
   allocate(wsp(lwsp))
   
-  wsp = ZERO
-  !do i = 1,n
-    !wsp(i) = ZERO
-    !print *, "wsp(i) = ", wsp(i), "  dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i !!!!
-  !enddo
+  !wsp = ZERO
+  do i = 1,n
+    wsp(i) = ZERO
+   !print *, "wsp(i) = ", wsp(i), "  dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i !!!!
+  enddo
   do i = 1,nz
     wsp(ia(i)) = wsp(ia(i)) + ABS( a(i) )
     !print *, "wsp(ia(i)) = ", dble(wsp(ia(i))), "   abs(a(i)) = ", abs(a(i)),  "  ia(i) = ", ia(i), "i = ", i !!!!

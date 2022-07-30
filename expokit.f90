@@ -619,6 +619,7 @@ CONTAINS
          t_old = t_step
          t_step = gamma ! t_step ! (t_step*tol/err_loc)**xm
          p1 = 10.0d0**(NINT( LOG10( t_step )-SQR1 )-1)
+         print *, "p1 = ", p1 !!!!!
          t_step = AINT( t_step/p1 + 0.55d0 ) ! p1
          if ( itrace.ne.0 ) then
             print*,'t_step =',t_old
@@ -650,6 +651,7 @@ CONTAINS
 !*
       t_new = gamma ! t_step ! (t_step*tol/err_loc)**xm
       p1 = 10.0d0**(NINT( LOG10( t_new )-SQR1 )-1)
+      !print *, " p1 = ", p1 !!!!
       t_new = AINT( t_new/p1 + 0.55d0 ) ! p1
 
       err_loc = MAX( err_loc,rndoff )

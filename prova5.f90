@@ -23,7 +23,7 @@ program swap
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
   
   real (c_double) :: norm
-  real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2
+  real (c_double), dimension(:), allocatable :: avg, sigma
   complex (c_double_complex) :: alpha, beta
 
   integer (c_int), dimension(:), allocatable :: ROWS, COLS, ROWS_Sz0, COLS_Sz0, states
@@ -105,26 +105,15 @@ program swap
 
   write(filestring,92) "data/magnetizations/Sz0_vs_Full_MBL_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
-  open(newunit=unit_avg,file=filestring)
+  !open(newunit=unit_avg,file=filestring)
   92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
 
  
   !------------------------------------------------
 
   !BUILD INITIAL STATE (of type staggered)
-  allocate(init_state(dim), init_state_Sz0(dim_Sz0))
-  call buildStaggState(nspin, dim, alpha, beta, init_state)
+  allocate(init_state_Sz0(dim_Sz0))
   call buildStaggState_Sz0(nspin, dim_Sz0, init_state_Sz0)
-  !print *, "Init_state in total Hilbert Space"
-  !do i = 1, dim
-  !  print *, init_state(i), i
-  !enddo
-  !call zero_mag_states(nspin, dim_Sz0, states)
-  !print *, "Init_state in Sz=0 subspace"
-  !do i = 1, dim_Sz0
-  !  print *, init_state_Sz0(i), states(i), i
-  !enddo
-
 
   !---------------------------------------------------
   !Allocate local interactions and fields
@@ -134,18 +123,14 @@ program swap
   !Allocate Floquet and MBL Operators
   nz_Sz0_dim = non_zero_HMBL_Sz0(nspin)  !(nspin+3)*dim_Sz0/2
   allocate(H_Sz0_sparse(nz_Sz0_dim), ROWS_Sz0(nz_Sz0_dim), COLS_Sz0(nz_Sz0_dim))
-  nz_dim = (nspin+1)*dim/2
-  allocate(H_sparse(nz_dim), ROWS(nz_dim), COLS(nz_dim))
-  !print *, "check 2"
-  !allocate(H(dim,dim))
   !allocate(U(dim,dim), H(dim,dim), E(dim), W_r(dim,dim))
 
   !Allocate initial and generic state
-  allocate( state_i(dim), state_f(dim))
+  !allocate( state_i(dim), state_f(dim))
   allocate( state_i_Sz0(dim_Sz0), state_f_Sz0(dim_Sz0))
 
   !Allocate observables and averages
-  allocate( avg(steps), sigma(steps), avg2(steps), sigma2(steps))
+  allocate( avg(steps), sigma(steps))
 
   !Allocate for Eigenvalues/Eigenvectors
   !allocate(PH(dim), W(dim,dim))
@@ -154,15 +139,13 @@ program swap
   !state_f = 0
   avg = 0
   sigma = 0
-  avg2 = 0
-  sigma2 = 0
   !$OMP PARALLEL
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma, avg2, sigma2) private(iteration, h_z, norm, j, &
-  !$OMP & state_i_Sz0, state_f_Sz0, H_Sz0_sparse, ROWS_Sz0, COLS_Sz0, &
-  !$OMP & ROWS, COLS, H_sparse, state_i, state_f)
+  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, &
+  !$OMP & state_i_Sz0, state_f_Sz0, H_Sz0_sparse, ROWS_Sz0, COLS_Sz0)
+  !!$OMP & ROWS, COLS, H_sparse, state_i, state_f)
   do iteration = 1, n_iterations
      
     if (mod(iteration,10)==0) then 
@@ -191,44 +174,21 @@ program swap
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    !print *, "Call to build_Sz0_Sparse"
     call buildSz0_SPARSE_HMBL(nspin, dim_Sz0, nz_Sz0_dim, Jint, Vint, h_z, H_Sz0_sparse, ROWS_Sz0, COLS_Sz0)
-    print *, "Sz0_Sparse Built"
     !do i = 1, nz_Sz0_dim
     !  print *, H_Sz0_sparse(i), ROWS_Sz0(i), COLS_Sz0(i)
     !enddo
     !call buildSz0_HMBL(nspin, dim_Sz0, Jint, Vint, h_z, H)
     !call printmat(dim_Sz0, H, 'R')
-    !call buildHMBL( nspin, dim, Jint, Vint, h_z, H )
-    !call printmat(dim, H, 'R')
-    call buildSPARSE_HMBL(nspin, dim, nz_dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
 
     !EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 
     
-    state_i = init_state
-    norm = dot_product(state_i, state_i)
-    j = 1
-    avg(j) = avg(j) + imbalance(nspin, dim, state_i)
-    sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
-    !print *, "Imbalance", "Magnetization", "Time", "Norm"
-    !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
-    do j = 2, steps
-      call evolve(dim, nz_dim, krylov_dim, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
-      state_i = state_f
-      norm = dot_product(state_i, state_i)
-      state_i = state_i / sqrt( dot_product(state_i, state_i) )
-      avg(j) = avg(j) + imbalance(nspin, dim, state_i)
-      sigma(j) = sigma(j) + imbalance(nspin, dim, state_i)**2
-      !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
-      !print*, avg(j), sigma(j), j*T0
-    enddo
-    print *, ""
  
     state_i_Sz0 = init_state_Sz0
     norm = dot_product(state_i_Sz0, state_i_Sz0)
     j = 1
-    avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)
-    sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)**2
+    avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)
+    sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)**2
     !print *, "Imbalance", "Magnetization", "Time", "Norm"
     !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
     do j = 2, steps
@@ -237,10 +197,10 @@ program swap
       state_i_Sz0 = state_f_Sz0
       norm = dot_product(state_i_Sz0, state_i_Sz0)
       state_i_Sz0 = state_i_Sz0 / sqrt( dot_product(state_i_Sz0, state_i_Sz0) )
-      avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)
-      sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)**2
+      avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)
+      sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)**2
       !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
-      !print*, avg2(j), sigma2(j), j*T0
+      !print*, avg(j), sigma(j), j*T0
     enddo
     print *, ""
 
@@ -250,21 +210,20 @@ program swap
 
   avg = avg/n_iterations
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
-  avg2 = avg2/n_iterations
-  sigma2 = sqrt(sigma2/n_iterations - avg2**2)/sqrt(real(n_iterations))
   !write(unit_avg,*) "  avg sparse                   sigma sparse                avg Sz0 sparse &
   !  &              sigma Sz0 sparse            time"
   do j = 1, steps
-    !write(unit_avg,*) avg(j), sigma(j), avg2(j), sigma2(j), j*T0
-    !if (mod(j,steps/10)==0) then
-      print *, avg(j), sigma(j), avg2(j), sigma2(j), j*T0
-    !endif
+    !write(unit_avg,*) avg(j), sigma(j), j*T0
+    if (mod(j,10)==1) then
+      print *, avg(j), sigma(j), j*T0
+    endif
   enddo
 
 
   deallocate(Jint, Vint, h_z)
   deallocate(H_Sz0_sparse,ROWS_Sz0,COLS_Sz0)
   deallocate(avg, sigma)
+  !deallocate(H, E, W_r, U)
   !deallocate(USwap)
   !deallocate(PH, W)
 

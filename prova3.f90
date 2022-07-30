@@ -161,15 +161,15 @@ program swap
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP DO reduction(+:avg, sigma) private(iteration, h_z, norm, j
-  !$OMP dim_Sz0, nz_Sz0_dim, krylov_dim, ROWS_Sz0, COLS_Sz0, H_Sz0_sparse, state_i_Sz0, T0, state_f_Sz0)
+  !$OMP DO reduction(+:avg, sigma) private(iteration, h_z, norm, j, &
+  !$OMP & ROWS_Sz0, COLS_Sz0, H_Sz0_sparse, state_i_Sz0, T0, state_f_Sz0)
   !!$OMP & state_i_Sz0, state_f_Sz0, H_Sz0_sparse, ROWS_Sz0, COLS_Sz0)
   !!$OMP & ROWS, COLS, H_sparse, state_i, state_f, &
   do iteration = 1, n_iterations
     
-    !if (mod(iteration,10)==0) then 
-      print *, "Start of iteration ", iteration
-    !endif
+    if (mod(iteration,10)==0) then 
+     print *, "Start of iteration ", iteration
+    endif
 
     !-------------------------------------------------
     !PARAMETERS
@@ -196,7 +196,7 @@ program swap
     !print *, "Call to build_Sz0_Sparse"
     !call zero_mag_states(nspin, dim_Sz0, states)
     call buildSz0_SPARSE_HMBL(nspin, dim_Sz0, nz_Sz0_dim, Jint, Vint, h_z, H_Sz0_sparse, ROWS_Sz0, COLS_Sz0)
-    print *, "Sz0_Sparse Built"
+    !print *, "Sz0_Sparse Built, iter = ", iteration
     !do i = 1, nz_Sz0_dim
     !  print *, H_Sz0_sparse(i), states(ROWS_Sz0(i)), states(COLS_Sz0(i))
     !enddo
@@ -209,25 +209,25 @@ program swap
     !!EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 
     !
     state_i_Sz0 = init_state_Sz0
-    print *, "State is initialized"
+    !print *, "State is initialized"
     norm = dot_product(state_i_Sz0, state_i_Sz0)
     j = 1
-    !avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)
-    !sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)**2
+    avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)
+    sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)**2
     !print *, "Imbalance", "Magnetization", "Time", "Norm"
     !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
     !print*, "Values  :", avg(j), sigma(j), j*T0
 
-    print *, "Start of Evolution Cycle"
+    !print *, "Start of Evolution Cycle"
     do j = 2, steps
-      print *, "Call to 'evolve'"
+      !print *, "Call to 'evolve', iteration = ", iteration
       call evolve(dim_Sz0, nz_Sz0_dim, krylov_dim, ROWS_Sz0, COLS_Sz0, -C_UNIT*dcmplx(H_Sz0_sparse), state_i_Sz0, T0, state_f_Sz0)
       state_i_Sz0 = state_f_Sz0
-      print *, "State is evolved"
-      !norm = dot_product(state_i_Sz0, state_i_Sz0)
-      !state_i_Sz0 = state_i_Sz0 / sqrt( dot_product(state_i_Sz0, state_i_Sz0) )
-      !avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)
-      !sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)**2
+      !print *, "State is evolved"
+      norm = dot_product(state_i_Sz0, state_i_Sz0)
+      state_i_Sz0 = state_i_Sz0 / sqrt( dot_product(state_i_Sz0, state_i_Sz0) )
+      avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)
+      sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state_i_Sz0)**2
       !print*, "Values  :", avg(j), sigma(j), j*T0
     enddo
     print *, ""
@@ -238,7 +238,7 @@ program swap
 
   avg = avg/n_iterations
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
-  write(unit_avg,*) "  avg Sz0 sparse               sigma Sz0 sparse            time"
+  !write(unit_avg,*) "  avg Sz0 sparse               sigma Sz0 sparse            time"
   do j = 1, steps
     !write(unit_avg,*) avg(j), sigma(j), j*T0
     !if (mod(j,steps/10)==0) then
@@ -253,7 +253,7 @@ program swap
   !deallocate(USwap)
   !deallocate(PH, W)
 
-  close(unit_avg)
+  !close(unit_avg)
 
   call system_clock(count_end)
 
