@@ -1,5 +1,7 @@
 FC =  gfortran
-FFLAGS = -O3 -Wall -Wextra -fbacktrace -fcheck=all -fopenmp #-fpp -D IFORT -qopenmp 
+FFLAGS = -O3 -fopenmp #-O3 -Wall -Wextra -g -fbacktrace -fcheck=all -fopenmp -pedantic #-ffpe-trap= invalid, zero, overflow 
+#-Werror -ffree-line-length-500 #-fpp -D IFORT -qopenmp 
+#-pg -> per debugging   $ gprof <program-name> <gmon.out>
 SRC = mod_print.f90 mod_genmat.f90 mod_exp.f90 mataid.f90 expokit.f90 exp_sparse.f90 
 LIBS = -llapack -lblas
 PFLAGS = #-qopenmp #-fopenmp
@@ -22,6 +24,9 @@ prova3: $(MOD) prova3.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 prova4: $(MOD) prova4.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+prova5: $(MOD) prova5.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 mag_avg: mag_avg.f90

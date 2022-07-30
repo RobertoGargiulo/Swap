@@ -99,7 +99,7 @@ program swap
   !---------------------------------------------
   write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
-  open(newunit=unit_mag,file=filestring)
+  !open(newunit=unit_mag,file=filestring)
 
   write(filestring,92) "data/magnetizations/Clean_MBL_OMP_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
@@ -188,14 +188,14 @@ program swap
   do j = 1, steps
     write(unit_avg,*) avg(j), sigma(j), j*T0
   enddo
-  do iteration = 1, n_iterations
-    j = 1
-    write(unit_mag,*) "iteration = ", iteration
-    write(unit_mag,*) imb(iteration,j), j*T0
-    do j = 2, steps
-      write(unit_mag,*) imb(iteration,j), j*T0
-    enddo
-  enddo
+  !do iteration = 1, n_iterations
+  !  j = 1
+  !  write(unit_mag,*) "iteration = ", iteration
+  !  write(unit_mag,*) imb(iteration,j), j*T0
+  !  do j = 2, steps
+  !    write(unit_mag,*) imb(iteration,j), j*T0
+  !  enddo
+  !enddo
 
 
 

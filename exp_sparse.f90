@@ -3,6 +3,7 @@ MODULE exp_sparse
 !Important: requires to be built with mataid.o expokit.o
 USE MATAID
 USE EXPOKIT
+USE GENMAT !!!!!!!
 implicit none
 !external zgcoov
 DOUBLE COMPLEX, PRIVATE, PARAMETER :: ZERO=DCMPLX(0.0d0,0.0d0)
@@ -33,8 +34,8 @@ SUBROUTINE evolve(n, nz, m, ia, ja, a, v, t, w)
   double precision tol, anorm
   complex*16, dimension(:), allocatable::  wsp
   integer i, itrace, iflag
-  complex*16 ZERO
-  parameter( ZERO=(0.0d0,0.0d0) )
+  !complex*16 ZERO
+  !parameter( ZERO=(0.0d0,0.0d0) )
   !common /CMAT/ a, ia, ja, nz, n
   !	  arguments variables ...
   integer lwsp, liwsp
@@ -43,16 +44,30 @@ SUBROUTINE evolve(n, nz, m, ia, ja, a, v, t, w)
   allocate(iwsp(liwsp))
   allocate(wsp(lwsp))
   
-  do i = 1,n
-    wsp(i) = ZERO
-  enddo
+  wsp = ZERO
+  !do i = 1,n
+    !wsp(i) = ZERO
+    !print *, "wsp(i) = ", wsp(i), "  dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i !!!!
+  !enddo
   do i = 1,nz
     wsp(ia(i)) = wsp(ia(i)) + ABS( a(i) )
+    !print *, "wsp(ia(i)) = ", dble(wsp(ia(i))), "   abs(a(i)) = ", abs(a(i)),  "  ia(i) = ", ia(i), "i = ", i !!!!
+    !print *, " dreal(wsp(ia(i))) = ", dreal(wsp(ia(i))), "   abs(a(i)) = ", abs(a(i)), " ia(i) = ", ia(i) , " i = ", i !!!!
   enddo
+  !!!!!
+  !do i = 1, lwsp
+  !  print *, "wsp(i) = ", wsp(i), "  dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i !!!!
+  !enddo
+  !!!!!!
+  !print *, " n = ", n, " nz = ", nz, " m = ", m, " lwsp = ", lwsp !!!!
   anorm = dreal(wsp(1))
+  !print *, "anorm (evolve initial) = ", anorm, " i = ", 1 !!!!!
   do i = 2,lwsp
     if ( anorm.lt.DBLE(wsp(i)) ) anorm =  dreal(wsp(i))
+    !if ( anorm<=dble(wsp(i))) print *, "anorm (evolve mid) = ", anorm, " dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i  !!!!!
+    !print *, "dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i !!!!!
   enddo
+  !print *, "anorm (evolve final) = ", anorm !!!!!
   
   
   

@@ -341,12 +341,12 @@ contains
 
 
 
-  subroutine buildSPARSE_HMBL(nspin, dim, Jint, Vint, hz, H, ROWS, COLS)
+  subroutine buildSPARSE_HMBL(nspin, dim, nz_dim, Jint, Vint, hz, H, ROWS, COLS)
 
-    integer (c_int), intent(in) :: nspin, dim
+    integer (c_int), intent(in) :: nspin, dim, nz_dim
     real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
-    real (c_double), intent(out) :: H((nspin+1)*dim/2)
-    integer (c_int), intent(out) :: ROWS((nspin+1)*dim/2), COLS((nspin+1)*dim/2)
+    real (c_double), intent(out) :: H(nz_dim)
+    integer (c_int), intent(out) :: ROWS(nz_dim), COLS(nz_dim)
 
     integer :: config(nspin)
     integer (c_int) :: i, j, k, m
@@ -499,12 +499,14 @@ contains
           !print *, ""
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
           H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
-          do r = 1, dim_Sz0
-            if(states(r) == j) then
-              n = r
-              exit
-            endif
-          enddo
+          !n = 1
+          n = binsearch(j,states)
+          !do r = 1, dim_Sz0
+            !if(states(r) == j) then
+            !  n = r
+            !  exit
+            !endif
+          !enddo
           COLS(m) = l
           ROWS(m) = n
           !print *, "(Second cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
@@ -893,8 +895,53 @@ contains
   end subroutine time_avg
 
 
-
-
+  integer (c_int) function binsearch(val, array)
+  
+  
+    implicit none
+    integer (c_int), intent(in) :: val, array(:)
+    integer (c_int) :: mid, start, finish, range
+    
+    
+    
+    binsearch = -1
+    start = 1
+    finish = size(array)
+    
+    
+    
+    range = finish - start
+    mid = (finish + start) / 2
+    
+    
+    
+    do while (array(mid) /= val .and. range > 0)
+    
+      if (val > array(mid)) then
+      
+        start = mid + 1
+      
+      else
+      
+        finish = mid - 1
+      
+      end if
+      
+      range = finish - start
+      
+      mid = (start + finish) / 2
+    
+    end do
+    
+    
+    
+    if (array(mid) == val) then
+    
+      binsearch = mid
+    
+    end if
+  
+  end function binsearch
 
 
 
