@@ -874,6 +874,7 @@ contains
     
     t_avg = 0
     t_sigma = 0
+    !print *, start
     do j = start, steps
       t_avg = t_avg + avg(j)
       t_sigma = t_sigma + sigma(j)**2
