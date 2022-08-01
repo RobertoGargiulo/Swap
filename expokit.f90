@@ -83,17 +83,13 @@ CONTAINS
       do j = 1,m
          do i = 1,m
             wsp(i) = wsp(i) + ABS( H(i,j) )
-            !if (j == m) print *, real(wsp(i)), j !!!!!
          enddo
       enddo
       hnorm = 0.0d0
       do i = 1,m
-         !print*, hnorm, dble(wsp(i))  !!!!
          hnorm = MAX( hnorm,DBLE(wsp(i)) )
       enddo
-      !print *, hnorm, t !!!!
       hnorm = ABS( t*hnorm )
-      !print *, "hnorm = t*hnorm = ", hnorm !!!!!
       if ( hnorm.eq.0.0d0 ) stop 'Error - null H in input of ZGPADM.'
       ns = MAX( 0,INT(LOG(hnorm)/LOG(2.0d0))+2 )
       scale =  CMPLX( t/DBLE(2**ns),0.0d0 )
@@ -475,7 +471,6 @@ CONTAINS
       nscale   = 0
 
       t_out    = ABS( t )
-      !print *, "t_out (initial) = ", t_out !!!!!
       tbrkdwn  = 0.0d0
       step_min = t_out
       step_max = 0.0d0
@@ -508,12 +503,9 @@ CONTAINS
       SQR1 = SQRT( 0.1d0 )
       xm = 1.0d0/DBLE( m )
       p2 = tol*(((m+1)/2.72D0)**(m+1))*SQRT(2.0D0*3.14D0*(m+1))
-      !print *, "anorm (t_new) = ", anorm !!!!!
       t_new = (1.0d0/anorm)*(p2/(4.0d0*beta*anorm))**xm
-      !print *, "t_new (1) = ", t_new !!!!!
       p1 = 10.0d0**(NINT( LOG10( t_new )-SQR1 )-1)
       t_new = AINT( t_new/p1 + 0.55d0 ) ! p1
-      !print *, "t_new (2) = ", t_new !!!!!
 !*
 !---  step-by-step integration ...
 !*
@@ -521,7 +513,6 @@ CONTAINS
 
       nstep = nstep + 1
       t_step = MIN( t_out-t_now, t_new )
-      !print *, "t_step (t_out>t_now) = ", t_step !!!!!
       p1 = 1.0d0/beta
       do i = 1,n
          wsp(iv + i-1) = p1*w(i)
@@ -550,7 +541,6 @@ CONTAINS
             mbrkdwn = j
             tbrkdwn = t_now
             t_step = t_out-t_now
-            !print *, "t_step (happy breakdown) = ", t_step !!!!
             goto 300
          endif
          wsp(ih+(j-1)*mh+j) = CMPLX( hj1j )
@@ -577,7 +567,6 @@ CONTAINS
       mx = mbrkdwn + k1
       if ( ideg.ne.0 ) then
 !---     irreducible rational Pade approximation ...
-         !print *, "Call to ZGPADM"
          call ZGPADM( ideg, mx, sgn*t_step, wsp(ih),mh,&
                      wsp(ifree),lfree, iwsp, iexph, ns, iflag )
          iexph = ifree + iexph - 1
@@ -619,7 +608,6 @@ CONTAINS
          t_old = t_step
          t_step = gamma ! t_step ! (t_step*tol/err_loc)**xm
          p1 = 10.0d0**(NINT( LOG10( t_step )-SQR1 )-1)
-         print *, "p1 = ", p1 !!!!!
          t_step = AINT( t_step/p1 + 0.55d0 ) ! p1
          if ( itrace.ne.0 ) then
             print*,'t_step =',t_old
@@ -651,7 +639,6 @@ CONTAINS
 !*
       t_new = gamma ! t_step ! (t_step*tol/err_loc)**xm
       p1 = 10.0d0**(NINT( LOG10( t_new )-SQR1 )-1)
-      !print *, " p1 = ", p1 !!!!
       t_new = AINT( t_new/p1 + 0.55d0 ) ! p1
 
       err_loc = MAX( err_loc,rndoff )

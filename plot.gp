@@ -124,8 +124,9 @@ Jint = '0.00'
 #plot for [ hz in "2.50 3.00 4.00" ] 'filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J'.Jint.'_V'.Vint.'_h'.hx.'_hz'.hz.'_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = '.hz
 
 
-filename = "data/magnetizations/Sz0_vs_Full_MBL_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin10_steps100000_iterations1_J0.50_V1.00_hz3.00_kdim30.txt"
-filename = "data/magnetizations/Sz0_vs_Full_MBL_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin10_steps4000_iterations30_J0.50_V1.00_hz3.00_kdim30.txt"
+#filename = "data/magnetizations/Sz0_vs_Full_MBL_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin10_steps100000_iterations1_J0.50_V1.00_hz3.00_kdim30.txt"
+#filename = "data/magnetizations/Sz0_vs_Full_MBL_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin10_steps4000_iterations30_J0.50_V1.00_hz3.00_kdim30.txt"
+filename = "data/magnetizations/Sz0_SPARSE_vs_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin12_steps12000_iterations1_J0.50_V1.00_hz3.00_kdim30.txt"
 ### Plot AVG difference between two computations
 Jint = '0.50'
 Vint = '1.00'
@@ -136,8 +137,8 @@ unset yrange #[-0.01:0.01]
 set xrange [0.5:0.5*steps]
 set ytics format "%.1s*10^{%T}"
 set xtics format "10^{%T}"
-set output "figures/Sz0_vs_Full_Imb_AVG_J".Jint."_V".Vint."_hz".hz.".png"
-set title "Sparse H in Full HS vs Sz=0\nImbalance over 30 Iterations, J = ".Jint.", V = ".Vint.", hz = ".hz
+set output "figures/Sz0_Sparse_vs_Dense_Imb_AVG_J".Jint."_V".Vint."_hz".hz.".png"
+set title "Sparse vs Dense H in Sz=0\nImbalance over Single Iteration, J = ".Jint.", V = ".Vint.", hz = ".hz
 plot filename u 5:($1-$3) w l
 
 

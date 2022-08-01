@@ -555,18 +555,7 @@ contains
 
         if (config(k)/=config(k+1)) then
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
-          do r = 1, dim_Sz0
-            if(states(r) == j) then
-              n = r
-              rflag = 0
-              exit
-            else
-              rflag = 1
-            endif
-          enddo
-          if(rflag==1) then 
-            print*, "rflag = ", rflag
-          endif
+          r = binsearch(j,states)
 
           H(r,l) = H(r,l) + Jint(k) * 2 * (config(k) - config(k+1))**2
         endif

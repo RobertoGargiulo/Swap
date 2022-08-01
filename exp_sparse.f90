@@ -44,30 +44,17 @@ SUBROUTINE evolve(n, nz, m, ia, ja, a, v, t, w)
   allocate(iwsp(liwsp))
   allocate(wsp(lwsp))
   
-  !wsp = ZERO
-  do i = 1,n
-    wsp(i) = ZERO
-   !print *, "wsp(i) = ", wsp(i), "  dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i !!!!
-  enddo
+  wsp = ZERO
+  !do i = 1,n
+  !  wsp(i) = ZERO
+  !enddo
   do i = 1,nz
     wsp(ia(i)) = wsp(ia(i)) + ABS( a(i) )
-    !print *, "wsp(ia(i)) = ", dble(wsp(ia(i))), "   abs(a(i)) = ", abs(a(i)),  "  ia(i) = ", ia(i), "i = ", i !!!!
-    !print *, " dreal(wsp(ia(i))) = ", dreal(wsp(ia(i))), "   abs(a(i)) = ", abs(a(i)), " ia(i) = ", ia(i) , " i = ", i !!!!
   enddo
-  !!!!!
-  !do i = 1, lwsp
-  !  print *, "wsp(i) = ", wsp(i), "  dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i !!!!
-  !enddo
-  !!!!!!
-  !print *, " n = ", n, " nz = ", nz, " m = ", m, " lwsp = ", lwsp !!!!
   anorm = dreal(wsp(1))
-  !print *, "anorm (evolve initial) = ", anorm, " i = ", 1 !!!!!
   do i = 2,lwsp
     if ( anorm.lt.DBLE(wsp(i)) ) anorm =  dreal(wsp(i))
-    !if ( anorm<=dble(wsp(i))) print *, "anorm (evolve mid) = ", anorm, " dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i  !!!!!
-    !print *, "dreal(wsp(i)) = ", dreal(wsp(i)), " i = ", i !!!!!
   enddo
-  !print *, "anorm (evolve final) = ", anorm !!!!!
   
   
   

@@ -212,9 +212,11 @@ program swap
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
   !write(unit_avg,*) "  avg sparse                   sigma sparse                avg Sz0 sparse &
   !  &              sigma Sz0 sparse            time"
-  do j = 1, steps
+  j = 1
+  print *, avg(j), sigma(j), j*T0
+  do j = 2, steps
     !write(unit_avg,*) avg(j), sigma(j), j*T0
-    if (mod(j,10)==1) then
+    if (mod(j,100)==0) then
       print *, avg(j), sigma(j), j*T0
     endif
   enddo
