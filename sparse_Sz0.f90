@@ -110,8 +110,8 @@ program swap
   !  & "_no_kick", kick, ".txt"
   !open(newunit=unit_mag,file=filestring)
 
-  write(filestring,92) "data/magnetizations/Sz0_SPARSE_vs_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
-    & nspin, "_steps", steps, &
+  write(filestring,92) "data/magnetizations/Sz0_SPARSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
+    & nspin, "_steps", steps, "_time_step", T0, &
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
   open(newunit=unit_avg,file=filestring)
 
@@ -122,7 +122,7 @@ program swap
 !  
 !  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
 !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
+  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
   !If V >= 10 (or hz) we can use
   ! hz_coupling --> int(hz_coupling), hz_coupling-int(hz_coupling)
   !   92  format(A,I0, A,I0, A,I0, A,F4.2, A,I2.2,F0.2, A,F4.2, A, I0, A)
@@ -209,7 +209,7 @@ program swap
     !---------------------------------------------------
     call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    print *, "Building Sparse Operator"  
+    !print *, "Building Sparse Operator"  
     call buildSz0_SPARSE_HMBL(nspin, dim_Sz0, nz_Sz0_dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
 
     !EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 
@@ -271,7 +271,7 @@ program swap
   !$OMP END DO
   !$OMP END PARALLEL 
 
-  call take_time(count_rate, count_beginning, count1, 'T', "Elapsed Time: ")
+  call take_time(count_rate, count_beginning, count1, 'T', "Program: ")
 
   avg = avg/n_iterations
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))

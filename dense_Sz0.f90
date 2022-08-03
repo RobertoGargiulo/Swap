@@ -22,7 +22,7 @@ program swap
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
-  real(c_double) :: t_avg, t_sigma, t_avg2, t_sigma2
+  real(c_double) :: t_avg, t_sigma
   
   real (c_double) :: norm
   real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2
@@ -31,7 +31,8 @@ program swap
   integer (c_int), dimension(:), allocatable :: ROWS, COLS
   real (c_double), dimension(:), allocatable :: H_sparse, E
   real (c_double), dimension(:,:), allocatable :: H, W_r
-  complex(c_double_complex), dimension(:,:), allocatable :: U
+  complex(c_double_complex), dimension(:), allocatable :: PH
+  complex(c_double_complex), dimension(:,:), allocatable :: U, W
 
   complex(c_double_complex), dimension(:), allocatable :: init_state, state_i, state_f, state
 
@@ -64,7 +65,7 @@ program swap
   read (*,*) steps
   print*,""
 
-  write (*,*) "Maximum Krylov Dimension"
+  write (*,*) "Maximum Krylov Dimension (useless for Dense Evolution)"
   read (*,*) krylov_dim
   print*,""
 
@@ -105,30 +106,28 @@ program swap
 
   !DATA FILES
   
-  !write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
-  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, &
-  !  & "_no_kick", kick, ".txt"
-  !open(newunit=unit_mag,file=filestring)
 
-  write(filestring,92) "data/magnetizations/Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
-    & nspin, "_steps", steps, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
+  write(filestring,91) "data/magnetizations/Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
+    & nspin, "_steps", steps, "_time_step", T0, &
+    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
   open(newunit=unit_avg,file=filestring)
 
   !EIGENVALUES/EIGENVECTORS
-!  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-!  !open(newunit=unit_ph, file=filestring)
-!  
-!  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
+  write(filestring,92) "data/eigen/Sz0_DENSE_MBL_PH_nspin", nspin, "_steps", steps, &
+  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  open(newunit=unit_ph, file=filestring)
+  
+  write(filestring,92) "data/eigen/Sz0_DENSE_MBL_W_nspin", nspin, "_steps", steps, &
+  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  open(newunit=unit_w, file=filestring)
+
+  91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
+  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !If V >= 10 (or hz) we can use
   ! hz_coupling --> int(hz_coupling), hz_coupling-int(hz_coupling)
   !   92  format(A,I0, A,I0, A,I0, A,F4.2, A,I2.2,F0.2, A,F4.2, A, I0, A)
   !   
 !
-!  !open(newunit=unit_w, file=filestring)
  
   !------------------------------------------------
 
@@ -159,28 +158,30 @@ program swap
   allocate(U(dim_Sz0,dim_Sz0), H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
 
   !Allocate initial and generic state
-  allocate( state_i(dim_Sz0), state_f(dim_Sz0))
+  allocate( state(dim_Sz0) )
 
   !Allocate observables and averages
   allocate( avg(steps), sigma(steps))
   !allocate( avg2(steps), sigma2(steps))
 
   !Allocate for Eigenvalues/Eigenvectors
-  !allocate(PH(dim), W(dim,dim))
+  !allocate(PH(dim_Sz0))
+  !allocate(W(dim_Sz0,dim_Sz0))
 
-  state_i = init_state
-  state_f = 0
+  !state_i = init_state
+  !state_f = 0
   avg = 0
   sigma = 0
   !avg2 = 0
   !sigma2 = 0
+  r_avg = 0
+  r_sigma = 0
   !$OMP PARALLEL
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
   !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, &
-  !$OMP & state_i, state_f, ROWS, COLS, H_sparse)
-  !!$OMP & H, E, W_r, U)
+  !$OMP & state, H, E, W_r, U, PH, W)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -214,14 +215,17 @@ program swap
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     !PRINT Eigenvalues/Eigenvectors to file
-    call writevec(unit_ph,dim,E,'R')
-    call writemat(unit_w,dim,W_r,'R')
+    !write(unit_ph,*) "iteration = ", iteration
+    !call writevec(unit_ph,dim_Sz0,E,'R')
+    !write(unit_w,*) "iteration = ", iteration
+    !call writemat(unit_w,dim_Sz0,W_r,'R')
+    call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sigma(iteration))
 
     state = init_state
     norm = dot_product(state,state)
     j = 1
     avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state)
-    sigma2(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
+    sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
     !print *, imbalance(nspin, dim, state), j, norm
   
     do j = 2, steps
@@ -229,20 +233,20 @@ program swap
       norm = dot_product(state,state)
       state = state / sqrt(norm)
       avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state) 
-      sigma(j) = sigma(j) + imbalance(nspin, dim_Sz0, state)**2
+      sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
       !print *, imbalance(nspin, dim, state), j, norm
     enddo
     !print *, ""
-    call take_time(count_rate, count2, count1, 'T', "Dense Evolution")
-    print *, "End of Dense Evolution"
-    print *, ""
+    !call take_time(count_rate, count2, count1, 'T', "Dense Evolution")
+    !print *, "End of Dense Evolution"
+    !print *, ""
  
 
   enddo
   !$OMP END DO
   !$OMP END PARALLEL 
 
-  call take_time(count_rate, count_beginning, count1, 'T', "Elapsed Time: ")
+  call take_time(count_rate, count_beginning, count1, 'T', "Program: ")
 
   avg = avg/n_iterations
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
@@ -254,7 +258,7 @@ program swap
     !print *, avg(j), sigma(j), avg2(j), sigma2(j), j*T0
   enddo
   
-  start = int(100/T0)
+  start = int(100/T0) !The average starts from the step for which 100 = start*T0
   call time_avg(steps, start, avg, sigma, t_avg, t_sigma)
   !call time_avg(steps, start, avg2, sigma2, t_avg2, t_sigma2)
 
@@ -264,8 +268,8 @@ program swap
   print *, start, t_avg, t_sigma!, t_avg2, t_sigma2
 
   deallocate(Jint, Vint, h_z)
-  deallocate(H_sparse,ROWS,COLS)
-  !deallocate(avg, sigma)
+  deallocate(avg, sigma)
+  deallocate(H,E,W_r,U)
   !deallocate(USwap)
   !deallocate(PH, W)
 

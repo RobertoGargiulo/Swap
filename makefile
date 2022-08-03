@@ -30,6 +30,12 @@ prova4: $(MOD) prova4.o
 prova5: $(MOD) prova5.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+dense_Sz0: $(MOD) dense_Sz0.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+sparse_Sz0: $(MOD) sparse_Sz0.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 mag_avg: mag_avg.f90
 	$(FC) $(FFLAGS) -o $@ $@.f90
 

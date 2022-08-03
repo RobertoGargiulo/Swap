@@ -103,7 +103,7 @@ set xtics (0.1, 1, 10, 1e2, 1e3, 1e4, 1e5, 1e6) format "10^{%T}"
 #set output "figures/figure.png"
 set title 'no kick, |1010...> state, nspin = '.nspin.', n_{iter} = '.n_iter.', V = '.Vint
 set ylabel 'I(t)'
-set xlabel 't(in units of hbar/V)'
+set xlabel 't(in units of hbar/2J)'
 #plot for [hz in "1.00 2.00 3.00 4.00 6.00"] 'filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J'.Jint.'_V'.Vint.'_h'.hx.'_hz'.hz.'_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz ='.hz
 
 #plot  'filetype.'_AVG_nspin'.nspin.'_steps'.steps.'_iterations'.n_iter.'_J1.00_V'.Vint.'_h'.hx.'_hz3.00_no_kick'.kick.'.txt' u 2:(-$1) w l title 'hz = 3, J = 1',\
@@ -143,6 +143,34 @@ plot filename u 5:($1-$3) w l
 
 
 
+#Scaling Plot
+
+steps="4000"
+iter="30"
+J = "0.50"
+V = "1.00"
+time_step="0.5"
+filetype = "PT_Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin"
+#list(start,end,increment)=system(sprintf("seq %g %g %g", start, increment, end))
+start=0.; end=6.; inc=0.6
+list = ""; a=start-inc; while (a<end) {list=list.sprintf(" %.2f",a=a+inc)}
+list = "6 8 10 12"
+
+unset logscale x
+set yrange [-0.1:1.1]
+unset xrange
+unset xtics
+unset ytics
+#set xrange [time_step:time_step*steps]
+#set xtics (0.1, 1, 10, 1e2, 1e3, 1e4, 1e5, 1e6) format "10^{%T}"
+set ytics format "%.1s"
+set xtics format "%.1s"
+set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_close_to_hz1.00.png"
+#set output "figures/figure.png"
+set title 'no kick, |1010...> state, n_{iter} = '.iter.', J = '.J.' V = '.V
+set ylabel 'I(t)'
+set xlabel 'h_{z}/J'
+plot for [nspin in list] filetype.nspin."_time_step".time_step."_steps".steps.".txt"u ($6/$4):(-$2) w l title 'L ='.nspin
 
 
 

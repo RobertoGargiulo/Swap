@@ -5,7 +5,7 @@ program min_time_avg
 
   implicit none
 
-  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations, start
+  integer (c_int)     ::  nspin, iteration, steps, n_iterations, start
   integer (c_int)     ::  i, j, k, p
   integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
 
@@ -17,11 +17,12 @@ program min_time_avg
 
 
   read (*,*) nspin
-  dim = 2**nspin
 
   read (*,*) n_iterations
 
   read (*,*) steps
+
+  read (*,*) krylov_dim
 
   read (*,*) T0
   
@@ -33,18 +34,19 @@ program min_time_avg
 
 
 
-  write(filestring,92) "data/magnetizations/Clean_MBL_OMP_AVG_FLUCT_Imbalance_nspin", nspin, "_steps", steps, &
+  write(filestring,91) "data/magnetizations/Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
+    & nspin, "_steps", steps, "_time_step", T0, &
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
   open(newunit=unit_avg,file=filestring)
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
+  91  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A)
 
   !print *, filestring
   
   !Allocate observables and averages
-  allocate( avg(steps), sigma(steps) )
+  !allocate( avg(steps), sigma(steps) )
 
   do j = 1, steps
-    read(unit_avg,*) avg(j), sigma(j), time_j
+    read(unit_avg,*) 
   enddo
   
   start = int(100/T0)

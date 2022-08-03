@@ -44,10 +44,10 @@ SUBROUTINE evolve(n, nz, m, ia, ja, a, v, t, w)
   allocate(iwsp(liwsp))
   allocate(wsp(lwsp))
   
-  wsp = ZERO
-  !do i = 1,n
-  !  wsp(i) = ZERO
-  !enddo
+  !wsp = ZERO
+  do i = 1,n
+    wsp(i) = ZERO
+  enddo
   do i = 1,nz
     wsp(ia(i)) = wsp(ia(i)) + ABS( a(i) )
   enddo
@@ -61,7 +61,7 @@ SUBROUTINE evolve(n, nz, m, ia, ja, a, v, t, w)
   !intrinsic ABS, CMPLX, CONJG, DBLE
   
   tol = 1.0d-7
-  itrace = 0
+  itrace = 1
   !WRITE(*,*) 'Orcomeno'
   call ZGEXPV( n,a,ia,ja,nz, m, t,v,w, tol, anorm, wsp,lwsp, iwsp,liwsp, zgcoov, itrace, iflag )
      

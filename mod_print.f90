@@ -83,7 +83,7 @@ contains
         write (u,*) int(M(i,:))
       enddo
     end if
-    print *,""
+    !print *,""
 
   end subroutine writemat_C
 
@@ -103,7 +103,7 @@ contains
         write (u,*) int(M(i,:))
       enddo
     end if
-    print *,""
+    !print *,""
 
   end subroutine writemat_R
 
@@ -130,7 +130,7 @@ contains
     else if (t == 'G') then
       write (u,'(f15.10,f15.10)') V(:)
     end if
-    print *,""
+    !print *,""
 
   end subroutine writevec_C
 
@@ -156,7 +156,7 @@ contains
         write (u,"(f15.10)") V(i)
       enddo
     end if
-    print *,""
+    !print *,""
 
   end subroutine writevec_R
 

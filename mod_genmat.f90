@@ -541,7 +541,7 @@ contains
     integer (c_int) :: i, j, k, m, n, l, r, rflag
     
     H = 0
-    print *, nspin, dim_Sz0
+    !print *, nspin, dim_Sz0
     call zero_mag_states(nspin, dim_Sz0, states)
     do l = 1, dim_Sz0
 
@@ -892,43 +892,28 @@ contains
     integer (c_int), intent(in) :: val, array(:)
     integer (c_int) :: mid, start, finish, range
     
-    
-    
     binsearch = -1
     start = 1
     finish = size(array)
     
-    
-    
     range = finish - start
     mid = (finish + start) / 2
-    
-    
     
     do while (array(mid) /= val .and. range > 0)
     
       if (val > array(mid)) then
-      
         start = mid + 1
-      
       else
-      
         finish = mid - 1
-      
       end if
       
       range = finish - start
-      
       mid = (start + finish) / 2
     
     end do
     
-    
-    
     if (array(mid) == val) then
-    
       binsearch = mid
-    
     end if
   
   end function binsearch
