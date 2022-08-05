@@ -114,13 +114,13 @@ program swap
   open(newunit=unit_avg,file=filestring)
 
   !EIGENVALUES/EIGENVECTORS
-  write(filestring,92) "data/eigen/Sz0_DENSE_MBL_PH_nspin", nspin, "_steps", steps, &
-  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
-  open(newunit=unit_ph, file=filestring)
+  !write(filestring,92) "data/eigen/Sz0_DENSE_MBL_PH_nspin", nspin, "_steps", steps, &
+  !&  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  !open(newunit=unit_ph, file=filestring)
   
-  write(filestring,92) "data/eigen/Sz0_DENSE_MBL_W_nspin", nspin, "_steps", steps, &
-  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
-  open(newunit=unit_w, file=filestring)
+  !write(filestring,92) "data/eigen/Sz0_DENSE_MBL_W_nspin", nspin, "_steps", steps, &
+  !&  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  !open(newunit=unit_w, file=filestring)
 
   91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -282,7 +282,7 @@ program swap
   !deallocate(USwap)
   !deallocate(PH, W)
 
-  !close(unit_avg)
+  close(unit_avg)
 
   !call take_time(count_rate, count_beginning, count_end)
 
