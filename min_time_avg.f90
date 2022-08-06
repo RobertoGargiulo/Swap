@@ -22,8 +22,6 @@ program min_time_avg
 
   read (*,*) steps
 
-  read (*,*) krylov_dim
-
   read (*,*) T0
   
   read (*,*) J_coupling

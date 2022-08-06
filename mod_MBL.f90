@@ -95,10 +95,44 @@ contains
 
   end subroutine right_reduced_DM
 
+  subroutine edges_reduced_DM(nspin, nspin_A, nspin_B, dim, dim_A, dim_B, psi, rho_AB)
+
+    !Computes the reduced density matrix for a pure state of the first (from the left) 'nspinA' spins and last 'nspinB' spins in the chain
+    ! rho_AB = Tr_C(rho) where C is the remaining region
+    !Traces out the remaining (nspin - nspin_A - nspin_B) spins
+    !Works in the full Hilbert Space (with the correspondence j<->{b_k})
+
+    integer, intent(in) :: nspin, nspin_A, nspin_B, dim, dim_A, dim_B
+    complex (c_double_complex), intent(in) :: psi(dim)
+    complex (c_double_complex), intent(out) :: rho_AB(dim_B,dim_B)
+
+    integer :: jAB, kAB, jA, jB, kA, kB, iC, dim_C
+
+    dim_C = dim/(dim_A*dim_B)
+    rho_AB = 0
+
+    do jA = 1, dim_A
+      do jB = 1, dim_B
+        do kA = 1, dim_A
+          do kB = 1, dim_B
+            do iC = 1, dim_C
+
+              jAB = jA + 2**(nspin_A)*jB
+              kAB = kA + 2**(nspin_A)*kB
+
+              rho_AB(jAB,kAB) = rho_AB(jAB,kAB) + psi(jA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * jB) * &
+               & dconjg( psi(kA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * kB ) )
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+
+  end subroutine edges_reduced_DM
 
 
 
-  real function entanglement(dim, rho)
+  function entanglement(dim, rho)
 
     !Computes the Entanglement (von Neumann) Entropy for a given density matrix rho of dimension dim
     ! EE = S = -Tr(rho * ln(rho))
@@ -106,6 +140,7 @@ contains
 
     integer, intent(in) :: dim
     real (c_double_complex), intent(in) :: rho(dim,dim)
+    real (c_double) :: entanglement
 
     real (c_double) :: EE, prob(dim), W(dim,dim)
     integer :: i
@@ -122,7 +157,42 @@ contains
   end function entanglement
 
 
+  integer function int_2dto1d(int_2d)
 
+    implicit none
+    integer, intent(in) :: int_2d(2)
+    integer :: int_1d
+    
+
+    if (int_2d(1) < int_2d(2)) then
+      int_1d = int_2d(2)**2 + int_2d(1)
+    else if (int_2d(1) >= int_2d(2)) then
+      int_1d = int_2d(1)**2 + int_2d(1) + int_2d(2)
+    endif
+
+    int_2dto1d = int_1d
+
+  end function int_2dto1d
+
+
+  function int_1dto2d(int_1d)
+
+    implicit none
+    integer, intent(in) :: int_1d
+    integer :: int_2d(2)
+    integer :: int_1dto2d(2)
+
+    if (int_1d - floor(sqrt(real(int_1d)))**2 < floor(sqrt(real(int_1d))) ) then
+      int_2d(1) = int_1d - floor(sqrt(real(int_1d)))**2
+      int_2d(2) = floor(sqrt(real(int_1d)))
+    else
+      int_2d(1) = floor(sqrt(real(int_1d)))
+      int_2d(2) = int_1d - floor(sqrt(real(int_1d)))**2 - floor(sqrt(real(int_1d)))
+    endif
+
+    int_1dto2d = int_2d
+
+  end function int_1dto2d
 
   
 end module MBL_subrtns

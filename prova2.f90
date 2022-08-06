@@ -144,7 +144,7 @@ program swap
   allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
-  nz_dim = (nspin+1)*dim/2
+  nz_dim = int((nspin+1)*dim/2)
   allocate(H_sparse(nz_dim), ROWS(nz_dim), COLS(nz_dim))
 
   !Allocate initial and generic state
@@ -194,7 +194,7 @@ program swap
     !---------------------------------------------------
   
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildSPARSE_HMBL(nspin, dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
+    call buildSPARSE_HMBL(nspin, dim, nz_dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
 
     !-----------------------------------------------
   

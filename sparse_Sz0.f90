@@ -105,24 +105,12 @@ program swap
 
   !DATA FILES
   
-  !write(filestring,92) "data/magnetizations/Clean_MBL_Imbalance_nspin", nspin, "_steps", steps, &
-  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, &
-  !  & "_no_kick", kick, ".txt"
-  !open(newunit=unit_mag,file=filestring)
-
   write(filestring,92) "data/magnetizations/Sz0_SPARSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
     & nspin, "_steps", steps, "_time_step", T0, &
     &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
   open(newunit=unit_avg,file=filestring)
 
-  !EIGENVALUES/EIGENVECTORS
-!  write(filestring,92) "data/eigenvalues/Swap_PH_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-!  !open(newunit=unit_ph, file=filestring)
-!  
-!  write(filestring,92) "data/eigenvalues/Swap_W_nspin", nspin, "_steps", steps, &
-!  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kick", kick, ".txt"
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
+  92  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
   !If V >= 10 (or hz) we can use
   ! hz_coupling --> int(hz_coupling), hz_coupling-int(hz_coupling)
   !   92  format(A,I0, A,I0, A,I0, A,F4.2, A,I2.2,F0.2, A,F4.2, A, I0, A)
@@ -165,9 +153,6 @@ program swap
   allocate( avg(steps), sigma(steps))
   !allocate( avg2(steps), sigma2(steps))
 
-  !Allocate for Eigenvalues/Eigenvectors
-  !allocate(PH(dim), W(dim,dim))
-
   state_i = init_state
   state_f = 0
   avg = 0
@@ -207,7 +192,7 @@ program swap
 !    print *, ""
   
     !---------------------------------------------------
-    call take_time(count_rate, count_beginning, count1, 'F', filestring)
+    !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     !print *, "Building Sparse Operator"  
     call buildSz0_SPARSE_HMBL(nspin, dim_Sz0, nz_Sz0_dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
@@ -232,40 +217,6 @@ program swap
       !print*, avg(j), sigma(j), j*T0
     enddo
     !print *, ""
-    !call take_time(count_rate, count1, count2, 'T', "Sparse Evolution")
-    !print *, "End of Sparse Evolution"
-    !print *, ""
-
-    !print *, "Building Dense Operator"
-    !call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
-    !call diagSYM( 'V', dim_Sz0, H, E, W_r )
-    !call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
-    !!PRINT Eigenvalues/Eigenvectors to file
-    !call writevec(unit_ph,dim,E,'R')
-    !call writemat(unit_w,dim,W_r,'R')
-
-    !state = init_state
-    !norm = dot_product(state,state)
-    !j = 1
-    !avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state)
-    !sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
-    !!print *, imbalance(nspin, dim, state), j, norm
-  
-    !do j = 2, steps
-    !  state = matmul(U,state)
-    !  norm = dot_product(state,state)
-    !  state = state / sqrt(norm)
-    !  avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state) 
-    !  sigma2(j) = sigma2(j) + imbalance(nspin, dim_Sz0, state)**2
-    !  !print *, imbalance(nspin, dim, state), j, norm
-    !enddo
-    !!print *, ""
-    !call take_time(count_rate, count2, count1, 'T', "Dense Evolution")
-    !print *, "End of Dense Evolution"
-    !print *, ""
-    !print "(A,4(2X,A,I0),2X,A,F5.2)", "Parameters: ", "nspin = ", nspin, "k_dim = ", krylov_dim, "steps = ", steps, & 
-    !  & "n_iter = ", n_iterations, "time_step = ", T0
- 
 
   enddo
   !$OMP END DO
@@ -275,8 +226,6 @@ program swap
 
   avg = avg/n_iterations
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
-  !avg2 = avg2/n_iterations
-  !sigma2 = sqrt(sigma2/n_iterations - avg2**2)/sqrt(real(n_iterations))
   do j = 1, steps
     write(unit_avg,*) avg(j), sigma(j), j*T0
     !write(unit_avg,*) avg(j), sigma(j), avg2(j), sigma2(j), j*T0
@@ -290,7 +239,7 @@ program swap
   write(unit_avg,*) "Time Averages and Errors"
   write(unit_avg,*) start, t_avg, t_sigma!, t_avg2, t_sigma2
   print *,"Time Averages and Errors"
-  print *, start, t_avg, t_sigma!, t_avg2, t_sigma2
+  print *, t_avg, t_sigma!, t_avg2, t_sigma2
 
   deallocate(Jint, Vint, h_z)
   deallocate(H_sparse,ROWS,COLS)
@@ -331,8 +280,9 @@ subroutine take_time(count_rate, count_start, count_end, opt, filestring)
   time_min = int(time_s/60)
   if(opt == 'T') then
     print "(A,A,A,1X,I4,A,2X,F15.10,A)", "Elapsed Time for ", filestring, ": ", time_min, "min", time_s - 60*time_min, "sec"
-  else if(opt == 'F') then
     print *, ""
+  else if(opt == 'F') then
+    stop
   endif
   !print *, ""
 end subroutine
