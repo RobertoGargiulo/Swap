@@ -5,7 +5,7 @@ make $filestring
 
 #read nspin
 #steps=200
-iterations=80 #80
+iterations=320 #80
 n_threads=10
 total_time=2000 #2000
 
@@ -16,14 +16,15 @@ do
   steps=`echo $total_time $time_step | awk '{print $1/$2}'`
   for nspin in {10..18..2} #18 #{2..18..2}
   do
+    iterations="echo $iterations | awk 'print {$1/2}'"
     for kdim in 30 #50 100 #200
     do
-      output="data/phases/PT_Sz0_SPARSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin${nspin}_time_step${time_step}_steps${steps}_iterations${iterations}_kdim${kdim}_close_to_hz2.txt"
+      output="data/phases/PT_Sz0_SPARSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin${nspin}_time_step${time_step}_steps${steps}_iterations${iterations}_kdim${kdim}.txt"
       for J in 0.50
       do
         for V in 0.25 #1.5 2 2.5 3
         do
-          for hz in 2.00 #$( seq 1.00 0.10 4.00 )
+          for hz in $( seq 0.00 0.50 6.00 )
           do
             cat > input.txt << *
 $nspin

@@ -5,6 +5,7 @@ program swap
   use genmat
   use printing
   use omp_lib
+  use MBL
   use iso_c_binding
   !use general
   implicit none
@@ -105,10 +106,10 @@ program swap
 
   !DATA FILES
   
-  write(filestring,92) "data/magnetizations/Sz0_SPARSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
-    & nspin, "_steps", steps, "_time_step", T0, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
-  open(newunit=unit_avg,file=filestring)
+  !write(filestring,92) "data/magnetizations/Sz0_SPARSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
+  !  & nspin, "_steps", steps, "_time_step", T0, &
+  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
+  !open(newunit=unit_avg,file=filestring)
 
   92  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
   !If V >= 10 (or hz) we can use

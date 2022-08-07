@@ -17,7 +17,7 @@ program swap
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations, dim_eff
-  integer (c_int)     ::  i, j, k, p, nz_dim, krylov_dim, dim_Sz0, nz_Sz0_dim
+  integer (c_int)     ::  i, j, k, p, nz_dim, dim_Sz0, nz_Sz0_dim
   integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
   integer (c_int)     ::  start
 
@@ -64,10 +64,6 @@ program swap
 
   write (*,*) "Number of Steps"
   read (*,*) steps
-  print*,""
-
-  write (*,*) "Maximum Krylov Dimension (useless for Dense Evolution)"
-  read (*,*) krylov_dim
   print*,""
 
 
