@@ -566,7 +566,124 @@ contains
 
   end subroutine buildSz0_HMBL
 
+  subroutine buildSz0_HSwap(nspin, dim_Sz0, H)
 
+    !dim_Sz0 is the dimensione of the Sz=0 subsapce
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
+
+    integer :: config(nspin), states(dim_Sz0)
+    integer (c_int) :: i, j, k, m, n, l, r, rflag
+    
+    H = 0
+    !print *, nspin, dim_Sz0
+    call zero_mag_states(nspin, dim_Sz0, states)
+    do l = 1, dim_Sz0
+
+      i = states(l)
+      call decode(i,nspin,config)
+
+      do k = 1, nspin/2
+
+        H(l,l) = H(l,l) + (1 - 2 * config(2*k-1)) * &
+          & (1 - 2 * config(2*k))-1
+
+        if (config(2*k-1)/=config(2*k)) then
+          j = i + (1-2*config(2*k-1))*2**(2*k-2) + (1-2*config(2*k))*2**(2*k-1)
+          r = binsearch(j,states)
+
+          H(r,l) = H(r,l) + 2 * (config(2*k-1) - config(2*k))**2
+        endif
+      enddo
+    enddo
+
+  end subroutine buildSz0_HSwap
+
+
+
+
+  subroutine buildProdState(nspin, dim, alpha, beta, state)
+
+    !Builds a product state of the form: (alpha|up> + beta|down) \otimes (alpha|up> + beta|down) \otimes ...
+    
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: alpha, beta
+    complex (c_double_complex), intent(out) :: state(dim)
+    integer :: config(nspin), un_vec(nspin), n_down
+    complex (c_double_complex) :: alpha_n, beta_n
+    real (c_double) :: norm
+    integer (c_int) :: i, j, k, m
+
+    norm = sqrt(abs(alpha)**2 + abs(beta)**2)
+    alpha_n = alpha/norm
+    beta_n = beta/norm
+
+    state = 0
+    un_vec = 1
+    do i = 1, dim
+      call decode(i-1,nspin,config)
+      n_down = dot_product(un_vec,config)
+      state(i) = alpha**(nspin-n_down) * beta**n_down
+
+    enddo
+
+  end subroutine buildProdState
+
+  subroutine buildStaggState(nspin,dim,alpha,beta,state)
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: alpha, beta
+    complex (c_double_complex), intent(out) :: state(dim)
+    
+    integer :: config(nspin), i, k
+    complex (c_double_complex) :: alpha_n, beta_n
+    real (c_double) :: norm
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+
+    norm = sqrt(abs(alpha)**2 + abs(beta)**2)
+    alpha_n = alpha/norm
+    beta_n = beta/norm
+    state = 1
+    do i = 1, dim
+
+      call decode(i-1,nspin,config)
+
+      do k = 1, nspin/2
+        state(i) = state(i) * ( (1-config(2*k-1)) * alpha_n + config(2*k-1) * beta_n ) * &
+          & ( config(2*k) * alpha_n + (1-config(2*k)) * beta_n )
+      enddo
+    enddo
+
+
+  end subroutine buildStaggState
+
+  subroutine buildStaggState_Sz0(nspin, dim_Sz0, state)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(out) :: state(dim_Sz0)
+    
+    integer :: config(nspin), i, k, indx(dim_Sz0), l
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+    call zero_mag_states(nspin, dim_Sz0, indx)
+
+    state = 0
+    l = 0
+    do k = 1, nspin/2
+      l = l + 2**(2*k-1)
+    enddo
+    print *, l
+    
+    do i = 1, dim_Sz0
+      if(indx(i)==l) then
+        state(i) = 1
+        exit
+      endif
+    enddo
+
+  end subroutine buildStaggState_Sz0
 
   integer function non_zero_HMBL_Sz0(L)
 
@@ -594,7 +711,7 @@ contains
     else if (L==20) then 
       nz = 2032316
     else if (L==22) then
-      nz= 8465184
+      nz = 8465184
     else
       print *, "Chain Length is odd or too large"
       nz = 0
@@ -784,89 +901,9 @@ contains
   end function imbalance_Sz0
 
 
-  subroutine buildProdState(nspin, dim, alpha, beta, state)
 
-    !Builds a product state of the form: (alpha|up> + beta|down) \otimes (alpha|up> + beta|down) \otimes ...
-    
-    integer (c_int), intent(in) :: nspin, dim
-    complex (c_double_complex), intent(in) :: alpha, beta
-    complex (c_double_complex), intent(out) :: state(dim)
-    integer :: config(nspin), un_vec(nspin), n_down
-    complex (c_double_complex) :: alpha_n, beta_n
-    real (c_double) :: norm
-    integer (c_int) :: i, j, k, m
-
-    norm = sqrt(abs(alpha)**2 + abs(beta)**2)
-    alpha_n = alpha/norm
-    beta_n = beta/norm
-
-    state = 0
-    un_vec = 1
-    do i = 1, dim
-      call decode(i-1,nspin,config)
-      n_down = dot_product(un_vec,config)
-      state(i) = alpha**(nspin-n_down) * beta**n_down
-
-    enddo
-
-  end subroutine buildProdState
-
-  subroutine buildStaggState(nspin,dim,alpha,beta,state)
-
-    integer (c_int), intent(in) :: nspin, dim
-    complex (c_double_complex), intent(in) :: alpha, beta
-    complex (c_double_complex), intent(out) :: state(dim)
-    
-    integer :: config(nspin), i, k
-    complex (c_double_complex) :: alpha_n, beta_n
-    real (c_double) :: norm
-
-    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
-
-    norm = sqrt(abs(alpha)**2 + abs(beta)**2)
-    alpha_n = alpha/norm
-    beta_n = beta/norm
-    state = 1
-    do i = 1, dim
-
-      call decode(i-1,nspin,config)
-
-      do k = 1, nspin/2
-        state(i) = state(i) * ( (1-config(2*k-1)) * alpha_n + config(2*k-1) * beta_n ) * &
-          & ( config(2*k) * alpha_n + (1-config(2*k)) * beta_n )
-      enddo
-    enddo
-
-
-  end subroutine buildStaggState
-
-  subroutine buildStaggState_Sz0(nspin, dim_Sz0, state)
-
-    integer (c_int), intent(in) :: nspin, dim_Sz0
-    complex (c_double_complex), intent(out) :: state(dim_Sz0)
-    
-    integer :: config(nspin), i, k, indx(dim_Sz0), l
-
-    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
-    call zero_mag_states(nspin, dim_Sz0, indx)
-
-    state = 0
-    l = 0
-    do k = 1, nspin/2
-      l = l + 2**(2*k-1)
-    enddo
-    print *, l
-    
-    do i = 1, dim_Sz0
-      if(indx(i)==l) then
-        state(i) = 1
-        exit
-      endif
-    enddo
-
-  end subroutine buildStaggState_Sz0
-
-  subroutine time_avg(steps, start, avg, sigma, t_avg, t_sigma)
+  subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)
+    character, intent(in) :: option*1
     integer (c_int), intent(in) :: steps, start
     real (c_double), intent(in) :: avg(steps), sigma(steps)
     real (c_double), intent(out) :: t_avg, t_sigma
@@ -874,13 +911,19 @@ contains
     
     t_avg = 0
     t_sigma = 0
-    !print *, start
-    do j = start, steps
-      t_avg = t_avg + avg(j)
-      t_sigma = t_sigma + sigma(j)**2
-    enddo
-    t_avg = t_avg/(steps-start)
-    t_sigma = sqrt(t_sigma/real(steps-start))
+    if (option == 'F') then
+      do j = start, steps
+        t_avg = t_avg + avg(j)
+        t_sigma = t_sigma + sigma(j)**2
+      enddo
+    else if (option == 'T') then
+      do j = start, steps
+        t_avg = t_avg + 2*(mod(j,2)-0.5) * avg(j)
+        t_sigma = t_sigma + sigma(j)**2
+      enddo
+    endif
+    t_avg = t_avg/(steps-start+1)
+    t_sigma = sqrt(t_sigma/real(steps-start+1))
 
   end subroutine time_avg
 

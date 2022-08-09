@@ -30,10 +30,16 @@ Vint = '1.00'
 hz = '3.00'
 iter=30
 steps=4000
-#set yrange [0:1.1]
-#set xrange [0.5:0.5*steps]
+file="data/magnetizations/Sz0_DENSE_SWAP_hz_Disorder_AVG_FLUCT_Imbalance_nspin8_steps8000_time_step1.00_iterations20_J0.50_V0.25_hz4.50.txt"
+file="data/magnetizations/Sz0_DENSE_SWAP_hz_Disorder_AVG_FLUCT_Imbalance_nspin8_steps8000_time_step1.00_iterations20_J0.01_V0.25_hz4.50.txt"
+
+unset logscale x
+set yrange [-1.1:1.1]
+set xrange [0:100]
 #set output "figures/imb_".type."_J".Jint."_V".Vint."_hz".hz.".png"
 #set title "imb ".type.", J = ".Jint.", V = ".Vint.", hz = ".hz
+set output "figures/figure.png"
+plot file u 5:1 w l, '' u 5:3 
 #plot for [L in "2 4 6 8 10"] filetype.'nspin'.L.'_steps'.steps.'_iterations'.iter.'_J'.Jint.'_V'.Vint.'_hz'.hz.'.txt' u 3:(-$1) w l title 'L = '.L
 
 
@@ -139,7 +145,7 @@ set ytics format "%.1s*10^{%T}"
 set xtics format "10^{%T}"
 set output "figures/Sz0_Sparse_vs_Dense_Imb_AVG_J".Jint."_V".Vint."_hz".hz.".png"
 set title "Sparse vs Dense H in Sz=0\nImbalance over Single Iteration, J = ".Jint.", V = ".Vint.", hz = ".hz
-plot filename u 5:($1-$3) w l
+#plot filename u 5:($1-$3) w l
 
 
 
@@ -170,7 +176,7 @@ set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_close_to_hz1.00
 set title 'no kick, |1010...> state, n_{iter} = '.iter.', J = '.J.' V = '.V
 set ylabel 'I(t)'
 set xlabel 'h_{z}/J'
-plot for [nspin in list] filetype.nspin."_time_step".time_step."_steps".steps.".txt"u ($6/$4):(-$2) w l title 'L ='.nspin
+#plot for [nspin in list] filetype.nspin."_time_step".time_step."_steps".steps.".txt"u ($6/$4):(-$2) w l title 'L ='.nspin
 
 
 

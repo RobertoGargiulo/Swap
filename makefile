@@ -3,7 +3,7 @@ FFLAGS = -O3 -Wall -Wextra -g -fbacktrace -fcheck=all -fopenmp -pedantic
 #-ffpe-trap= invalid, zero, overflow
 #-Werror -ffree-line-length-500 #-fpp -D IFORT -qopenmp 
 #-pg -> per debugging   $ gprof <program-name> <gmon.out>
-SRC = mod_print.f90 mod_genmat.f90 mod_exp.f90 mataid.f90 expokit.f90 exp_sparse.f90 mod_MBL.f90
+SRC = mod_print.f90 mod_genmat.f90 mod_exp.f90 mataid.f90 expokit.f90 exp_sparse.f90 mod_MBL.f90 sorts.f90
 LIBS = -llapack -lblas
 PFLAGS = #-qopenmp #-fopenmp
 MOD = ${SRC:.f90=.o} #substitute .f90 with .o
@@ -37,6 +37,12 @@ sparse_Sz0: $(MOD) sparse_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 spectrum_Sz0: $(MOD) spectrum_Sz0.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+swap_dense_Sz0: $(MOD) swap_dense_Sz0.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+swap_spectrum_Sz0: $(MOD) swap_spectrum_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 mag_avg: mag_avg.f90

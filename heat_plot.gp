@@ -22,10 +22,22 @@ filename="data/phases/PT_Sz0_DENSE_MBL_hz_Disorder_AVG_Gap_Ratio_nspin".nspin."_
 #set yrange [0:6]
 #set output "figures/MBL_Full_PD_Gap_Ratio_nspin".nspin."_J".J."_Dense_up_toV3_hz6.png"
 
-set xrange [0:0.75]
-set yrange [0:3]
-set output "figures/MBL_Full_PD_Gap_Ratio_nspin".nspin."_J".J."_Dense_up_toV0.75_hz3.png"
+#set xrange [0:0.75]
+#set yrange [0:3]
+#set output "figures/MBL_Full_PD_Gap_Ratio_nspin".nspin."_J".J."_Dense_up_toV0.75_hz3.png"
 
+nspin="8"
+iter="320"
+period="10.00"
+kick="0"
+J="0.50"
+set title "Sz=0 subspace, n_{spin} = ".nspin.", n_{iter} = ".iter.", period = ".period.", eps = ".kick.", J = ".J
+
+filename="data/phases/PT_Sz0_DENSE_SWAP_hz_Disorder_AVG_Gap_Ratio_nspin".nspin."_iterations".iter."_period".period."_kick".kick."_J".J."_up_to_V5_hz10.txt"
+
+set xrange [0:6]
+set yrange [0:12]
+set output "figures/Swap_Full_PD_Gap_Ratio_nspin".nspin."_iterations".iter."_period".period."_kick".kick."_J".J."_up_to_V5_hz10.png"
 
 set view map
 #set dgrid3d 100,100,2

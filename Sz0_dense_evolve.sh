@@ -14,16 +14,17 @@ export OMP_NUM_THREADS=$n_threads
 for time_step in 0.50
 do
   steps=`echo $total_time $time_step | awk '{print $1/$2}'`
-  for nspin in {6..16..2}
+  for J in 0.50
   do
-    iterations=`echo $iterations | awk '{print $1/2}'`
-    for J in 0.50
+    for V in 0.25 #1.5 2 2.5 3
     do
-      for V in 0.25 #1.5 2 2.5 3
+      for hz in 1.00 3.50 6.00 10.00 30.00  #$( seq 11.0 1.00 20.00 )
       do
-        output="data/phases/PT_Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin${nspin}_time_step${time_step}_steps${steps}_iterations${iterations}_J${J}_V${V}_up_to_hz6.txt"
-        for hz in $( seq 0.50 0.50 6.00) #; seq 4.10 0.10 6.00 )
+        iterations=1280
+        output="data/phases/PT_Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_time_step${time_step}_steps${steps}_J${J}_V${V}_hz${hz}_up_to_nspin12.txt"
+        for nspin in {6..12..2}
         do
+          iterations=`echo $iterations | awk '{print $1/2}'`
           cat > input.txt << *
 $nspin
 $iterations
@@ -41,7 +42,7 @@ $hz
           echo "iterations = $iterations   n_threads = $n_threads "
           avg=`grep -A1 "Averages" out2.txt | tail -1`
           gap_ratio=`grep -A1 "Ratio" out2.txt | tail -1`
-          echo $J $V $hz $avg $gap_ratio >> $output
+          echo $nspin $J $V $avg $gap_ratio $iterations >> $output
         done
       done
     done

@@ -236,6 +236,28 @@ contains
 
   end subroutine printvec_I
 
+  subroutine take_time(count_rate, count_start, count_end, opt, filestring)
+    implicit none
+    integer, intent(in) :: count_rate, count_start
+    integer, intent(out) :: count_end
+    character :: opt*1
+    character (*) :: filestring
+  
+    real :: time_s
+    integer(c_int) :: time_min
+  
+    call system_clock(count_end)
+  
+    time_s = real(count_end - count_start) / real(count_rate)
+    time_min = aint(time_s/60,kind(time_min))
+    if(opt == 'T') then
+      print "(A,A,A,1X,I4,A,2X,F15.10,A)", "Elapsed Time for ", filestring, ": ", time_min, "min", time_s - 60*time_min, "sec"
+    else if(opt == 'F') then
+      print *, ""
+    endif
+    !print *, ""
+  end subroutine take_time
+
 end module printing_subrtns
 
 module printing
@@ -256,5 +278,8 @@ module printing
   interface printvec
     module procedure printvec_R, printvec_C, printvec_I
   end interface
+  
+
+
 
 end module printing

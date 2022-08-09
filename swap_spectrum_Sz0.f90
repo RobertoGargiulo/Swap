@@ -4,8 +4,9 @@ program swap
   use exponentiate
   use genmat
   use printing
-  use omp_lib
   use MBL
+  use omp_lib
+  use sorts
   use iso_c_binding
   !use general
   implicit none
@@ -19,20 +20,20 @@ program swap
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations, dim_eff
   integer (c_int)     ::  i, j, k, p, nz_dim, krylov_dim, dim_Sz0, nz_Sz0_dim
   integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
-  integer (c_int)     ::  start
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
-  real(c_double) :: t_avg, t_sigma, t_avg2, t_sigma2
+  real(c_double) :: t_avg, t_sigma, r_dis_avg, r_dis_sigma
   
   real (c_double) :: norm
-  real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2
+  real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2, r_avg, r_sigma
   complex (c_double_complex) :: alpha, beta
 
   integer (c_int), dimension(:), allocatable :: ROWS, COLS
   real (c_double), dimension(:), allocatable :: H_sparse, E
   real (c_double), dimension(:,:), allocatable :: H, W_r
-  complex(c_double_complex), dimension(:,:), allocatable :: U
+  complex(c_double_complex), dimension(:), allocatable :: PH
+  complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
 
   complex(c_double_complex), dimension(:), allocatable :: init_state, state_i, state_f, state
 
@@ -61,15 +62,6 @@ program swap
   read (*,*) n_iterations
   print*,""
 
-  write (*,*) "Number of Steps"
-  read (*,*) steps
-  print*,""
-
-  write (*,*) "Maximum Krylov Dimension"
-  read (*,*) krylov_dim
-  print*,""
-
-
   !Standard Values
   T0 = 1
   J_coupling = 1
@@ -78,7 +70,7 @@ program swap
   kick = 0.1
   T1 = pi/4 + kick
 
-  write (*,*) "Time Step/Period T0"
+  write (*,*) "Period T0"
   read (*,*) T0
   print*,""
   
@@ -93,6 +85,10 @@ program swap
   write (*,*) "Longitudinal Field h_z * Z"
   read (*,*) hz_coupling
   print*,""
+
+  write (*,*) "Perturbation on Kick T1 = pi/4 + kick"
+  read (*,*) kick
+  print*,""
   !---Read below for distributions of J, V, hz
   
   T1 = pi/4 + kick
@@ -106,67 +102,65 @@ program swap
 
   !DATA FILES
   
-  !write(filestring,92) "data/magnetizations/Sz0_SPARSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
+
+  !write(filestring,91) "data/magnetizations/Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
   !  & nspin, "_steps", steps, "_time_step", T0, &
-  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, "_kdim", krylov_dim ,".txt"
+  !  &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
   !open(newunit=unit_avg,file=filestring)
 
-  92  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A, I0, A)
+  !!EIGENVALUES/EIGENVECTORS
+  !write(filestring,92) "data/eigen/Sz0_DENSE_MBL_PH_nspin", nspin, "_steps", steps, &
+  !&  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  !open(newunit=unit_ph, file=filestring)
+  !
+  !write(filestring,92) "data/eigen/Sz0_DENSE_MBL_W_nspin", nspin, "_steps", steps, &
+  !&  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
+  !open(newunit=unit_w, file=filestring)
+
+  !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
+  !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !If V >= 10 (or hz) we can use
   ! hz_coupling --> int(hz_coupling), hz_coupling-int(hz_coupling)
   !   92  format(A,I0, A,I0, A,I0, A,F4.2, A,I2.2,F0.2, A,F4.2, A, I0, A)
   !   
 !
-!  !open(newunit=unit_w, file=filestring)
  
   !------------------------------------------------
 
-  !BUILD INITIAL STATE (of type staggered)
-  allocate(init_state(dim_Sz0))
-  call buildStaggState_Sz0(nspin, dim_Sz0, init_state)
-
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
-  !------------- NO DRIVING ---------- Uncomment following lines to use the driving
-!  allocate(H(dim,dim), E(dim), W_r(dim,dim), USwap(dim,dim))
-!  call buildHSwap(nspin, dim, H)
-!  call diagSYM( 'V', dim, H, E, W_r)
-!!  print *, "HSwap = "
-!!  call printmat(dim, H, 'R')
-!  deallocate(H)
-!  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap) 
-!  deallocate(E, W_r)
-  
-  !print *, "USwap = "
-  !call printmat(dim, USwap, 'R')
+  allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0), USwap(dim_Sz0,dim_Sz0))
+  call buildSz0_HSwap(nspin, dim_Sz0, H)
+  call diagSYM( 'V', dim_Sz0, H, E, W_r)
+!  print *, "HSwap = "
+!  call printmat(dim, H, 'R')
+  deallocate(H)
+  call expSYM( dim_Sz0, -C_UNIT*T1, E, W_r, USwap )
+  deallocate(E, W_r)
 
   !---------------------------------------------------
   !Allocate local interactions and fields
   allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
-  allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
-  !allocate(U(dim_Sz0,dim_Sz0), H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
-
-  !Allocate initial and generic state
-  allocate( state_i(dim_Sz0), state_f(dim_Sz0))
+  !allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
+  allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
+  allocate(U(dim_Sz0,dim_Sz0))
 
   !Allocate observables and averages
-  allocate( avg(steps), sigma(steps))
-  !allocate( avg2(steps), sigma2(steps))
+  allocate( r_avg(n_iterations), r_sigma(n_iterations))
 
-  state_i = init_state
-  state_f = 0
-  avg = 0
-  sigma = 0
-  !avg2 = 0
-  !sigma2 = 0
+  !Allocate for Eigenvalues/Eigenvectors
+  allocate(PH(dim_Sz0))
+  allocate(W(dim_Sz0,dim_Sz0))
+
+  r_avg = 0
+  r_sigma = 0
   !$OMP PARALLEL
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, &
-  !$OMP & state_i, state_f, ROWS, COLS, H_sparse)
-  !!$OMP & H, E, W_r, U)
+  !$OMP DO private(iteration, h_z, H, E, W_r, &
+  !$OMP & U, W, PH)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -195,62 +189,31 @@ program swap
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    !print *, "Building Sparse Operator"  
-    call buildSz0_SPARSE_HMBL(nspin, dim_Sz0, nz_Sz0_dim, Jint, Vint, h_z, H_sparse, ROWS, COLS)
-
-    !EVOLUTION OF INITIAL STATE and COMPUTATION OF MAGNETIZATION 
-    
-    state_i = init_state
-    norm = dot_product(state_i, state_i)
-    j = 1
-    avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state_i)
-    sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state_i)**2
-    !print *, "Imbalance", "Magnetization", "Time", "Norm"
-    !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
-    do j = 2, steps
-      call evolve(dim_Sz0, nz_Sz0_dim, krylov_dim, ROWS, COLS, -C_UNIT*dcmplx(H_sparse), state_i, T0, state_f)
-      state_i = state_f
-      norm = dot_product(state_i, state_i)
-      state_i = state_i / sqrt( dot_product(state_i, state_i) )
-      avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state_i)
-      sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state_i)**2
-      !print *, imbalance(nspin, dim, state_i), mag_z(nspin, dim, state_i), j*T0, norm
-      !print*, avg(j), sigma(j), j*T0
-    enddo
-    !print *, ""
+    call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
+    call diagSYM( 'V', dim_Sz0, H, E, W_r )
+    call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
+    U = matmul(USwap,U)
+    call diagUN( SELECT, dim_Sz0, U, PH, W)
+    E = real(C_UNIT*log(PH))
+    call dpquicksort(E)
+    call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sigma(iteration))
 
   enddo
   !$OMP END DO
   !$OMP END PARALLEL 
 
+
+  call time_avg('F', n_iterations, 1, r_avg, r_sigma, r_dis_avg, r_dis_sigma)
+
+  print *, "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
+  print *, r_dis_avg, r_dis_sigma
+
   call take_time(count_rate, count_beginning, count1, 'T', "Program: ")
 
-  avg = avg/n_iterations
-  sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
-  do j = 1, steps
-    write(unit_avg,*) avg(j), sigma(j), j*T0
-    !write(unit_avg,*) avg(j), sigma(j), avg2(j), sigma2(j), j*T0
-    !print *, avg(j), sigma(j), avg2(j), sigma2(j), j*T0
-  enddo
-  
-  start = int(100/T0)
-  call time_avg('F',steps, start, avg, sigma, t_avg, t_sigma)
-  !call time_avg('F',steps, start, avg2, sigma2, t_avg2, t_sigma2)
-
-  write(unit_avg,*) "Time Averages and Errors"
-  write(unit_avg,*) start, t_avg, t_sigma!, t_avg2, t_sigma2
-  print *,"Time Averages and Errors"
-  print *, t_avg, t_sigma!, t_avg2, t_sigma2
-
   deallocate(Jint, Vint, h_z)
-  deallocate(H_sparse,ROWS,COLS)
-  !deallocate(avg, sigma)
+  deallocate(H,E,W_r)
   !deallocate(USwap)
-  !deallocate(PH, W)
-
-  !close(unit_avg)
-
-  !call take_time(count_rate, count_beginning, count_end)
+  !deallocate(U, PH, W)
 
 end program swap
 
@@ -281,9 +244,8 @@ subroutine take_time(count_rate, count_start, count_end, opt, filestring)
   time_min = int(time_s/60)
   if(opt == 'T') then
     print "(A,A,A,1X,I4,A,2X,F15.10,A)", "Elapsed Time for ", filestring, ": ", time_min, "min", time_s - 60*time_min, "sec"
-    print *, ""
   else if(opt == 'F') then
-    stop
+    print *, ""
   endif
   !print *, ""
 end subroutine
