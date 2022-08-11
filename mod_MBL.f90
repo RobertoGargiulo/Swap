@@ -104,7 +104,7 @@ contains
 
     integer, intent(in) :: nspin, nspin_A, nspin_B, dim, dim_A, dim_B
     complex (c_double_complex), intent(in) :: psi(dim)
-    complex (c_double_complex), intent(out) :: rho_AB(dim_B,dim_B)
+    complex (c_double_complex), intent(out) :: rho_AB(dim_A*dim_B,dim_A*dim_B)
 
     integer :: jAB, kAB, jA, jB, kA, kB, iC, dim_C
 
@@ -135,17 +135,18 @@ contains
   function entanglement(dim, rho)
 
     !Computes the Entanglement (von Neumann) Entropy for a given density matrix rho of dimension dim
-    ! EE = S = -Tr(rho * ln(rho))
+    ! EE = S(rho) = -Tr(rho * ln(rho))
     ! For a reduced density matrix S_A = -Tr_A(rho_A ln(rho_A))
 
     integer, intent(in) :: dim
-    real (c_double_complex), intent(in) :: rho(dim,dim)
+    complex (c_double_complex), intent(in) :: rho(dim,dim)
     real (c_double) :: entanglement
 
-    real (c_double) :: EE, prob(dim), W(dim,dim)
+    real (c_double) :: EE, prob(dim)
+    complex (c_double_complex) :: W(dim,dim)
     integer :: i
 
-    call diagSYM( 'V', dim, rho, prob, W)
+    call diagHE( 'V', dim, rho, prob, W)
 
     EE = 0
     do i = 1, dim
@@ -155,6 +156,62 @@ contains
     entanglement = EE
 
   end function entanglement
+
+
+  function mutual_information(nspin, nspin_A, dim, dim_A, psi)
+
+    !Computes the long-range mutual information between the two edges.
+    !The edges are regions (spin chains) A,B both of length nspin_A and local dimension dim_A (here case of Full Hilbert Space)
+    !psi is the (pure) state of the spin chain
+    ! MI = S_A + S_B - S_AB
+    ! MI is the maximum information of A we can find from B, and viceversa
+
+    integer, intent(in) :: nspin_A, nspin, dim_A, dim
+    complex (c_double_complex), intent(in) :: psi(dim)
+    real (c_double) :: mutual_information
+
+    real (c_double) :: MI
+    complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)
+    integer :: i
+
+    call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
+    call right_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_B)
+    call edges_reduced_DM(nspin, nspin_A, nspin_A, dim, dim_A, dim_A, psi, rho_AB)
+
+    MI = entanglement(dim_A,rho_A) + entanglement(dim_A,rho_B) - entanglement(dim_A*dim_A,rho_AB)
+    
+    mutual_information = MI
+
+  end function mutual_information
+
+  function mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
+
+    !Computes the long-range mutual information between the two edges.
+    !The edges are regions (spin chains) A,B both of length nspin_A and local dimension dim_A (here case of Full Hilbert Space)
+    !psi is the (pure) state of the spin chain
+    ! MI = S_A + S_B - S_AB
+    ! MI is the maximum information of A we can find from B, and viceversa
+
+    integer, intent(in) :: nspin_A, nspin, dim_A, dim, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: mutual_information_Sz0
+
+    real (c_double) :: MI
+    complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)
+    complex (c_double_complex) :: psi(dim)
+    integer :: i
+
+    call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
+
+    call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
+    call right_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_B)
+    call edges_reduced_DM(nspin, nspin_A, nspin_A, dim, dim_A, dim_A, psi, rho_AB)
+
+    MI = entanglement(dim_A,rho_A) + entanglement(dim_A,rho_B) - entanglement(dim_A*dim_A,rho_AB)
+    
+    mutual_information_Sz0 = MI
+
+  end function mutual_information_Sz0
 
 
   integer function int_2dto1d(int_2d)

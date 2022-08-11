@@ -685,6 +685,29 @@ contains
 
   end subroutine buildStaggState_Sz0
 
+
+  subroutine buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, state_Sz0, state)
+    !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
+    !simply by constructing a vector which has zero components outside the Sz=0 subspace
+
+    integer (c_int), intent(in) :: nspin, dim, dim_Sz0
+    complex (c_double_complex), intent(in) :: state_Sz0(dim_Sz0)
+    complex (c_double_complex), intent(out) :: state(dim)
+
+    integer :: i, l, states(dim_Sz0)
+
+    call zero_mag_states(nspin, dim_Sz0, states)
+
+    state = 0
+    do i = 1, dim_Sz0
+      l = states(i) + 1
+      state(l) = state_Sz0(l)
+    enddo
+
+  end subroutine buildState_Sz0_to_FullHS
+
+
+
   integer function non_zero_HMBL_Sz0(L)
 
     integer, intent(in) :: L

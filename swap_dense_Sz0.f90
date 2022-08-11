@@ -108,24 +108,15 @@ program swap
 
   !DATA FILES
   
-  
-  write(filestring,91) "data/magnetizations/Sz0_DENSE_SWAP_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
-    & nspin, "_steps", steps, "_time_step", T0, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
-  !open(newunit=unit_avg,file=filestring)
-
   write(filestring,93) "data/magnetizations/Sz0_DENSE_SWAP_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
-    & nspin, "_steps", steps, "_time_step", T0, &
-    &  "_iterations", n_iterations, "_J", J_coupling, "_V", V_coupling, "_hz", hz_coupling, ".txt"
-  print *, filestring
+    & nspin, "_steps", steps, "_period", T0, "_iterations", n_iterations, &
+    & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
+  open(newunit=unit_avg,file=filestring)
 
   91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  93  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,I2,F0.2, A)
-  !If V >= 10 (or hz) we can use
-  ! hz_coupling --> int(hz_coupling), hz_coupling-int(hz_coupling)
-  !   92  format(A,I0, A,I0, A,I0, A,F4.2, A,I2.2,F0.2, A,F4.2, A, I0, A)
-  !   
+  93  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
 !
  
   !------------------------------------------------
@@ -270,13 +261,7 @@ program swap
   avg2 = avg2/n_iterations
   sigma2 = sqrt(sigma2/n_iterations - avg2**2)/sqrt(real(n_iterations))
   do j = 1, steps
-    !write(unit_avg,*) avg(j), sigma(j), j*T0
-    write(unit_avg,*) avg(j), sigma(j), avg2(j), sigma2(j), j*T0
-    !if (mod(j,steps/10)==1) then
-    !  print *, avg(j), sigma(j), j
-    !else if (mod(j,steps/10)==2) then
-      !print *, avg(j), sigma(j), j
-    !endif
+    write(unit_avg,*) j*T0, avg(j), sigma(j), avg2(j), sigma2(j)
   enddo
 
   call time_avg('F', n_iterations, 1, r_avg, r_sigma, r_dis_avg, r_dis_sigma)
@@ -285,7 +270,7 @@ program swap
   call time_avg('F', steps, start, avg2, sigma2, t_avg2, t_sigma2)
 
   write(unit_avg,*) "Time Averages and Errors of Imbalance"
-  write(unit_avg,*) t_avg, t_sigma!, t_avg2, t_sigma2
+  write(unit_avg,*) t_avg, t_sigma, t_avg2, t_sigma2
   write(unit_avg,*) "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
   write(unit_avg,*) r_dis_avg, r_dis_sigma
 
@@ -318,25 +303,3 @@ logical function SELECT(z)
   RETURN
 
 end
-
-subroutine take_time(count_rate, count_start, count_end, opt, filestring)
-  implicit none
-  integer, intent(in) :: count_rate, count_start
-  integer, intent(out) :: count_end
-  character :: opt*1
-  character (*) :: filestring
-
-  real :: time_s
-  integer :: time_min
-
-  call system_clock(count_end)
-
-  time_s = real(count_end - count_start) / real(count_rate)
-  time_min = int(time_s/60)
-  if(opt == 'T') then
-    print "(A,A,A,1X,I4,A,2X,F15.10,A)", "Elapsed Time for ", filestring, ": ", time_min, "min", time_s - 60*time_min, "sec"
-  else if(opt == 'F') then
-    print *, ""
-  endif
-  !print *, ""
-end subroutine

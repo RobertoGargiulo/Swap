@@ -51,7 +51,7 @@ mag_avg: mag_avg.f90
 min_time_avg: $(MOD) min_time_avg.o
 	$(FC) $(FFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
-all: swap mag_avg prova prova2 prova3 min_time_avg
+all: swap dense_Sz0 sparse_Sz0 spectrum_Sz0 swap_dense_Sz0 swap_spectrum_Sz0
 
 
 clean:

@@ -102,7 +102,7 @@ set xtics 1, 2, 8 format "%.2f"
 
 list1 = "6 8 10 12 14 16"
 list2 = "640 320 160 80 40 20"
-set title "no kick, |1010...> state, J = ".J." V = ".V
+set title "no kick, J = ".J." V = ".V
 
 #set output "figures/MBL_PT_Scaling_Gap_Ratio_J".J."_V".V."_Dense_up_to_hz6.png"
 #plot for [i=1:5] file_upto6."".word(list1,i)."_time_step".time_step."_steps".steps."_iterations".word(list2,i)."_J".J."_V".V."_up_to_hz6.txt" u ($3/$1):6 w lp lw 1.6 title "L = ".word(list1,i)."  n_{iter} = ".word(list2,i)
@@ -117,15 +117,19 @@ inc=0.10
 end=1.00
 unset xrange
 unset logscale x
-set xtics 8, 2, 12
+set xtics 6, 2, 14
 set xlabel "L"
 set ylabel "Imbalance"
 #list = ""; a=start-inc; while (a<end) {list=list.sprintf(" %.2f",a=a+inc)}
 #system(sprintf(list))
 
-#set output "figures/figure4.png"
-set yrange [0:1]
-plot for [hz in "0.05 1.00 3.50 6.00 10.00 30.00"] "data_".hz.".txt" u 1:(-$2) w l lw 1.6 title "hz = ".hz
+J="0.50"
+V="0.25"
+set title "no kick, |1010...> state, J = ".J." V = ".V
+set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_up_to_nspin14.png"
+file_upto_nspin14="data/phases/PT_Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_time_step0.50_steps4000_J0.50_V0.25_hz"
+set yrange [-0.1:1.1]
+plot for [hz in "0.05 1.00 3.50 6.00 10.00 30.00"] file_upto_nspin14."".hz."_up_to_nspin12.txt" u 1:(-$4):5 w errorlines lw 1.6 title "hz = ".hz
 
 
 

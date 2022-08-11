@@ -18,13 +18,14 @@ do
   do
     for V in 0.25 #1.5 2 2.5 3
     do
-      for hz in 1.00 3.50 6.00 10.00 30.00  #$( seq 11.0 1.00 20.00 )
+      for hz in 0.05 1.00 3.50 6.00 10.00 30.00  #$( seq 11.0 1.00 20.00 )
       do
         iterations=1280
         output="data/phases/PT_Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_time_step${time_step}_steps${steps}_J${J}_V${V}_hz${hz}_up_to_nspin12.txt"
-        for nspin in {6..12..2}
+        for nspin in 14 #{6..12..2}
         do
-          iterations=`echo $iterations | awk '{print $1/2}'`
+          #iterations=`echo $iterations | awk '{print $1/2}'`
+          iterations=40
           cat > input.txt << *
 $nspin
 $iterations

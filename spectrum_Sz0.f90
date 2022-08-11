@@ -206,7 +206,7 @@ program swap
   !$OMP END PARALLEL 
 
 
-  call time_avg(n_iterations, 1, r_avg, r_sigma, r_dis_avg, r_dis_sigma)
+  call time_avg('F', n_iterations, 1, r_avg, r_sigma, r_dis_avg, r_dis_sigma)
 
   print *, "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
   print *, r_dis_avg, r_dis_sigma
