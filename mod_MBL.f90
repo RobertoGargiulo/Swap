@@ -55,11 +55,12 @@ contains
     dim_B = dim/dim_A
     rho_A = 0
 
-    do jA = 1, dim_A
-      do kA = 1, dim_A
-        do iB = 1, dim_B
+    do jA = 0, dim_A-1
+      do kA = 0, dim_A-1
+        do iB = 0, dim_B-1
 
-          rho_A(jA,kA) = rho_A(jA,kA) + psi(jA + 2**(nspin_A) * iB) * dconjg( psi(kA + 2**(nspin_A) * iB ) )
+          rho_A(jA+1,kA+1) = rho_A(jA+1,kA+1) + psi(jA + 2**(nspin_A) * iB+1) * dconjg( psi(kA + 2**(nspin_A) * iB +1) )
+          !print *, jA, kA, dim_A, iB, dim_B, jA + 2**(nspin_A) * iB, kA + 2**(nspin_A) * iB, dim
 
         enddo
       enddo
@@ -83,11 +84,11 @@ contains
     dim_A = dim/dim_B
     rho_B = 0
 
-    do jB = 1, dim_B
-      do kB = 1, dim_B
-        do iA = 1, dim_A
+    do jB = 0, dim_B-1
+      do kB = 0, dim_B-1
+        do iA = 0, dim_A-1
 
-          rho_B(jB,kB) = rho_B(jB,kB) + psi(iA + 2**(nspin-nspin_B) * jB) * dconjg( psi(iA + 2**(nspin-nspin_B) * kB ) )
+          rho_B(jB+1,kB+1) = rho_B(jB+1,kB+1) + psi(iA + 2**(nspin-nspin_B) * jB+1) * dconjg( psi(iA + 2**(nspin-nspin_B) * kB +1) )
 
         enddo
       enddo
@@ -111,17 +112,17 @@ contains
     dim_C = dim/(dim_A*dim_B)
     rho_AB = 0
 
-    do jA = 1, dim_A
-      do jB = 1, dim_B
-        do kA = 1, dim_A
-          do kB = 1, dim_B
-            do iC = 1, dim_C
+    do jA = 0, dim_A-1
+      do jB = 0, dim_B-1
+        do kA = 0, dim_A-1
+          do kB = 0, dim_B-1
+            do iC = 0, dim_C-1
 
-              jAB = jA + 2**(nspin_A)*jB
-              kAB = kA + 2**(nspin_A)*kB
+              jAB = jA + 2**(nspin_A)*jB + 1
+              kAB = kA + 2**(nspin_A)*kB + 1
 
-              rho_AB(jAB,kAB) = rho_AB(jAB,kAB) + psi(jA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * jB) * &
-               & dconjg( psi(kA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * kB ) )
+              rho_AB(jAB,kAB) = rho_AB(jAB,kAB) + psi(jA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * jB + 1) * &
+               & dconjg( psi(kA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * kB + 1 ) )
             enddo
           enddo
         enddo

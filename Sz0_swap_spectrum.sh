@@ -3,47 +3,56 @@ filestring="swap_spectrum_Sz0"
 
 make $filestring
 
-#read nspin
-#steps=200
-iterations=1280
+#iterations=100 #1280
 n_threads=10
-
 export OMP_NUM_THREADS=$n_threads 
 #j=0
-for nspin in 6 8 10 12 # 14 16 #{2..18..2}
+output="Swap_spectrum.txt"
+#mv $output ../Trash
+pi=3.14
+pi2=1.57
+endV=`echo $pi | awk '{print 4*$1}'`
+
+iterations_2=2560
+for nspin in 10 #2 4 6 8 10 #{6..16..2}
 do
-  iterations=`echo $iterations | awk '{print $1/2}'`
-  for kick in 0 0.1 0.5
+  iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
+  for kick in 0.05
   do
-    for time_step in 0.10 1.00 10.00
+    for period in 1.00
     do
-      for J in 0.50
+      for J in 0.05 0.50 #1.57 3.14
       do
-        for V in $( seq 0.00 0.20 6.00 )
+        for V in $(seq 0.00 0.30 1.50) #$(seq 0.00 0.30 3.00; seq 3.05 0.05 3.15)
         do
-          for hz in $( seq 0.00 0.40 12.00 )
+          #output="data/phases/PT_Sz0_DENSE_SWAP_hz_Disorder_AVG_FLUCT_Imbalance_nspin${nspin}_period${period}_steps${steps}_iterations${iterations}_J${J}_V${V}_up_to_hz6.txt"
+          for hz in$(seq 0.00 4.00 20.00)   #$(seq 0.00 1.00 6.00)
           do
-            output="data/phases/PT_Sz0_DENSE_SWAP_hz_Disorder_AVG_Gap_Ratio_nspin${nspin}_iterations${iterations}_period${time_step}_kick${kick}_J${J}_up_to_V5_hz10.txt"
             cat > input.txt << *
 $nspin
 $iterations
-$time_step
+$period
 $J
 $V
 $hz
 $kick
 *
-  	        ./$filestring < input.txt | tee out.txt
-            echo "nspin = $nspin"
-            echo "J = $J  V = $V  hz = $hz  epsilon = $kick"
-            echo "period = $time_step"
+            file_out="out.txt"
+  	        ./$filestring < input.txt | tee $file_out
+            #file_out="data/magnetizations/Sz0_DENSE_SWAP_hz_Disorder_AVG_FLUCT_Imbalance_nspin${nspin}_steps${steps}_period${period}_iterations${iterations}_J${J}_V${V}_hz${hz}_kick${kick}.txt"
+            echo "nspin = $nspin "
+            echo "J = $J  V = $V  hz = $hz  epsilon = $kick  period = $period"
             echo "iterations = $iterations   n_threads = $n_threads "
-            gap_ratio=`cat out.txt | grep -A1 Ratio | tail -1`
-            echo $J $V $hz  $gap_ratio >> $output
-            done
+            gap_ratio=`grep -a -A1 "Ratio" $file_out | tail -1`
+            echo $nspin $J $V $hz $kick $period $gap_ratio $iterations >> $output
           done
+          echo "" >> $output
         done
+        echo "" >> $output
       done
+      echo "" >> $output
     done
     echo "" >> $output
   done
+  echo "" >> $output
+done

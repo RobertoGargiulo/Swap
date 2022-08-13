@@ -58,8 +58,8 @@ set title "no kick, |1010...> state, J = ".J." V = ".V
 set xrange [0.2:40]
 file_imb_upto10="data/phases/PT_Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin"
 
-set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_up_to_hz10_w_errors.png"
-plot for [i=1:4] file_imb_upto10."".word(list1,i)."_time_step".time_step."_steps".steps."_iterations".word(list2,i)."_J".J."_V".V."_up_to_hz10.txt" u ($3/$1):(-$4):5 w errorlines title "L = ".word(list1,i)."  n_{iter} = ".word(list2,i)
+#set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_up_to_hz10_w_errors.png"
+#plot for [i=1:4] file_imb_upto10."".word(list1,i)."_time_step".time_step."_steps".steps."_iterations".word(list2,i)."_J".J."_V".V."_up_to_hz10.txt" u ($3/$1):(-$4):5 w errorlines title "L = ".word(list1,i)."  n_{iter} = ".word(list2,i)
 
 
 
@@ -126,10 +126,64 @@ set ylabel "Imbalance"
 J="0.50"
 V="0.25"
 set title "no kick, |1010...> state, J = ".J." V = ".V
-set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_up_to_nspin14.png"
 file_upto_nspin14="data/phases/PT_Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_time_step0.50_steps4000_J0.50_V0.25_hz"
 set yrange [-0.1:1.1]
-plot for [hz in "0.05 1.00 3.50 6.00 10.00 30.00"] file_upto_nspin14."".hz."_up_to_nspin12.txt" u 1:(-$4):5 w errorlines lw 1.6 title "hz = ".hz
+#set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_up_to_nspin14.png"
+#plot for [hz in "0.05 1.00 3.50 6.00 10.00 30.00"] file_upto_nspin14."".hz."_up_to_nspin12.txt" u 1:(-$4):5 w errorlines lw 1.6 title "hz = ".hz
+
+#Fixed nspin,J,hz,kick,iter,steps, varying V
+
+file="Swap_varying_V_data2.txt"
+file="Swap_varying_V.txt"
+
+set ylabel "Imbalance"
+set xlabel "V"
+set xtics 0, pi/2, 4*pi
+
+#mod(x) = system( sprintf("echo $((%d % 4))",x)  )
+#system(sprintf("echo %s", mod(4)))
+#do for [i=1:10] {set xtics add (sprintf("%d/4*pi",i) i)}
+set yrange [0:1.1]
+
+nspin = "10"
+iter = "160"
+period = "1.00"
+J = "0.05"
+hz = "6.00"
+kick = "0.00"
+
+set title "nspin = ".nspin.", n_{iter} = ".iter.", period = ".period.", J = ".J.", hz = ".hz.", kick = ".kick
+set output "figures/Avg_Imbalance_Sz0_SWAP_hz_Disorder_nspin".nspin."_period".period."_J".J."_hz".hz."_kick".kick."_up_to_V12.png"
+plot file u 3:(-$7) w lp lw 1.4 title "Swap", "" u 3:(-$9) title "MBL"
+
+
+##### Decay Time
+
+
+#Fixed nspin,J,hz,kick,iter,steps, varying V
+
+file_time="Swap_decay_times.txt"
+
+set ylabel "Decay Time"
+set xlabel "L"
+set logscale y
+unset logscale x
+
+
+list_L = "2 4 6 8 10"
+list_iter = "5120 2560 1280 640 320"
+list_J = "0.02 0.04 0.06 0.08 0.10"
+list_V = "0.25 0.50"
+list_h = "3.00 6.00 12.00"
+
+period = "1.00"
+kick = "0.00"
+
+set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{5}, period = ".period.", J = ".J.", hz = ".hz.", kick = ".kick
+set output "figures/Decay_Time_Sz0_SWAP_hz_Disorder_nspin".nspin."_period".period."_J".J."_V".V."_kick".kick."_up_to_L10.png"
+plot file u 1:11 every 3:20:1 w lp lw 1.4 title "hz = ".hz #, "" u 3:(-$9) title "MBL"
+
+
 
 
 

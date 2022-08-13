@@ -102,7 +102,6 @@ contains
     integer (c_int) :: i, j, k, m
 
     Sx = 0
-    !print*, "Start Sx"
     
     do i = 0, dim - 1
       
@@ -247,7 +246,6 @@ contains
       enddo
     enddo
 
-    !print*,"End buildHJ"
   end subroutine buildHJ
 
 
@@ -457,25 +455,17 @@ contains
     integer :: config(nspin), states(dim_Sz0)
     integer (c_int) :: i, j, k, m, n, l, r
 
-    !print *, nspin, dim, dim_eff, nz_dim
-    !print *, "Start buildSz0_Sparse"
     H = 0
     ROWS = 0
     COLS = 0
     m = 0
-    !print *, "Call to build states"
     call zero_mag_states(nspin, dim_Sz0, states)
-    !do i = 1, dim
-    !  print *, i, states(i)
-    !enddo
 
 
-    !print *, states
     do l = 1, dim_Sz0
 
       i = states(l)
       call decode(i,nspin,config)
-      !print *, " states(l) =", i, "Dimensions =", dim**2, (nspin+1)*dim/2
 
       m = m+1
       do k = 1, nspin-1
@@ -487,44 +477,21 @@ contains
 
       ROWS(m) = l
       COLS(m) = l
-      !print *, "(First cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
-      !print *, ""
-      !print *, H(m), ROWS(m), COLS(m), m, i+1, i+1
 
       do k = 1, nspin-1
 
         if (config(k)/=config(k+1)) then
           m = m+1
-          !print *, "m = m+1 done", m
-          !print *, ""
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
           H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
-          !n = 1
           n = binsearch(j,states)
-          !do r = 1, dim_Sz0
-            !if(states(r) == j) then
-            !  n = r
-            !  exit
-            !endif
-          !enddo
           COLS(m) = l
           ROWS(m) = n
-          !print *, "(Second cycle) H(m) assigned. ", "l = ", l, "m = ", m, "H(m) =", H(m)!, "ROWS(m) = ", ROWS(m), "COLS(m) =", COLS(m)
-          !print *, H(m), ROWS(m), COLS(m), m, j+1, i+1
-          !print *, ""
         endif
       enddo
 
     enddo
     n = m
-    !print *, "Dimensions =", m, dim**2, (nspin+1)*dim/2
-    !print *, "H_MBL_SPARSE ="
-    !do m = 1, n
-    !  print *, H(m), ROWS(m), COLS(m), m
-    !enddo
-    !print *, nspin, 2**nspin, dim_Sz0
-    !print *, nspin, 2**(2*nspin), dim_Sz0**2, nz_dim, n, &
-    ! & real(n)/real(dim_Sz0**2)*100, real(n)/real(2**(2*nspin))*100
 
   end subroutine buildSz0_SPARSE_HMBL
 
@@ -541,7 +508,6 @@ contains
     integer (c_int) :: i, j, k, m, n, l, r, rflag
     
     H = 0
-    !print *, nspin, dim_Sz0
     call zero_mag_states(nspin, dim_Sz0, states)
     do l = 1, dim_Sz0
 
@@ -577,7 +543,6 @@ contains
     integer (c_int) :: i, j, k, m, n, l, r, rflag
     
     H = 0
-    !print *, nspin, dim_Sz0
     call zero_mag_states(nspin, dim_Sz0, states)
     do l = 1, dim_Sz0
 
@@ -674,7 +639,7 @@ contains
     do k = 1, nspin/2
       l = l + 2**(2*k-1)
     enddo
-    print *, l
+    !print *, l
     
     do i = 1, dim_Sz0
       if(indx(i)==l) then
@@ -701,7 +666,8 @@ contains
     state = 0
     do i = 1, dim_Sz0
       l = states(i) + 1
-      state(l) = state_Sz0(l)
+      state(l) = state_Sz0(i)
+      !print *, l, dim, i, dim_Sz0
     enddo
 
   end subroutine buildState_Sz0_to_FullHS
@@ -757,18 +723,13 @@ contains
 
     k = 0
     states = 0
-    !print *, "Start building states"
     do i = 0, 2**nspin-1
 
       call decode(i, nspin, config)
-      !print *, "Decoding states"
 
       if (sum(config)==nspin/2) then
         k = k+1
         states(k) = i
-        !print *, states(p), p
-        !print '(1X,I0)', config(:)
-        !print *, "Building states(k)"
       endif
     enddo
 
@@ -807,11 +768,9 @@ contains
       magaux = 0
       do k = 1, nspin
         magaux = magaux + (1._c_double - 2._c_double * config(k))
-        !print *, i, k, config(:)
       enddo
       magaux = magaux * abs(state(i))**2
       mag = mag + magaux
-      !print *, i, mag, config(:)
     enddo
     mag = mag/nspin
     mag_z = mag
@@ -850,11 +809,9 @@ contains
       magaux = 0
       do k = 1, nspin
         magaux = magaux + (-1)**k * (1._c_double - 2._c_double * config(k))
-        !print *, i, k, config(:)
       enddo
       magaux = magaux * abs(state(i))**2
       mag = mag + magaux
-      !print *, i, mag, config(:)
     enddo
     mag = mag/nspin
     mag_stag_z = mag
@@ -878,13 +835,11 @@ contains
       do k = 1, nspin
         imbaux = imbaux + (-1)**k * (1 - 2 * config(k))
         magaux = magaux + (1 - 2*config(k))
-        !print *, i, k, config(:)
       enddo
       magaux = magaux * abs(state(i))**2
       imbaux = imbaux * abs(state(i))**2
       mag = mag + magaux
       imb = imb + imbaux
-      !print *, i, mag, config(:)
     enddo
     mag = mag/nspin
     imb = imb/nspin
@@ -912,11 +867,9 @@ contains
       imbaux = 0
       do k = 1, nspin
         imbaux = imbaux + (-1)**k * (1 - 2 * config(k))
-        !print *, i, k, config(:)
       enddo
       imbaux = imbaux * abs(state(i))**2
       imb = imb + imbaux
-      !print *, i, mag, config(:)
     enddo
     imb = imb/nspin
     imbalance_Sz0 = imb

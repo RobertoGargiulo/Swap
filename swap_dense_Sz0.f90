@@ -1,6 +1,5 @@
 program swap
 
-  use exp_sparse
   use exponentiate
   use genmat
   use printing
@@ -11,53 +10,51 @@ program swap
   !use general
   implicit none
 
-  complex (c_double_complex), parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
-  complex (c_double_complex), parameter :: C_ONE = dcmplx(1._c_double, 0._c_double)
+  !complex (c_double_complex), parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
+  !complex (c_double_complex), parameter :: C_ONE = dcmplx(1._c_double, 0._c_double)
   complex (c_double_complex), parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
-  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations, dim_eff
-  integer (c_int)     ::  i, j, k, p, nz_dim, dim_Sz0, nz_Sz0_dim
-  integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
+  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
+  integer (c_int)     ::  j, dim_Sz0
+  integer (c_int)     ::  unit_avg
   integer (c_int)     ::  start
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
+
   real(c_double) :: t_avg, t_sigma, r_dis_avg, r_dis_sigma, t_avg2, t_sigma2
   
   real (c_double) :: norm
   real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2, r_avg, r_sigma
-  complex (c_double_complex) :: alpha, beta
 
-  integer (c_int), dimension(:), allocatable :: ROWS, COLS
-  real (c_double), dimension(:), allocatable :: H_sparse, E
+  real (c_double), dimension(:), allocatable :: E
   real (c_double), dimension(:,:), allocatable :: H, W_r
   complex(c_double_complex), dimension(:), allocatable :: PH
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap, UF
 
-  complex(c_double_complex), dimension(:), allocatable :: init_state, state_i, state_f, state, state2
+  complex(c_double_complex), dimension(:), allocatable :: init_state, state, state2
 
   logical :: SELECT
   EXTERNAL SELECT
 
-  integer(c_int) :: count_beginning, count_end, count_rate, time_min, count1, count2
-  real (c_double) :: time_s
+  integer(c_int) :: count_beginning, count_end, count_rate!, time_min, count1, count2
   character(len=200) :: filestring
-  character(len=8) :: time_string
+
+  real (c_double), allocatable, dimension(:) :: t_decay
+  real (c_double) :: imb_p, t_decay_avg, sigma_t_decay, tau_avg, tau_sigma
+  integer (c_int) :: idecay, idecay2, n_decays
 
 
   !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine, Steps di Evoluzione, Stato Iniziale
-
-  !Parametri Iniziali
 
   write (*,*) "Number of Spins"
   read (*,*) nspin
   print*,""
   dim = 2**nspin
   dim_Sz0 = binom(nspin,nspin/2)
-  nz_Sz0_dim = non_zero_HMBL_Sz0(nspin)
 
   write (*,*) "Number of Iterations"
   read (*,*) n_iterations
@@ -66,15 +63,6 @@ program swap
   write (*,*) "Number of Steps"
   read (*,*) steps
   print*,""
-
-
-  !Standard Values
-  T0 = 1
-  J_coupling = 1
-  V_coupling = J_coupling
-  hz_coupling = J_coupling
-  kick = 0
-  T1 = pi/4 + kick
 
   write (*,*) "Period T0"
   read (*,*) T0
@@ -99,9 +87,6 @@ program swap
   
   T1 = pi/4 + kick
 
-    !Coefficienti dello stato iniziale |psi> = (alpha|up>+beta|down>)^L
-  alpha = 1
-  beta = 0
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
@@ -114,8 +99,8 @@ program swap
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
   open(newunit=unit_avg,file=filestring)
 
-  91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
+  !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
+  !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   93  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
 !
  
@@ -155,25 +140,27 @@ program swap
   allocate( avg(steps), sigma(steps))
   allocate( r_avg(n_iterations), r_sigma(n_iterations))
   allocate( avg2(steps), sigma2(steps))
+  allocate( t_decay(n_iterations) )
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim_Sz0))
   allocate(W(dim_Sz0,dim_Sz0))
 
-  !state_i = init_state
-  !state_f = 0
   avg = 0
   sigma = 0
   !avg2 = 0
   !sigma2 = 0
   r_avg = 0
   r_sigma = 0
+  n_decays = 0
+  t_decay = 0
   !$OMP PARALLEL
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:avg, sigma) private(iteration, h_z, norm, j, &
-  !$OMP & state, H, E, W_r, U, PH, W, state2, UF)
+  !$OMP do reduction(+:avg, sigma, n_decays) private(iteration, h_z, norm, j, &
+  !$OMP & state, H, E, W_r, U, PH, W, state2, UF, &
+  !$OMP & imb_p, idecay)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -208,19 +195,19 @@ program swap
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     UF = matmul(USwap,U)
     !U = USwap
-    call diagUN( SELECT, dim_Sz0, U, PH, W)
+    call diagUN( SELECT, dim_Sz0, UF, PH, W)
     E = real(C_UNIT*log(PH))
     call dpquicksort(E)
     call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sigma(iteration))
 
     state = init_state
-    norm = dot_product(state,state)
+    norm = real(dot_product(state,state))
     j = 1
     avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state)
     sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
 
     state2 = init_state
-    norm = dot_product(state2,state2)
+    norm = real(dot_product(state2,state2))
     j = 1
     avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)
     sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
@@ -228,15 +215,26 @@ program swap
       !print *, imbalance_Sz0(nspin, dim_Sz0, state), imbalance_Sz0(nspin, dim_Sz0, state2), j, norm
     !endif
 
+    idecay = 0
     do j = 2, steps
+      imb_p = imbalance_Sz0(nspin, dim_Sz0, state)
       state = matmul(UF,state)
-      norm = dot_product(state,state)
+      norm = real(dot_product(state,state))
       state = state / sqrt(norm)
+      if (idecay == 0) then
+        if(imb_p*imbalance_Sz0(nspin, dim_Sz0, state) > 0) then
+          t_decay(iteration) = (j-1)*T0
+          idecay = 1
+          n_decays = n_decays + 1
+          !print *, t_decay(iteration), iteration, n_decays
+        endif
+      endif
+
       avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state) 
       sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
 
       state2 = matmul(U,state2)
-      norm = dot_product(state2,state2)
+      norm = real(dot_product(state2,state2))
       state2 = state2 / sqrt(norm)
       avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2) 
       sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
@@ -260,26 +258,49 @@ program swap
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
   avg2 = avg2/n_iterations
   sigma2 = sqrt(sigma2/n_iterations - avg2**2)/sqrt(real(n_iterations))
-  do j = 1, steps
+  idecay = 0
+  idecay2 = 0
+  j = 1
+  write(unit_avg,*) j*T0, avg(j), sigma(j), avg2(j), sigma2(j)
+  do j = 2, steps
     write(unit_avg,*) j*T0, avg(j), sigma(j), avg2(j), sigma2(j)
+    if (idecay == 0) then
+      if(avg(j)*avg(j-1) > 0) then
+        tau_avg = (j-1)*T0
+        idecay = 1
+      endif
+    endif
+    if (idecay2 == 0) then
+      if(abs(avg(j-1)) < sigma(j-1)) then
+        tau_sigma = (j-1)*T0
+        idecay2 = 1
+      endif
+    endif
   enddo
 
   call time_avg('F', n_iterations, 1, r_avg, r_sigma, r_dis_avg, r_dis_sigma)
-  start = 1 !int(100/T0) !The average starts from the step for which 100 = start*T0
+  start = int(100/T0) !The average starts from the step for which 100 = start*T0
   call time_avg('T', steps, start, avg, sigma, t_avg, t_sigma)
   call time_avg('F', steps, start, avg2, sigma2, t_avg2, t_sigma2)
 
-  write(unit_avg,*) "Time Averages and Errors of Imbalance"
+  write(unit_avg,*) "Imbalance Time Averages and Errors of Imbalance"
   write(unit_avg,*) t_avg, t_sigma, t_avg2, t_sigma2
   write(unit_avg,*) "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
   write(unit_avg,*) r_dis_avg, r_dis_sigma
 
-  print *,"Time Averages and Errors"
+  print *,"Imbalance Time Averages and Errors"
   print *, t_avg, t_sigma, t_avg2, t_sigma2
   print *, "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
   print *, r_dis_avg, r_dis_sigma
 
-  call take_time(count_rate, count_beginning, count1, 'T', "Program: ")
+
+  t_decay_avg = sum(t_decay)/n_decays
+  sigma_t_decay = sqrt((sum(t_decay**2)/n_decays - t_decay_avg**2)/n_decays)
+  print *, "Decay Time ( t*, sigma(t*), tau_avg, tau_sigma, n_decays)"
+  print*, t_decay_avg, sigma_t_decay, tau_avg, tau_sigma, n_decays
+    
+
+  call take_time(count_rate, count_beginning, count_end, 'T', "Program: ")
 
   deallocate(Jint, Vint, h_z)
   deallocate(avg, sigma)
@@ -298,6 +319,10 @@ logical function SELECT(z)
   implicit none
 
   complex(kind=8), intent(in) :: z
+
+  complex(kind=8) :: w
+  
+  w = z
 
   SELECT = .TRUE.
   RETURN

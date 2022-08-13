@@ -51,6 +51,7 @@ V = "0.25"
 list_L = "2 4 6 8 10 12 14 16"
 list_iter1 = "100 100 100 100 100 100 100 100"
 list_iter2 = "1280 640 320 160 80 80 20 10"
+list_iter3 = "2560 1280 640 320 160 80 40 20 10"
 
 list_J1 = "0.00 0.02 0.04 0.06 0.08 0.10"
 list_V1 = "0.00 0.25 0.50"
@@ -60,6 +61,13 @@ list_J2 = "0.00 0.10 0.20 0.30 0.40 0.50"
 list_V2 = "0.00 0.50 1.00 1.50 2.00 2.50 3.00"
 list_hz2 = "0.00 1.00 2.00 3.00 4.00 5.00 6.00"
 list_kick = "0.00 0.05 0.10 0.15 0.20"
+
+start=0.00; end=4.00; inc=0.10
+list(start,end,increment)=system(sprintf("seq %.2f %.2f %.2f", start, increment, end))
+list_V3 = list(0.00,4.00,0.10)  #at J = 0.10, hz = 6.00, kick = 0.00
+#list_V3 = ""; a=start-inc; while (a<end) {list_V3=list_V3.sprintf(" %.2f",a=a+inc)}
+#print list_V3
+
 
 #Varying L
 
@@ -79,6 +87,24 @@ set title "nspin = ".word(list_L,j).", n_{iter} = ".word(list_iter2,j).", period
 #plot for [i=1:6] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter2,j)."_J".word(list_J2,i)."_V".V."_hz".hz."_kick".kick.".txt" every density::::steps u 1:(abs($2)) w l title "Swap, J =".word(list_J2,i)
 
 
+
+#Varying V
+J = "0.05"
+hz = "6.00"
+j = 5
+#unset logscale x
+
+set title "nspin = ".word(list_L,j).", n_{iter} = ".word(list_iter3,j).", period = ".period.", J = ".J.", hz = ".hz.", kick = ".kick
+set output "figures/Avg_Imbalance_Evolution_Sz0_SWAP_hz_Disorder_nspin".word(list_L,j)."_period".period."_J".J."_hz".hz."_kick".kick."_varying_V_log.png"
+
+#plot for [i=1:3] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter1,j)."_J".J."_V".word(list_V1,i)."_hz".hz."_kick".kick.".txt" every density u 1:(abs($2)) w l title "Swap, V =".word(list_V1,i)
+
+#plot for [i=2:7] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter2,j)."_J".J."_V".word(list_V2,i)."_hz".hz."_kick".kick.".txt" every density::::steps  u 1:(abs($2)) w l title "Swap, V =".word(list_V2,i)
+
+plot for [i=1:20] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter3,j)."_J".J."_V".word(list_V3,i)."_hz".hz."_kick".kick.".txt" every density::::steps  u 1:(abs($2)) w l title "Swap, V =".word(list_V3,i)
+
+
+
 #Varying hz
 J = "0.10"
 V = "0.50"
@@ -93,17 +119,19 @@ set title "nspin = ".word(list_L,j).", n_{iter} = ".word(list_iter2,j).", period
 #plot for [i=2:7] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter2,j)."_J".J."_V".V."_hz".word(list_hz2,i)."_kick".kick.".txt" every density::::steps  u 1:(abs($2)) w l title "Swap, hz =".word(list_hz2,i)
 
 
-
-#Varying V
+#Varying kick
 J = "0.10"
+V = "0.50"
 hz = "6.00"
-j = 6
+j = 5
 #unset logscale x
 
-set title "nspin = ".word(list_L,j).", n_{iter} = ".word(list_iter1,j).", period = ".period.", J = ".J.", hz = ".hz.", kick = ".kick
-set output "figures/Avg_Imbalance_Evolution_Sz0_SWAP_hz_Disorder_nspin".word(list_L,j)."_period".period."_J".J."_hz".hz."_kick".kick."_log.png"
-#plot for [i=1:3] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter1,j)."_J".J."_V".word(list_V1,i)."_hz".hz."_kick".kick.".txt" every density u 1:(abs($2)) w l title "Swap, V =".word(list_V1,i)
-plot for [i=2:7] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter2,j)."_J".J."_V".word(list_V2,i)."_hz".hz."_kick".kick.".txt" every density::::steps  u 1:(abs($2)) w l title "Swap, V =".word(list_V2,i)
+set title "nspin = ".word(list_L,j).", n_{iter} = ".word(list_iter2,j).", period = ".period.", J = ".J.", V = ".V.", hz = ".hz
+#set output "figures/Avg_Imbalance_Evolution_Sz0_SWAP_hz_Disorder_nspin".word(list_L,j)."_period".period."_J".J."_V".V."_hz".hz."_log.png"
+
+#plot for [i=1:5] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter2,j)."_J".J."_V".V."_hz".hz."_kick".word(list_kick,i).".txt" every density::::steps  u 1:(abs($2)) w l title "kick =".word(list_kick,i)
+
+
 
 
 
