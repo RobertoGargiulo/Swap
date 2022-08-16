@@ -45,6 +45,9 @@ swap_dense_Sz0: $(MOD) swap_dense_Sz0.o
 swap_spectrum_Sz0: $(MOD) swap_spectrum_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+entanglement: $(MOD) entanglement.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 mag_avg: mag_avg.f90
 	$(FC) $(FFLAGS) -o $@ $@.f90
 

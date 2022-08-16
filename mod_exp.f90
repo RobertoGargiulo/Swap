@@ -58,7 +58,7 @@ contains
     do j = 1, N
       do i = 1, j
         HP(i + j*(j-1)/2) = H(i,j)
-        !print*, i, j, i + j*(j-1)/2, n*(n+1)/2
+        !print*, i, j, i + j*(j-1)/2, N*(N+1)/2, H(i,j), HP(i + j*(j-1)/2)
       enddo
     enddo
     !print *, "H in packed storage HP"
@@ -104,7 +104,7 @@ contains
     do j = 1, N
       do i = 1, j
         HP(i + j*(j-1)/2) = H(i,j)
-        !print*, i, j, i + j*(j-1)/2, n*(n+1)/2
+        !print*, i, j, i + j*(j-1)/2, N*(n+1)/2, H(i,j), HP(i + j*(j-1)/2)
       enddo
     enddo
     !print *, "H in packed storage HP"

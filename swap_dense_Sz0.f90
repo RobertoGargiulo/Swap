@@ -139,7 +139,7 @@ program swap
   !Allocate observables and averages
   allocate( avg(steps), sigma(steps))
   allocate( r_avg(n_iterations), r_sigma(n_iterations))
-  allocate( avg2(steps), sigma2(steps))
+  !allocate( avg2(steps), sigma2(steps))
   allocate( t_decay(n_iterations) )
 
   !Allocate for Eigenvalues/Eigenvectors
@@ -153,7 +153,7 @@ program swap
   r_avg = 0
   r_sigma = 0
   n_decays = 0
-  t_decay = 0
+  t_decay = steps
   !$OMP PARALLEL
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
@@ -194,11 +194,6 @@ program swap
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     UF = matmul(USwap,U)
-    !U = USwap
-    call diagUN( SELECT, dim_Sz0, UF, PH, W)
-    E = real(C_UNIT*log(PH))
-    call dpquicksort(E)
-    call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sigma(iteration))
 
     state = init_state
     norm = real(dot_product(state,state))
@@ -206,14 +201,11 @@ program swap
     avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state)
     sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
 
-    state2 = init_state
-    norm = real(dot_product(state2,state2))
-    j = 1
-    avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)
-    sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
-    !if(iteration==1) then
-      !print *, imbalance_Sz0(nspin, dim_Sz0, state), imbalance_Sz0(nspin, dim_Sz0, state2), j, norm
-    !endif
+    !state2 = init_state
+    !norm = real(dot_product(state2,state2))
+    !j = 1
+    !avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)
+    !sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
 
     idecay = 0
     do j = 2, steps
@@ -226,28 +218,18 @@ program swap
           t_decay(iteration) = (j-1)*T0
           idecay = 1
           n_decays = n_decays + 1
-          !print *, t_decay(iteration), iteration, n_decays
         endif
       endif
 
       avg(j) = avg(j) + imbalance_Sz0(nspin, dim_Sz0, state) 
       sigma(j) = sigma(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
 
-      state2 = matmul(U,state2)
-      norm = real(dot_product(state2,state2))
-      state2 = state2 / sqrt(norm)
-      avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2) 
-      sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
-      !if (iteration==1) then
-      !  print *, imbalance_Sz0(nspin, dim_Sz0, state), j, norm
-      !endif
-      !print *, imbalance_Sz0(nspin, dim_Sz0, state), imbalance_Sz0(nspin, dim_Sz0, state2), j, norm
+      !state2 = matmul(U,state2)
+      !norm = real(dot_product(state2,state2))
+      !state2 = state2 / sqrt(norm)
+      !avg2(j) = avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2) 
+      !sigma2(j) = sigma2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
     enddo
-    !print *, ""
-    !call take_time(count_rate, count2, count1, 'T', "Dense Evolution")
-    !print *, "End of Dense Evolution"
-    !print *, ""
-    !print *, imbalance_Sz0(nspin, dim_Sz0, state), j, norm
 
   enddo
   !$OMP END DO
@@ -256,57 +238,58 @@ program swap
 
   avg = avg/n_iterations
   sigma = sqrt(sigma/n_iterations - avg**2)/sqrt(real(n_iterations))
-  avg2 = avg2/n_iterations
-  sigma2 = sqrt(sigma2/n_iterations - avg2**2)/sqrt(real(n_iterations))
-  idecay = 0
-  idecay2 = 0
+  !avg2 = avg2/n_iterations
+  !sigma2 = sqrt(sigma2/n_iterations - avg2**2)/sqrt(real(n_iterations))
+  !idecay = 0
+  !idecay2 = 0
   j = 1
-  write(unit_avg,*) j*T0, avg(j), sigma(j), avg2(j), sigma2(j)
+  write(unit_avg,*) j*T0, avg(j), sigma(j)!, avg2(j), sigma2(j)
   do j = 2, steps
-    write(unit_avg,*) j*T0, avg(j), sigma(j), avg2(j), sigma2(j)
-    if (idecay == 0) then
-      if(avg(j)*avg(j-1) > 0) then
-        tau_avg = (j-1)*T0
-        idecay = 1
-      endif
-    endif
-    if (idecay2 == 0) then
-      if(abs(avg(j-1)) < sigma(j-1)) then
-        tau_sigma = (j-1)*T0
-        idecay2 = 1
-      endif
-    endif
+    write(unit_avg,*) j*T0, avg(j), sigma(j)!, avg2(j), sigma2(j)
+    !if (idecay == 0) then
+    !  if(avg(j)*avg(j-1) > 0) then
+    !    tau_avg = (j-1)*T0
+    !    idecay = 1
+    !  endif
+    !endif
+    !if (idecay2 == 0) then
+    !  if(abs(avg(j-1)) < sigma(j-1)) then
+    !    tau_sigma = (j-1)*T0
+    !    idecay2 = 1
+    !  endif
+    !endif
   enddo
 
   call time_avg('F', n_iterations, 1, r_avg, r_sigma, r_dis_avg, r_dis_sigma)
   start = int(100/T0) !The average starts from the step for which 100 = start*T0
   call time_avg('T', steps, start, avg, sigma, t_avg, t_sigma)
-  call time_avg('F', steps, start, avg2, sigma2, t_avg2, t_sigma2)
+  !call time_avg('F', steps, start, avg2, sigma2, t_avg2, t_sigma2)
+
+  t_decay_avg = sum(t_decay)/n_iterations
+  sigma_t_decay = sqrt((sum(t_decay**2)/n_iterations - t_decay_avg**2)/n_iterations)
 
   write(unit_avg,*) "Imbalance Time Averages and Errors of Imbalance"
-  write(unit_avg,*) t_avg, t_sigma, t_avg2, t_sigma2
+  write(unit_avg,*) t_avg, t_sigma!, t_avg2, t_sigma2
   write(unit_avg,*) "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
   write(unit_avg,*) r_dis_avg, r_dis_sigma
+  write(unit_avg,*) "Decay Time ( t*, sigma(t*), n_decays)"
+  write(unit_avg,*) t_decay_avg, sigma_t_decay, n_decays!, tau_avg, tau_sigma
 
   print *,"Imbalance Time Averages and Errors"
-  print *, t_avg, t_sigma, t_avg2, t_sigma2
+  print *, t_avg, t_sigma!, t_avg2, t_sigma2
   print *, "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
   print *, r_dis_avg, r_dis_sigma
-
-
-  t_decay_avg = sum(t_decay)/n_decays
-  sigma_t_decay = sqrt((sum(t_decay**2)/n_decays - t_decay_avg**2)/n_decays)
-  print *, "Decay Time ( t*, sigma(t*), tau_avg, tau_sigma, n_decays)"
-  print*, t_decay_avg, sigma_t_decay, tau_avg, tau_sigma, n_decays
+  print *, "Decay Time ( t*, sigma(t*), n_decays)"
+  print*, t_decay_avg, sigma_t_decay, n_decays!, tau_avg, tau_sigma
     
 
-  call take_time(count_rate, count_beginning, count_end, 'T', "Program: ")
+  call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 
   deallocate(Jint, Vint, h_z)
   deallocate(avg, sigma)
   deallocate(H,E,W_r,U)
-  !deallocate(USwap)
-  !deallocate(PH, W)
+  deallocate(USwap)
+  deallocate(PH, W)
 
   !close(unit_avg)
 

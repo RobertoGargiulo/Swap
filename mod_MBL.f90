@@ -50,17 +50,28 @@ contains
     complex (c_double_complex), intent(in) :: psi(dim)
     complex (c_double_complex), intent(out) :: rho_A(dim_A,dim_A)
 
-    integer :: jA, kA, iB, dim_B
+    integer :: jA, kA, iB, dim_B, i, j
 
     dim_B = dim/dim_A
     rho_A = 0
 
+
+    !print *, nspin, nspin_A, dim, dim_A
+    !print *, "jA         kA       dim_A          iB       dim_B           i           j         dim"
     do jA = 0, dim_A-1
       do kA = 0, dim_A-1
         do iB = 0, dim_B-1
 
-          rho_A(jA+1,kA+1) = rho_A(jA+1,kA+1) + psi(jA + 2**(nspin_A) * iB+1) * dconjg( psi(kA + 2**(nspin_A) * iB +1) )
-          !print *, jA, kA, dim_A, iB, dim_B, jA + 2**(nspin_A) * iB, kA + 2**(nspin_A) * iB, dim
+          i = jA + 2**(nspin_A) * iB + 1
+          j = kA + 2**(nspin_A) * iB + 1
+
+          !if ( i > dim ) then
+          !  print *, jA, kA, dim_A, iB, dim_B, i, j, dim
+          !else if ( j > dim ) then
+          !  print *, jA, kA, dim_A, iB, dim_B, i, j, dim
+          !endif
+          !2^(N_A) - 1 + 2^(N_A) * (2^(N_B) - 1) + 1 = 2^(N_A) + 2^(N_A+N_B) - 2^(N_A)
+          rho_A(jA+1,kA+1) = rho_A(jA+1,kA+1) + psi(i) * dconjg( psi(j) )
 
         enddo
       enddo
@@ -79,7 +90,7 @@ contains
     complex (c_double_complex), intent(in) :: psi(dim)
     complex (c_double_complex), intent(out) :: rho_B(dim_B,dim_B)
 
-    integer :: jB, kB, iA, dim_A
+    integer :: jB, kB, iA, dim_A, i, j
 
     dim_A = dim/dim_B
     rho_B = 0
@@ -88,7 +99,10 @@ contains
       do kB = 0, dim_B-1
         do iA = 0, dim_A-1
 
-          rho_B(jB+1,kB+1) = rho_B(jB+1,kB+1) + psi(iA + 2**(nspin-nspin_B) * jB+1) * dconjg( psi(iA + 2**(nspin-nspin_B) * kB +1) )
+          i = iA + 2**(nspin-nspin_B) * jB + 1
+          j = iA + 2**(nspin-nspin_B) * kB + 1
+
+          rho_B(jB+1,kB+1) = rho_B(jB+1,kB+1) + psi(i) * dconjg( psi(j) )
 
         enddo
       enddo
@@ -107,7 +121,7 @@ contains
     complex (c_double_complex), intent(in) :: psi(dim)
     complex (c_double_complex), intent(out) :: rho_AB(dim_A*dim_B,dim_A*dim_B)
 
-    integer :: jAB, kAB, jA, jB, kA, kB, iC, dim_C
+    integer :: jAB, kAB, jA, jB, kA, kB, iC, dim_C, i, j
 
     dim_C = dim/(dim_A*dim_B)
     rho_AB = 0
@@ -121,8 +135,10 @@ contains
               jAB = jA + 2**(nspin_A)*jB + 1
               kAB = kA + 2**(nspin_A)*kB + 1
 
-              rho_AB(jAB,kAB) = rho_AB(jAB,kAB) + psi(jA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * jB + 1) * &
-               & dconjg( psi(kA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * kB + 1 ) )
+              i = jA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * jB + 1
+              j = kA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * kB + 1 
+
+              rho_AB(jAB,kAB) = rho_AB(jAB,kAB) + psi(i) * dconjg( psi(j) )
             enddo
           enddo
         enddo
@@ -144,14 +160,23 @@ contains
     real (c_double) :: entanglement
 
     real (c_double) :: EE, prob(dim)
-    complex (c_double_complex) :: W(dim,dim)
+    complex (c_double_complex), allocatable :: W(:,:)
     integer :: i
 
-    call diagHE( 'V', dim, rho, prob, W)
+    !print *, "Call to diagHE"
+    allocate(W(dim,dim))
+    call diagHE( 'N', dim, rho, prob, W)
+    deallocate(W(dim,dim))
 
     EE = 0
     do i = 1, dim
-      EE = EE - prob(i) * log(prob(i))
+      if(prob(i) > 0 ) then
+        EE = EE - prob(i) * log(prob(i))
+      !else
+        !print *, "Zero, Negative or Complex eigenvalue of rho: ", prob(i), i
+      endif
+      
+      !print *, i, prob(i), EE
     enddo
   
     entanglement = EE
@@ -173,7 +198,6 @@ contains
 
     real (c_double) :: MI
     complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)
-    integer :: i
 
     call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
     call right_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_B)
@@ -188,7 +212,7 @@ contains
   function mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
 
     !Computes the long-range mutual information between the two edges.
-    !The edges are regions (spin chains) A,B both of length nspin_A and local dimension dim_A (here case of Full Hilbert Space)
+    !The edges are regions (spin chains) A,B both of length nspin_A and local dimension dim_A (here case of subspace Sz=0)
     !psi is the (pure) state of the spin chain
     ! MI = S_A + S_B - S_AB
     ! MI is the maximum information of A we can find from B, and viceversa
@@ -200,7 +224,6 @@ contains
     real (c_double) :: MI
     complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)
     complex (c_double_complex) :: psi(dim)
-    integer :: i
 
     call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
 
@@ -209,6 +232,9 @@ contains
     call edges_reduced_DM(nspin, nspin_A, nspin_A, dim, dim_A, dim_A, psi, rho_AB)
 
     MI = entanglement(dim_A,rho_A) + entanglement(dim_A,rho_B) - entanglement(dim_A*dim_A,rho_AB)
+
+    !print *, "S_A         S_B          S_{AB}"
+    !print *, entanglement(dim_A,rho_A), entanglement(dim_A,rho_B), entanglement(dim_A*dim_A,rho_AB)
     
     mutual_information_Sz0 = MI
 

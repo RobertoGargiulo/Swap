@@ -34,8 +34,7 @@ program swap
   complex(c_double_complex), dimension(:), allocatable :: PH
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
 
-  real (c_double), dimension(:,:,:), allocatable :: MI
-  real (c_double), dimension(:,:), allocatable :: MI_avg
+  real (c_double), allocatable :: MI(:,:,:), MI_avg(:,:), MI_dis_avg(:)
   integer (c_int) :: nspin_A, dim_A
 
   logical :: SELECT
@@ -87,8 +86,6 @@ program swap
   T1 = pi/4 + kick
 
     !Coefficienti dello stato iniziale |psi> = (alpha|up>+beta|down>)^L
-  alpha = 1
-  beta = 0
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
@@ -123,7 +120,7 @@ program swap
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim_Sz0))
   allocate(W(dim_Sz0,dim_Sz0))
-  allocate(MI(nspin/2,n_iterations,dim_Sz0), MI_avg(nspin/2,n_iterations))
+  allocate(MI(nspin/2,n_iterations,dim_Sz0), MI_avg(nspin/2,n_iterations), MI_dis_avg(nspin/2))
 
   r_avg = 0
   r_sigma = 0
@@ -135,7 +132,7 @@ program swap
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
   !$OMP DO private(iteration, h_z, H, E, W_r, &
-  !$OMP & U, W, PH)
+  !$OMP & U, W, PH, nspin_A, dim_A, i)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -193,6 +190,7 @@ program swap
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
   MI_avg = 0
+  MI_dis_avg = 0
   print *, "Mutual Information (MI, log 2, nspin_A, iteration)"
   do nspin_A = 1, nspin/2
     do iteration = 1, n_iterations
@@ -200,16 +198,20 @@ program swap
         MI_avg(nspin_A,iteration) = MI_avg(nspin_A,iteration) + MI(nspin_A,iteration,i)
       enddo
       MI_avg = MI_avg/dim_Sz0
-      print *, MI_avg(nspin_A,iteration), log(2.d0), nspin_A, iteration
+      !print *, MI_avg(nspin_A,iteration), log(2.d0) ,nspin_A, iteration
+      MI_dis_avg(nspin_A) = MI_dis_avg(nspin_A) + MI_avg(nspin_A,iteration)
     enddo
+    MI_dis_avg = MI_dis_avg/n_iterations
+    print *, MI_dis_avg(nspin_A), log(2.d0), nspin_A
+    !print *, ""
   enddo
 
   call take_time(count_rate, count_beginning, count1, 'T', "Program")
 
   deallocate(Jint, Vint, h_z)
   deallocate(H,E,W_r)
-  !deallocate(USwap)
-  !deallocate(U, PH, W)
+  deallocate(USwap)
+  deallocate(U, PH, W)
 
 end program swap
 
@@ -223,25 +225,3 @@ logical function SELECT(z)
   RETURN
 
 end
-
-subroutine take_time(count_rate, count_start, count_end, opt, filestring)
-  implicit none
-  integer, intent(in) :: count_rate, count_start
-  integer, intent(out) :: count_end
-  character :: opt*1
-  character (*) :: filestring
-
-  real :: time_s
-  integer :: time_min
-
-  call system_clock(count_end)
-
-  time_s = real(count_end - count_start) / real(count_rate)
-  time_min = int(time_s/60)
-  if(opt == 'T') then
-    print "(A,A,A,1X,I4,A,2X,F15.10,A)", "Elapsed Time for ", filestring, ": ", time_min, "min", time_s - 60*time_min, "sec"
-  else if(opt == 'F') then
-    print *, ""
-  endif
-  !print *, ""
-end subroutine

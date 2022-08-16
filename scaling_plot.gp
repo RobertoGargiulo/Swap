@@ -153,8 +153,8 @@ hz = "6.00"
 kick = "0.00"
 
 set title "nspin = ".nspin.", n_{iter} = ".iter.", period = ".period.", J = ".J.", hz = ".hz.", kick = ".kick
-set output "figures/Avg_Imbalance_Sz0_SWAP_hz_Disorder_nspin".nspin."_period".period."_J".J."_hz".hz."_kick".kick."_up_to_V12.png"
-plot file u 3:(-$7) w lp lw 1.4 title "Swap", "" u 3:(-$9) title "MBL"
+#set output "figures/Avg_Imbalance_Sz0_SWAP_hz_Disorder_nspin".nspin."_period".period."_J".J."_hz".hz."_kick".kick."_up_to_V12.png"
+#plot file u 3:(-$7) w lp lw 1.4 title "Swap", "" u 3:(-$9) title "MBL"
 
 
 ##### Decay Time
@@ -162,7 +162,9 @@ plot file u 3:(-$7) w lp lw 1.4 title "Swap", "" u 3:(-$9) title "MBL"
 
 #Fixed nspin,J,hz,kick,iter,steps, varying V
 
-file_time="Swap_decay_times.txt"
+file_time="sort_Swap_decay_times.txt"
+file_time2="Swap_decay_times2.txt"
+
 
 set ylabel "Decay Time"
 set xlabel "L"
@@ -174,15 +176,52 @@ list_L = "2 4 6 8 10"
 list_iter = "5120 2560 1280 640 320"
 list_J = "0.02 0.04 0.06 0.08 0.10"
 list_V = "0.25 0.50"
-list_h = "3.00 6.00 12.00"
+list_hz = "3.00 6.00 12.00"
 
 period = "1.00"
 kick = "0.00"
+steps = 1e5
+set xrange [1.50:10.50]
+set yrange [:steps]
 
-set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{5}, period = ".period.", J = ".J.", hz = ".hz.", kick = ".kick
-set output "figures/Decay_Time_Sz0_SWAP_hz_Disorder_nspin".nspin."_period".period."_J".J."_V".V."_kick".kick."_up_to_L10.png"
-plot file u 1:11 every 3:20:1 w lp lw 1.4 title "hz = ".hz #, "" u 3:(-$9) title "MBL"
+set xtics list_L
+set ytics 0.001, 10, 10e6 format "10^{%T}"
 
+# J = 0.02, ..., 0.10, V = 0.25, hz = 3.00 -> j = 0, ..., 4
+# J = 0.02, ..., 0.10, V = 0.50, hz = 3.00 -> j = 5, ..., 9
+# J = 0.02, ..., 0.10, V = 0.25, hz = 6.00 -> j = 10, ..., 14
+# J = 0.02, ..., 0.10, V = 0.50, hz = 6.00 -> j = 15, ..., 19
+# J = 0.02, ..., 0.10, V = 0.25, hz = 12.00 -> j = 20, ..., 24
+# J = 0.02, ..., 0.10, V = 0.50, hz = 12.00 -> j = 25, ..., 29
+ 
+# INDEX = i+5*j+10*k -> 0<i<4 (changing J), 0<j<1 (changing V), 0<k<2 (changing hz)
+# In generale: i + num_J * j + num_J * num_V * k, 0<i<num_J-1; 0<j<num_V-1; 0<k<num_hz-1
+
+
+j = 0; k = 0
+set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{5}, period = ".period.", V = ".word(list_V,j+1).", hz = ".word(list_hz,k+1).", kick = ".kick
+set output "figures/Scaling_Decay_Time_varying_J.png"
+plot for [i=0:4] file_time every :::i+5*j+10*k::i+5*j+10*k u 1:(($11*$15+$17*($16-$15))/$16):12 w errorlines title "J = ".word(list_J,i+1)
+
+i = 4; k = 0
+set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{5}, period = ".period.", J = ".word(list_J,i+1).", hz = ".word(list_hz,k+1).", kick = ".kick
+set output "figures/Scaling_Decay_Time_varying_V.png"
+plot for [j=0:1] file_time every :::i+5*j+10*k::i+5*j+10*k u 1:(($11*$15+$17*($16-$15))/$16):12 w errorlines title "V = ".word(list_J,j+1)
+
+i = 4; j = 0
+set title "J = ".word(list_J,i+1).", V = ".word(list_V,j+1)
+set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{5}, period = ".period.", J = ".word(list_J,i+1).", V = ".word(list_V,j+1).", kick = ".kick
+set output "figures/Scaling_Decay_Time_varying_hz.png"
+plot for [k=0:2] file_time every :::i+5*j+10*k::i+5*j+10*k u 1:(($11*$15+$17*($16-$15))/$16):12 w errorlines title "hz = ".word(list_hz,k+1)
+
+i = 1; j = 1; k = 2
+do for [k=0:2] {
+set table $DataSelected
+  plot file_time every :::i+5*j+10*k::i+5*j+10*k u 1:2:3:4:(($11*$15+$17*($16-$15))/$16):15 w table
+unset table
+print "Table"
+print $DataSelected
+}
 
 
 

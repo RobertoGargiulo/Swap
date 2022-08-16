@@ -730,11 +730,37 @@ contains
       if (sum(config)==nspin/2) then
         k = k+1
         states(k) = i
+        print *, i, k, states(k)
       endif
     enddo
 
   end subroutine zero_mag_states
 
+  subroutine finite_imbalance_states(nspin, dim, IMB, states)
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: IMB
+    integer (c_int), intent(out) :: states(dim)
+
+    integer (c_int) :: i, k, l, config(nspin), sum_even, sum_odd, loc_imb
+
+    l = 0
+    do i = 0, dim-1
+      call decode(i, nspin, config)
+      sum_even = 0
+      sum_odd = 0
+      do k = 1, nspin/2
+        sum_even = sum_even + config(2*k)
+        sum_odd = sum_odd + config(2*k-1)
+      enddo
+      loc_imb = (sum_odd - sum_even) / (nspin - sum_odd - sum_even)
+      if(loc_imb == IMB) then
+        l = l+1
+        states(l) = i
+        print *, i, l, states(l)
+      endif
+    enddo
+
+  end subroutine finite_imbalance_states
 
 
   subroutine magntz(i, nspin, mag)
