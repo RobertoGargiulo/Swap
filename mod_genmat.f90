@@ -432,12 +432,12 @@ contains
       enddo
 
     enddo
-    print *, m
-    print *, "H_MBL_SPARSE ="
-    do m = 1, (nspin+1)*dim/2
+    !print *, m
+    !print *, "H_MBL_SPARSE ="
+    !do m = 1, (nspin+1)*dim/2
       !if(abs(H(m))<0e-10)  print *, H(m), ROWS(m), COLS(m), m
-      print *, H(m), ROWS(m), COLS(m), m
-    enddo
+      !print *, H(m), ROWS(m), COLS(m), m
+    !enddo
 
   end subroutine buildHESPARSE_HMBL
 
@@ -730,7 +730,7 @@ contains
       if (sum(config)==nspin/2) then
         k = k+1
         states(k) = i
-        print *, i, k, states(k)
+        !print *, i, k, states(k)
       endif
     enddo
 
@@ -741,26 +741,38 @@ contains
     real (c_double), intent(in) :: IMB
     integer (c_int), intent(out) :: states(dim)
 
-    integer (c_int) :: i, k, l, config(nspin), sum_even, sum_odd, loc_imb
+    integer (c_int) :: i, k, l, config(nspin), sum_even, sum_odd
+    real (c_double) :: loc_imb
 
     l = 0
+    print *, "       i     l  config"
     do i = 0, dim-1
       call decode(i, nspin, config)
-      sum_even = 0
       sum_odd = 0
+      sum_even = 0
+      !print *, i, sum_even, sum_odd
       do k = 1, nspin/2
-        sum_even = sum_even + config(2*k)
         sum_odd = sum_odd + config(2*k-1)
+        sum_even = sum_even + config(2*k)
+        !print *, k, sum_even, sum_odd
       enddo
-      loc_imb = (sum_odd - sum_even) / (nspin - sum_odd - sum_even)
-      if(loc_imb == IMB) then
+      loc_imb = real(sum_odd - sum_even, c_double) / real(nspin - sum_odd - sum_even, c_double)
+      !print *, loc_imb
+      if(abs(IMB) < 1.0e-10 .AND. sum_odd == sum_even) then
         l = l+1
         states(l) = i
-        print *, i, l, states(l)
+        print "(2(8X,I0),4X,*(I0))", i, l, config(:)
+      else if(abs(IMB) > 1.0e-10 .AND. abs(loc_imb - IMB) < 1.0e-10) then
+        l = l+1
+        states(l) = i
+        print "(2(8X,I0),4X,*(I0))", i, l, config(:)
       endif
     enddo
 
   end subroutine finite_imbalance_states
+
+
+
 
 
   subroutine magntz(i, nspin, mag)
@@ -902,6 +914,58 @@ contains
 
   end function imbalance_Sz0
 
+  real function imbalance_sq_Sz0(nspin, dim_Sz0, state)
+
+    integer(c_int), intent(in) :: nspin, dim_Sz0
+    complex(c_double_complex), intent(in) :: state(dim_Sz0)
+    real(c_double) :: imb, imbaux
+    integer :: config(nspin)
+    integer (c_int) :: i, k1, k2, l, indx(dim_Sz0)
+
+    imb = 0
+    call zero_mag_states(nspin, dim_Sz0, indx)
+
+    do i = 1, dim_Sz0
+
+      l = indx(i)
+      call decode(l,nspin,config)
+      imbaux = 0
+      do k1 = 1, nspin
+        do k2 = 1, nspin
+          imbaux = imbaux + (-1)**k1 * (1 - 2 * config(k1)) * (-1)**k2 * (1 - 2 * config(k2))
+        enddo
+      enddo
+      imbaux = imbaux * abs(state(i))**2
+      imb = imb + imbaux
+    enddo
+    imb = imb/nspin
+    imbalance_sq_Sz0 = imb
+
+  end function imbalance_sq_Sz0
+
+  real function imbalance_sq_Sz0_basis(nspin, dim_Sz0, i)
+
+    integer(c_int), intent(in) :: nspin, dim_Sz0
+    integer (c_int), intent(out) :: i
+    real(c_double) :: imb
+    integer :: config(nspin)
+    integer (c_int) :: k1, k2, l, indx(dim_Sz0)
+
+    imb = 0
+    call zero_mag_states(nspin, dim_Sz0, indx)
+
+    l = indx(i)
+    call decode(l,nspin,config)
+    imb = 0
+    do k1 = 1, nspin
+      do k2 = 1, nspin
+        imb = imb + (-1)**k1 * (1 - 2 * config(k1)) * (-1)**k2 * (1 - 2 * config(k2))
+      enddo
+    enddo
+    imb = imb/nspin
+    imbalance_sq_Sz0_basis = imb
+
+  end function imbalance_sq_Sz0_basis
 
 
   subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)
@@ -924,8 +988,8 @@ contains
         t_sigma = t_sigma + sigma(j)**2
       enddo
     endif
-    t_avg = t_avg/(steps-start+1)
-    t_sigma = sqrt(t_sigma/real(steps-start+1))
+    t_avg = t_avg/real(steps-start+1,c_double)
+    t_sigma = sqrt(t_sigma/real(steps-start+1,c_double))
 
   end subroutine time_avg
 

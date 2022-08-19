@@ -5,8 +5,10 @@ program swap
   use genmat
   use printing
   use MBL
-  !use omp_lib
+  use omp_lib
   use sorts
+  !use sorting
+  !use stdlib_sorting_sort_index
   use iso_c_binding
   !use general
   implicit none
@@ -17,7 +19,7 @@ program swap
 
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
-  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations, dim_eff
+  integer (c_int)     ::  nspin, dim, iteration, n_iterations, dim_eff
   integer (c_int)     ::  i, j, k, p, nz_dim, krylov_dim, dim_Sz0, nz_Sz0_dim
   integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
 
@@ -26,7 +28,7 @@ program swap
   real(c_double) :: t_avg, t_sigma, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
   
   real (c_double) :: norm
-  real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2, r_avg, r_sigma, r_avg2, r_sigma2
+  real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2, r_avg, r_sq, r_avg2, r_sq2
   complex (c_double_complex) :: alpha, beta
 
   real (c_double), dimension(:), allocatable :: E
@@ -34,8 +36,14 @@ program swap
   complex(c_double_complex), dimension(:), allocatable :: PH
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
 
+  real (c_double), allocatable :: pair_gaps(:), gaps(:), gaps_abs(:), log_gap(:)
+  real (c_double), allocatable :: log_gap_avg(:), log_gap_sq(:)
+  real (c_double) :: log_gap_dis_avg, log_gap_dis_sigma
+
   real (c_double), allocatable :: MI(:,:,:), MI_avg(:,:), MI_dis_avg(:)
-  integer (c_int) :: nspin_A, dim_A
+  integer (c_int) :: nspin_A, dim_A, n_lim
+
+  integer (c_int), allocatable :: idx(:), config(:), states(:)
 
   logical :: SELECT
   EXTERNAL SELECT
@@ -47,7 +55,7 @@ program swap
 
 
   !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
-  !Parametri Simulazione: Iterazioni di Disordine, Steps di Evoluzione, Stato Iniziale
+  !Parametri Simulazione: Iterazioni di Disordine
 
   !Parametri Iniziali
 
@@ -91,6 +99,16 @@ program swap
   !---------------------------------------------
 
   !DATA FILES
+  
+  write(filestring,93) "data/eigen/Sz0_DENSE_SWAP_hz_Disorder_Quasi_Energies_nspin", &
+    & nspin, "_period", T0, "_iterations", n_iterations, &
+    & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
+  open(newunit=unit_ph,file=filestring)
+
+  !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
+  !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
+  93  format(A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
  
   !------------------------------------------------
 
@@ -112,20 +130,32 @@ program swap
   !allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
   allocate(U(dim_Sz0,dim_Sz0))
+  allocate(idx(dim_Sz0))
 
   !Allocate observables and averages
-  allocate( r_avg(n_iterations), r_sigma(n_iterations))
-  allocate( r_avg2(n_iterations), r_sigma2(n_iterations))
+  allocate( r_avg(n_iterations), r_sq(n_iterations))
+  allocate( r_avg2(n_iterations), r_sq2(n_iterations))
+  
+  !Allocate gap vectors 
+  allocate( pair_gaps(dim_Sz0), gaps(dim_Sz0), gaps_abs(dim_Sz0), log_gap(dim_Sz0))
+  allocate( log_gap_avg(n_iterations), log_gap_sq(n_iterations))
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim_Sz0))
   allocate(W(dim_Sz0,dim_Sz0))
   allocate(MI(nspin/2,n_iterations,dim_Sz0), MI_avg(nspin/2,n_iterations), MI_dis_avg(nspin/2))
 
+  allocate(config(nspin), states(dim_Sz0))
+
+
+  call zero_mag_states(nspin, dim_Sz0, states)
+
   r_avg = 0
-  r_sigma = 0
+  r_sq = 0
   r_avg2 = 0
-  r_sigma2 = 0
+  r_sq2 = 0
+
+  n_lim = 2
 
   !$OMP PARALLEL
   call init_random_seed() 
@@ -146,9 +176,9 @@ program swap
     !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
     Jint = -J_coupling
 
-    !call random_number(Vint)
-    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-V,V]
-    Vint = -V_coupling
+    call random_number(Vint)
+    Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-V,V]
+    !Vint = -V_coupling
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
@@ -163,36 +193,55 @@ program swap
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
-    call gap_ratio(dim_Sz0, E, r_avg2(iteration), r_sigma2(iteration))
+    call gap_ratio(dim_Sz0, E, r_avg2(iteration), r_sq2(iteration))
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     E = real(C_UNIT*log(PH))
+    !call sort_index(E, idx)
     call dpquicksort(E)
-    call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sigma(iteration))
+    !print *, E(:)
+    call log_gap_difference(dim_Sz0, E, pair_gaps, gaps, gaps_abs, log_gap)
+    log_gap_avg(iteration) = sum(log_gap)/dim_Sz0
+    log_gap_sq(iteration) = sum(log_gap**2)/dim_Sz0
+    call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sq(iteration))
 
-    do nspin_A = 1, nspin/2
+    do nspin_A = 1, min(n_lim,nspin/2) !nspin/2
+      !print *, "   nspin_A  eigenvector        MI"
       dim_A = 2**nspin_A
       do i = 1, dim_Sz0
         MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, W(1:dim_Sz0,i))
+        !print *, nspin_A, i, MI(nspin_A,iteration,i)
       enddo
+      !print *, ""
     enddo
 
   enddo
   !$OMP END DO
   !$OMP END PARALLEL 
 
+  !print *, E(:)
+  do j = 1, dim_Sz0
+    write(unit_ph,*) E(j), pair_gaps(j), gaps(j), gaps_abs(j), log_gap(j)
+  enddo
+  log_gap_dis_avg = sum(log_gap_avg)/n_iterations
+  log_gap_dis_sigma = sqrt( ( sum(log_gap_sq)/n_iterations - log_gap_dis_avg**2) / n_iterations )
+  r_dis_avg = sum(r_avg) / n_iterations
+  r_dis_sigma = sqrt( ( sum(r_sq)/n_iterations - r_dis_avg**2 ) / n_iterations )
 
-  call time_avg('F', n_iterations, 1, r_avg, r_sigma, r_dis_avg, r_dis_sigma)
-  call time_avg('F', n_iterations, 1, r_avg2, r_sigma2, r_dis_avg2, r_dis_sigma2)
+  !call time_avg('F', n_iterations, 1, r_avg, r_sigma, r_dis_avg, r_dis_sigma)
+  !call time_avg('F', n_iterations, 1, r_avg2, r_sigma2, r_dis_avg2, r_dis_sigma2)
 
   print *, "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
+  print *, "Average of Difference of Logarithm of Gap log(Delta^alpha / Delta_0^alpha)"
+  print *, log_gap_dis_avg, log_gap_dis_sigma
+
   MI_avg = 0
   MI_dis_avg = 0
   print *, "Mutual Information (MI, log 2, nspin_A, iteration)"
-  do nspin_A = 1, nspin/2
+  do nspin_A = 1, n_lim !nspin/2
     do iteration = 1, n_iterations
       do i = 1, dim_Sz0
         MI_avg(nspin_A,iteration) = MI_avg(nspin_A,iteration) + MI(nspin_A,iteration,i)
@@ -203,7 +252,7 @@ program swap
     enddo
     MI_dis_avg = MI_dis_avg/n_iterations
     print *, MI_dis_avg(nspin_A), log(2.d0), nspin_A
-    !print *, ""
+    print *, ""
   enddo
 
   call take_time(count_rate, count_beginning, count1, 'T', "Program")

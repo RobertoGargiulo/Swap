@@ -186,6 +186,11 @@ contains
         96 format('|',(*(1X,I0)))
         !print*,""
       enddo
+    else if (t == 'A') then
+      do i = 1,dim
+        write (*,"('|',*(f6.2))",advance='no') abs(V(i))
+        print *, "|"
+      enddo
     end if
     print *,""
 

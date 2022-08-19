@@ -3,7 +3,10 @@ module MBL_subrtns
   use iso_c_binding
   use genmat
   use exponentiate
+  use printing
   implicit none
+
+  real (c_double), parameter, private :: pi = 4.d0 * datan(1.d0)
 
 contains
 
@@ -37,6 +40,44 @@ contains
     !
 
   !end function avg_gap_ratio_C
+
+  subroutine log_gap_difference(dim, energies, pair_gaps, gaps, gaps_abs, log_gap)
+
+    integer (c_int), intent(in) :: dim
+    real (c_double), intent(in) :: energies(dim)
+    real (c_double), intent(out) :: log_gap(dim)
+    real (c_double) :: pair_gaps(dim), gaps(dim), gaps_abs(dim)
+
+    integer (c_int) :: i, j1, j2
+
+    do i = 1, dim 
+      
+      j1 = i
+      if (i<=dim-1) then
+        j2 = i + 1
+        gaps(i) = energies(j2) - energies(j1)
+      else if (i>dim-1) then
+        j2 = i+1-dim
+        gaps(i) = energies(j2) + 2*pi - energies(j1)
+      endif
+  
+      if (i<=dim/2) then
+        j2 = i + dim/2
+        gaps_abs(i) = abs( energies(j2) - energies(j1) - pi )
+        pair_gaps(i) = energies(j2) - energies(j1)
+      else if (i>dim/2) then
+        j2 = i - dim/2
+        gaps_abs(i) = abs( energies(j2) + 2*pi - energies(j1) - pi  )
+        pair_gaps(i) = energies(j2) + 2*pi - energies(j1)
+      endif
+
+    enddo
+
+    log_gap = log(gaps_abs) - log(gaps)
+
+
+  end subroutine log_gap_difference
+
 
 
   subroutine left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
@@ -166,7 +207,7 @@ contains
     !print *, "Call to diagHE"
     allocate(W(dim,dim))
     call diagHE( 'N', dim, rho, prob, W)
-    deallocate(W(dim,dim))
+    deallocate(W)
 
     EE = 0
     do i = 1, dim
@@ -204,6 +245,7 @@ contains
     call edges_reduced_DM(nspin, nspin_A, nspin_A, dim, dim_A, dim_A, psi, rho_AB)
 
     MI = entanglement(dim_A,rho_A) + entanglement(dim_A,rho_B) - entanglement(dim_A*dim_A,rho_AB)
+    !print *, nspin_A, entanglement(dim_A,rho_A), entanglement(dim_A,rho_B), entanglement(dim_A*dim_A,rho_AB), MI
     
     mutual_information = MI
 
@@ -222,19 +264,41 @@ contains
     real (c_double) :: mutual_information_Sz0
 
     real (c_double) :: MI
-    complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)
+    complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A), rho(dim_Sz0,dim_Sz0)
     complex (c_double_complex) :: psi(dim)
+    integer :: i, j, l, states(dim_Sz0), config(nspin)
 
     call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
+    !do i = 1, dim_Sz0
+    !  do j = 1, dim_Sz0
+    !    rho(i,j) = psi(i) * dconjg(psi(j))
+    !  enddo
+    !enddo
+    !print *, "rho = "
+    !call printmat(dim, rho, 'C')
+    print *, "psi = "
+    call printvec(dim_Sz0, psi_Sz0, 'A')
+    call zero_mag_states(nspin, dim_Sz0, states)
+    do i = 0, dim-1
+      call decode(i,nspin,config)
+      print "(2X,F4.2,2X,I0,2X,I0,2X,*(I0))", abs(psi(i+1)), i, config(:)
+    enddo
 
     call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
     call right_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_B)
     call edges_reduced_DM(nspin, nspin_A, nspin_A, dim, dim_A, dim_A, psi, rho_AB)
+    
+    !print *, "rho_A = "
+    !call printmat(dim_A, rho_A, 'C')
+    !print *, "rho_B = "
+    !call printmat(dim_A, rho_B, 'C')
+    !print *, "rho_AB = "
+    !call printmat(dim_A*dim_A, rho_AB, 'C')
 
     MI = entanglement(dim_A,rho_A) + entanglement(dim_A,rho_B) - entanglement(dim_A*dim_A,rho_AB)
 
     !print *, "S_A         S_B          S_{AB}"
-    !print *, entanglement(dim_A,rho_A), entanglement(dim_A,rho_B), entanglement(dim_A*dim_A,rho_AB)
+    print *, nspin_A, entanglement(dim_A,rho_A), entanglement(dim_A,rho_B), entanglement(dim_A*dim_A,rho_AB), MI
     
     mutual_information_Sz0 = MI
 

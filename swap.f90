@@ -256,7 +256,7 @@ program swap
 
   write(unit_avg,*) "Time Averages and Errors"
   start = int(100/T0)
-  call time_avg(steps, start, avg, sigma, t_avg, t_sigma)
+  call time_avg('F', steps, start, avg, sigma, t_avg, t_sigma)
   write(unit_avg,*) start, t_avg, t_sigma
 
   deallocate(Jint, Vint, h_z)

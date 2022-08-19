@@ -263,7 +263,7 @@ unset ytics
 #set xtics (0.1, 1, 10, 1e2, 1e3, 1e4, 1e5, 1e6) format "10^{%T}"
 set ytics format "%.1s"
 set xtics format "%.1s"
-set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_close_to_hz1.00.png"
+#set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_close_to_hz1.00.png"
 #set output "figures/figure.png"
 set title 'no kick, |1010...> state, n_{iter} = '.iter.', J = '.J.' V = '.V
 set ylabel 'I(t)'
@@ -271,6 +271,8 @@ set xlabel 'h_{z}/J'
 #plot for [nspin in list] filetype.nspin."_time_step".time_step."_steps".steps.".txt"u ($6/$4):(-$2) w l title 'L ='.nspin
 
 
+set output "figures/figure.png"
+plot "data.txt"  u  4:11 w l
 
 
 set output
