@@ -21,6 +21,9 @@ swap_dense_Sz0: $(MOD) swap_dense_Sz0.o
 swap_spectrum_Sz0: $(MOD) swap_spectrum_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+swap_decay: $(MOD) swap_decay.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 entanglement: $(MOD) entanglement.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 

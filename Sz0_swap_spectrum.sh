@@ -17,7 +17,7 @@ pi2=1.57
 endV=`echo $pi | awk '{print 4*$1}'`
 
 iterations_2=5120
-for nspin in 6 #2 4 6 8 10 #{6..16..2}
+for nspin in 4 #2 4 6 8 10 #{6..16..2}
 do
   #iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
   #iterations=100

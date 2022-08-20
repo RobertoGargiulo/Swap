@@ -10,28 +10,28 @@ module MBL_subrtns
 
 contains
 
-  subroutine gap_ratio_R(dim, energies, r_avg, r_sigma)
+  subroutine gap_ratio_R(dim, energies, r_avg, r_sq)
 
     integer, intent(in) :: dim
     real (c_double), intent(in) :: energies(dim)
 
     integer :: n
-    real (c_double) :: r_avg, r_sigma, gap1, gap2
+    real (c_double) :: r_avg, r_sq, gap1, gap2
 
     r_avg = 0
-    r_sigma = 0
+    r_sq = 0
     do n = 1, dim - 2
 
       gap1 = energies(n+1) - energies(n)
       gap2 = energies(n+2) - energies(n+1)
 
       r_avg = r_avg + min(gap1,gap2)/max(gap1,gap2)
-      r_sigma = r_sigma + (min(gap1,gap2)/max(gap1,gap2))**2
+      r_sq = r_sq + (min(gap1,gap2)/max(gap1,gap2))**2
 
     enddo
 
-    r_avg = r_avg/real(dim-2)
-    r_sigma = sqrt( real(dim-2)/real(dim-3) * ( r_sigma/real(dim-2) - r_avg**2  ) ) / sqrt(real(dim-2))
+    r_avg = r_avg / (dim-2)
+    r_sq = r_sq / (dim-2)
 
   end subroutine gap_ratio_R
 
@@ -41,12 +41,12 @@ contains
 
   !end function avg_gap_ratio_C
 
-  subroutine log_gap_difference(dim, energies, pair_gaps, gaps, gaps_abs, log_gap)
+  subroutine log_gap_difference(dim, energies, log_pair_gaps, log_near_gaps, log_gap)
 
     integer (c_int), intent(in) :: dim
     real (c_double), intent(in) :: energies(dim)
     real (c_double), intent(out) :: log_gap(dim)
-    real (c_double) :: pair_gaps(dim), gaps(dim), gaps_abs(dim)
+    real (c_double) :: log_pair_gaps(dim), log_near_gaps(dim)
 
     integer (c_int) :: i, j1, j2
 
@@ -55,25 +55,25 @@ contains
       j1 = i
       if (i<=dim-1) then
         j2 = i + 1
-        gaps(i) = energies(j2) - energies(j1)
+        log_near_gaps(i) = energies(j2) - energies(j1)
       else if (i>dim-1) then
         j2 = i+1-dim
-        gaps(i) = energies(j2) + 2*pi - energies(j1)
+        log_near_gaps(i) = energies(j2) + 2*pi - energies(j1)
       endif
   
       if (i<=dim/2) then
         j2 = i + dim/2
-        gaps_abs(i) = abs( energies(j2) - energies(j1) - pi )
-        pair_gaps(i) = energies(j2) - energies(j1)
+        log_pair_gaps(i) = abs( energies(j2) - energies(j1) - pi )
       else if (i>dim/2) then
         j2 = i - dim/2
-        gaps_abs(i) = abs( energies(j2) + 2*pi - energies(j1) - pi  )
-        pair_gaps(i) = energies(j2) + 2*pi - energies(j1)
+        log_pair_gaps(i) = abs( energies(j2) + 2*pi - energies(j1) - pi  )
       endif
 
     enddo
 
-    log_gap = log(gaps_abs) - log(gaps)
+    log_pair_gaps = log(log_pair_gaps)
+    log_near_gaps = log(log_near_gaps)
+    log_gap = log_pair_gaps - log_near_gaps
 
 
   end subroutine log_gap_difference
@@ -93,6 +93,7 @@ contains
 
     integer :: jA, kA, iB, dim_B, i, j
 
+    i = nspin
     dim_B = dim/dim_A
     rho_A = 0
 
@@ -264,9 +265,9 @@ contains
     real (c_double) :: mutual_information_Sz0
 
     real (c_double) :: MI
-    complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A), rho(dim_Sz0,dim_Sz0)
+    complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)!, rho(dim_Sz0,dim_Sz0)
     complex (c_double_complex) :: psi(dim)
-    integer :: i, j, l, states(dim_Sz0), config(nspin)
+    integer :: i, l, states(dim_Sz0), config(nspin)
 
     call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
     !do i = 1, dim_Sz0
@@ -279,9 +280,11 @@ contains
     print *, "psi = "
     call printvec(dim_Sz0, psi_Sz0, 'A')
     call zero_mag_states(nspin, dim_Sz0, states)
-    do i = 0, dim-1
-      call decode(i,nspin,config)
-      print "(2X,F4.2,2X,I0,2X,I0,2X,*(I0))", abs(psi(i+1)), i, config(:)
+    print *, "    abs(c_i)^2      I^2      l      config"
+    do i = 1, dim_Sz0
+      l = states(i)
+      call decode(l,nspin,config)
+      print "(2X,F4.2,2X,F4.2,2X,I0,2X,*(I0))", abs(psi_Sz0(i))**2, imbalance_sq_basis(nspin, dim_Sz0, l), l, config(:)
     enddo
 
     call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
@@ -303,6 +306,19 @@ contains
     mutual_information_Sz0 = MI
 
   end function mutual_information_Sz0
+
+  function IPR(psi)
+    complex (c_double_complex), intent(in) :: psi(:)
+    real (c_double) :: IPR
+    integer (c_int) :: dim, i
+
+    dim = size(psi)
+    IPR = 0
+    do i = 1, dim
+      IPR = IPR + abs(psi(i))**2
+    enddo
+
+  end function IPR
 
 
   integer function int_2dto1d(int_2d)

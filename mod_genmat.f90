@@ -943,19 +943,15 @@ contains
 
   end function imbalance_sq_Sz0
 
-  real function imbalance_sq_Sz0_basis(nspin, dim_Sz0, i)
+  real function imbalance_sq_basis(nspin, dim_Sz0, i)
 
-    integer(c_int), intent(in) :: nspin, dim_Sz0
-    integer (c_int), intent(out) :: i
+    integer(c_int), intent(in) :: nspin, dim_Sz0, i
     real(c_double) :: imb
-    integer :: config(nspin)
-    integer (c_int) :: k1, k2, l, indx(dim_Sz0)
+    integer :: config(nspin), k1, k2
 
     imb = 0
-    call zero_mag_states(nspin, dim_Sz0, indx)
 
-    l = indx(i)
-    call decode(l,nspin,config)
+    call decode(i,nspin,config)
     imb = 0
     do k1 = 1, nspin
       do k2 = 1, nspin
@@ -963,9 +959,9 @@ contains
       enddo
     enddo
     imb = imb/nspin
-    imbalance_sq_Sz0_basis = imb
+    imbalance_sq_basis = imb
 
-  end function imbalance_sq_Sz0_basis
+  end function imbalance_sq_basis
 
 
   subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)
