@@ -107,7 +107,83 @@ set title "no kick, J = ".J." V = ".V
 #set output "figures/MBL_PT_Scaling_Gap_Ratio_J".J."_V".V."_Dense_up_to_hz6.png"
 #plot for [i=1:5] file_upto6."".word(list1,i)."_time_step".time_step."_steps".steps."_iterations".word(list2,i)."_J".J."_V".V."_up_to_hz6.txt" u ($3/$1):6 w lp lw 1.6 title "L = ".word(list1,i)."  n_{iter} = ".word(list2,i)
 
-##############
+############## Varying J
+
+file_swap_J="sort_Swap_entanglement.txt"
+
+unset logscale x
+list_hz = "0.01 2.00 4.00 8.00 12.00 16.00"
+list_J = "0.00 0.05 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50"
+V = "0.50"
+hz = "6.00"
+kick = "0.00"
+period = "1.00"
+
+list_L = "4 6 8 10"
+num_L = words(list_L)
+num_J = words(list_J)
+
+set ylabel "Gap Ratio"
+set title "V = ".V.", hz = ".hz." kick = ".kick.", period = ".period
+
+
+set xlabel "J"
+set xtics 0, 0.10, 0.50 format "%.2f"
+set xrange [0:0.50]
+set yrange [0.35:0.6]
+#set output "figures/Swap_PT_Scaling_Gap_Ratio_V".V."_hz".hz."_up_to_J0.5.png"
+#plot for [i=0:num_L-1] file_swap_J u 2:7:8 every :::i::i w errorlines title "L = ".word(list_L,i+1)
+
+set xlabel "L"
+set xtics 4, 2, 10 format "%.0f"
+set xrange [4:10]
+set yrange [0.35:0.6]
+#set output "figures/Swap_PT_Scaling_Gap_Ratio_V".V."_hz".hz."_up_to_J0.5.png"
+#plot for [i=0:(num_J-1)/2] file_swap_J u 1:7:8 every :::2*i::2*i w errorlines title "J = ".word(list_J,i+1)
+
+set xlabel "L"
+set xtics 4, 2, 10 format "%.0f"
+set xrange [4:10]
+unset yrange
+#set output "figures/Swap_PT_Log_Gap_V".V."_hz".hz."_up_to_J0.5.png"
+#plot for [i=0:(num_J-1)/2] file_swap_J u 1:11:12 every :::2*i::2*i w errorlines title "J = ".word(list_J,i+1)
+
+set xlabel "J"
+set xtics 0, 0.1, 0.5 format "%.2f"
+set xrange [0:0.5]
+
+#file_swap_J='< ./spaces.sh Swap_entanglement.txt'
+#set output "figures/Swap_PT_Log_Near_Pair_Gap_V".V."_hz".hz."_up_to_J0.5.png"
+#plot for [i=0:num_L-1] file_swap_J u 2:13 every :::i::i w errorlines pt 4 lt i+1 title "log Delta, L = ".word(list_L,i+1),\
+#     for [i=0:num_L-1] file_swap_J u 2:14 every :::i::i w errorlines pt 5 lt i+1 notitle #"log Delta_0, L = ".word(list_L,i+1)
+
+
+list_L = "4 6 8 10 12"
+num_L = words(list_L)
+set xtics (0.01, 0.05, 0.1, 0.5, 1) format "%.2f"
+set xrange [0.01:1]
+file_swap_J="sort_Swap_spectrum_J.txt"
+set logscale x
+set key right bottom box 3
+#set output "figures/Swap_PT_Log_Near_Pair_Gap_V".V."_hz".hz."_up_to_J1.png"
+#plot for [i=0:num_L-1] file_swap_J u 2:13 every :::i::i w errorlines pt 4 lt i+1 title "log Delta, L = ".word(list_L,i+1),\
+#     for [i=0:num_L-1] file_swap_J u 2:14 every :::i::i w errorlines pt 5 lt i+1 notitle #"log Delta_0, L = ".word(list_L,i+1)
+
+
+set xlabel "h_{z}"
+set xtics format "%.2f"
+set xrange [0.01:16.00]
+file_swap_hz="sort_Swap_spectrum_hz.txt"
+set logscale x
+set key left bottom box 3
+#set output "figures/Swap_PT_Log_Near_Pair_Gap_J".J."V".V."_up_to_hz16.png"
+#plot for [i=0:num_L-1] file_swap_hz u 4:13 every :::i::i w errorlines pt 4 lt i+1 title "log Delta, L = ".word(list_L,i+1),\
+#     for [i=0:num_L-1] file_swap_hz u 4:14 every :::i::i w errorlines pt 5 lt i+1 notitle #"log Delta_0, L = ".word(list_L,i+1)
+
+
+
+
+########
 
 
 #Fixed Disorder, Varying 'nspin'
@@ -194,7 +270,7 @@ set xrange [1.50:10.50]
 set yrange [1:steps]
 
 set xtics list_L
-set ytics 0.001, 10, 10e6 format "10^{%T}"
+set ytics 0.001, 10, 10e10 format "10^{%T}"
 
 # J = 0.02, ..., 0.10, V = 0.25, hz = 3.00 -> j = 0, ..., 4
 # J = 0.02, ..., 0.10, V = 0.50, hz = 3.00 -> j = 5, ..., 9
@@ -240,16 +316,23 @@ num_J = 1
 num_V = 1
 #set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{5}, period = ".period.", J = ".word(list_J,i+1).", V = ".word(list_V,j+1).", kick = ".kick
 set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{6}, period = ".period.", J = ".J.", V = ".V.", kick = ".kick
-set output "figures/Scaling_Decay_Time_varying_hz.png"
-plot for [k=0:num_hz-1] file_time_hz every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:9:10 w errorlines title "hz = ".word(list_hz,k+1)
+#set output "figures/Scaling_Decay_Time_varying_hz.png"
+#plot for [k=0:num_hz-1] file_time_hz every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:9:10 w errorlines title "hz = ".word(list_hz,k+1)
+
+set yrange [1:1e9]
+set xrange [2:12]
+set key left top box 3
+file_hz="sort_Swap_decay_times_hz.txt"
+#set output "figures/Scaling_Decay_Time_varying_hz.png"
+#plot for [k=0:num_hz-1] file_hz every :::k::k u 1:7:8 w errorlines title "hz = ".word(list_hz,k+1)
 
 i = 1; j = 0; k = 0
 do for [i=0:num_J-1] {
-set table $DataSelected
-  plot file_time_V every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:2:3:4:9:10:11 w table
-unset table
-print "Table"
-print $DataSelected
+#set table $DataSelected
+#  plot file_time_V every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:2:3:4:9:10:11 w table
+#unset table
+#print "Table"
+#print $DataSelected
 }
 
 

@@ -272,8 +272,13 @@ set xlabel 'h_{z}/J'
 
 
 set output "figures/figure.png"
-plot "data.txt"  u  4:11 w l
+#plot "data.txt"  u  4:11 w l
 
+unset xrange
+unset yrange
+unset title
+unset ylabel
+plot "plot_data.txt" u 1:2
 
 set output
 unset logscale x

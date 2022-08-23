@@ -41,40 +41,47 @@ contains
 
   !end function avg_gap_ratio_C
 
-  subroutine log_gap_difference(dim, energies, log_pair_gaps, log_near_gaps, log_gap)
+  subroutine log_gap_difference(dim, energies, log_pair_avg, log_near_avg, log_avg, log_sq)
+
+    !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
+    !and paired eigenvalues (separated by half the spectrum)
+    ! log_near_avg = < log( E_{n+1} - E_n ) >
+    ! log_pair_avg = < log( E_{n+dim/2} - E_n ) >
+    ! log_avg = log_pair_avg - log_near_avg
+    ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
+
 
     integer (c_int), intent(in) :: dim
     real (c_double), intent(in) :: energies(dim)
-    real (c_double), intent(out) :: log_gap(dim)
-    real (c_double) :: log_pair_gaps(dim), log_near_gaps(dim)
+    real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
+    real (c_double) :: pair(dim), near(dim)
 
-    integer (c_int) :: i, j1, j2
+    integer (c_int) :: i, j
 
     do i = 1, dim 
       
-      j1 = i
       if (i<=dim-1) then
-        j2 = i + 1
-        log_near_gaps(i) = energies(j2) - energies(j1)
+        j = i + 1
+        near(i) = energies(j) - energies(i)
       else if (i>dim-1) then
-        j2 = i+1-dim
-        log_near_gaps(i) = energies(j2) + 2*pi - energies(j1)
+        j = i + 1 -dim
+        near(i) = energies(j) + 2*pi - energies(i)
       endif
   
       if (i<=dim/2) then
-        j2 = i + dim/2
-        log_pair_gaps(i) = abs( energies(j2) - energies(j1) - pi )
+        j = i + dim/2
+        pair(i) = abs( energies(j) - energies(i) - pi )
       else if (i>dim/2) then
-        j2 = i - dim/2
-        log_pair_gaps(i) = abs( energies(j2) + 2*pi - energies(j1) - pi  )
+        j = i - dim/2
+        pair(i) = abs( energies(j) + 2*pi - energies(i) - pi  )
       endif
 
     enddo
 
-    log_pair_gaps = log(log_pair_gaps)
-    log_near_gaps = log(log_near_gaps)
-    log_gap = log_pair_gaps - log_near_gaps
-
+    log_pair_avg = sum(log(pair)) / dim
+    log_near_avg = sum(log(near)) / dim
+    log_avg = log_pair_avg - log_near_avg
+    log_sq = sum((log(pair) - log(near))**2) / dim
 
   end subroutine log_gap_difference
 
@@ -123,9 +130,9 @@ contains
 
   subroutine right_reduced_DM(nspin, nspin_B, dim, dim_B, psi, rho_B)
 
-    !Computes the reduced density matrix for a pure state of the first (from the left) 'nspinA' spins in the chain
-    ! rho_A = Tr_B(rho) = Tr_B( |psi> <psi| )
-    !Traces out the remaining (nspin - nspin_A) spins
+    !Computes the reduced density matrix for a pure state of the last (from the left) 'nspinA' spins in the chain
+    ! rho_B = Tr_A(rho) = Tr_A( |psi> <psi| )
+    !Traces out the remaining (nspin - nspin_B) spins
     !Works in the full Hilbert Space (with the correspondence j<->{b_k})
 
     integer, intent(in) :: nspin, nspin_B, dim, dim_B
@@ -193,7 +200,7 @@ contains
 
   function entanglement(dim, rho)
 
-    !Computes the Entanglement (von Neumann) Entropy for a given density matrix rho of dimension dim
+    !Computes the Entanglement (von Neumann) Entropy for a given density matrix rho of dimension dim, using Exact Diagonalization
     ! EE = S(rho) = -Tr(rho * ln(rho))
     ! For a reduced density matrix S_A = -Tr_A(rho_A ln(rho_A))
 
@@ -205,7 +212,6 @@ contains
     complex (c_double_complex), allocatable :: W(:,:)
     integer :: i
 
-    !print *, "Call to diagHE"
     allocate(W(dim,dim))
     call diagHE( 'N', dim, rho, prob, W)
     deallocate(W)
@@ -214,11 +220,8 @@ contains
     do i = 1, dim
       if(prob(i) > 0 ) then
         EE = EE - prob(i) * log(prob(i))
-      !else
-        !print *, "Zero, Negative or Complex eigenvalue of rho: ", prob(i), i
+        !if (prob(i) > 1.0e-3) print *, prob(i), i
       endif
-      
-      !print *, i, prob(i), EE
     enddo
   
     entanglement = EE
@@ -256,7 +259,7 @@ contains
 
     !Computes the long-range mutual information between the two edges.
     !The edges are regions (spin chains) A,B both of length nspin_A and local dimension dim_A (here case of subspace Sz=0)
-    !psi is the (pure) state of the spin chain
+    !psi_Sz0 is the (pure) state of the spin chain
     ! MI = S_A + S_B - S_AB
     ! MI is the maximum information of A we can find from B, and viceversa
 
@@ -264,28 +267,14 @@ contains
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
     real (c_double) :: mutual_information_Sz0
 
-    real (c_double) :: MI
+    real (c_double) :: MI, MBEE
     complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)!, rho(dim_Sz0,dim_Sz0)
     complex (c_double_complex) :: psi(dim)
     integer :: i, l, states(dim_Sz0), config(nspin)
 
+    real (c_double) :: var1
+
     call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
-    !do i = 1, dim_Sz0
-    !  do j = 1, dim_Sz0
-    !    rho(i,j) = psi(i) * dconjg(psi(j))
-    !  enddo
-    !enddo
-    !print *, "rho = "
-    !call printmat(dim, rho, 'C')
-    print *, "psi = "
-    call printvec(dim_Sz0, psi_Sz0, 'A')
-    call zero_mag_states(nspin, dim_Sz0, states)
-    print *, "    abs(c_i)^2      I^2      l      config"
-    do i = 1, dim_Sz0
-      l = states(i)
-      call decode(l,nspin,config)
-      print "(2X,F4.2,2X,F4.2,2X,I0,2X,*(I0))", abs(psi_Sz0(i))**2, imbalance_sq_basis(nspin, dim_Sz0, l), l, config(:)
-    enddo
 
     call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
     call right_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_B)
@@ -301,11 +290,61 @@ contains
     MI = entanglement(dim_A,rho_A) + entanglement(dim_A,rho_B) - entanglement(dim_A*dim_A,rho_AB)
 
     !print *, "S_A         S_B          S_{AB}"
-    print *, nspin_A, entanglement(dim_A,rho_A), entanglement(dim_A,rho_B), entanglement(dim_A*dim_A,rho_AB), MI
+    !print *, nspin_A, entanglement(dim_A,rho_A), entanglement(dim_A,rho_B), entanglement(dim_A*dim_A,rho_AB), MI
+    !print *, MI, imbalance_sq_Sz0(nspin, dim_Sz0, psi_Sz0), IPR(psi)
     
     mutual_information_Sz0 = MI
 
   end function mutual_information_Sz0
+
+
+  function max_bipartite_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
+
+    !Computes the long-range mutual information between the two edges.
+    !The edges are regions (spin chains) A,B both of length nspin_A and local dimension dim_A (here case of subspace Sz=0)
+    !psi_Sz0 is the (pure) state of the spin chain
+    ! MI = S_A + S_B - S_AB
+    ! MI is the maximum information of A we can find from B, and viceversa
+
+    integer, intent(in) :: nspin, dim, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: max_bipartite_entropy_Sz0
+
+    real (c_double) :: MBEE, pMBEE, BEE(nspin-1), BEEvar
+    integer (c_int) :: nspin_A, dim_A
+    complex (c_double_complex), allocatable :: rho_A(:,:) !, rho(dim_Sz0,dim_Sz0)
+    complex (c_double_complex) :: psi(dim)
+
+
+    call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
+    MBEE = 0
+    pMBEE = 0
+    !print *, "    nspin_A        dim_A     BEE"
+    do nspin_A = 1, nspin - 1
+      dim_A = 2**nspin_A
+      allocate(rho_A(dim_A,dim_A))
+      if (nspin_A <= nspin/2) then
+        !print *, "rho_A allocated"
+        call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
+      else 
+        call right_reduced_DM(nspin, nspin-nspin_A, dim, dim/dim_A, psi, rho_A)
+      endif
+      BEEvar = entanglement(dim_A,rho_A)
+      BEE(nspin_A) = BEEvar
+      if (BEEvar > pMBEE) MBEE = BEEvar
+      pMBEE = BEEvar
+      !print *, "    nspin_A        dim_A     BEE"
+      !print *, nspin_A, dim_A, BEE(nspin_A)
+      !call printmat(dim_A, rho_A, 'A')
+      deallocate(rho_A)
+    enddo
+
+    max_bipartite_entropy_Sz0 = maxval(BEE)
+    !print *, max_bipartite_entropy_Sz0, MBEE
+
+
+  end function max_bipartite_entropy_Sz0
+
 
   function IPR(psi)
     complex (c_double_complex), intent(in) :: psi(:)
@@ -313,13 +352,14 @@ contains
     integer (c_int) :: dim, i
 
     dim = size(psi)
+    !print *, dim
     IPR = 0
     do i = 1, dim
-      IPR = IPR + abs(psi(i))**2
+      IPR = IPR + abs(psi(i))**4
+      !print*, IPR, abs(psi(i))
     enddo
 
   end function IPR
-
 
   integer function int_2dto1d(int_2d)
 

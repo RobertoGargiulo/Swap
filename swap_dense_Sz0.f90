@@ -27,7 +27,7 @@ program swap
   real(c_double) :: imb_t_avg, imb_t_sigma!, imb_t_avg2, imb_t_sigma2
   
   real (c_double) :: norm
-  real (c_double), dimension(:), allocatable :: imb_avg, imb_avg_sq!, imb_avg2, imb_avg_sq2
+  real (c_double), dimension(:), allocatable :: imb_avg, imb_sq!, imb_avg2, imb_sq2
 
   real (c_double), dimension(:), allocatable :: E
   real (c_double), dimension(:,:), allocatable :: H, W_r
@@ -129,24 +129,23 @@ program swap
   allocate( state(dim_Sz0) )
 
   !Allocate observables and averages
-  allocate( imb_avg(steps), imb_avg_sq(steps))
-  !allocate( avg2(steps), imb_avg_sq2(steps))
-  allocate( t_decay(n_iterations) )
+  allocate( imb_avg(steps), imb_sq(steps))
+  !allocate( avg2(steps), imb_sq2(steps))
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim_Sz0))
   allocate(W(dim_Sz0,dim_Sz0))
 
   imb_avg = 0
-  imb_avg_sq = 0
+  imb_sq = 0
   !imb_avg2 = 0
   !imb_sq2 = 0
   !$OMP PARALLEL
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:imb_avg, imb_avg_sq, n_decays) private(iteration, h_z, norm, j, &
-  !$OMP & state, H, E, W_r, U, PH, W, state2, UF)
+  !$OMP do reduction(+:imb_avg, imb_sq) private(iteration, h_z, norm, j, &
+  !$OMP & state, H, E, W_r, U, PH, W, UF)
   do iteration = 1, n_iterations
     
     if (mod(iteration,10)==0) then 
@@ -185,36 +184,27 @@ program swap
     norm = real(dot_product(state,state))
     j = 1
     imb_avg(j) = imb_avg(j) + imbalance_Sz0(nspin, dim_Sz0, state)
-    imb_avg_sq(j) = imb_avg_sq(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
+    imb_sq(j) = imb_sq(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
 
     !state2 = init_state
     !norm = real(dot_product(state2,state2))
     !j = 1
     !imb_avg2(j) = imb_avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)
-    !imb_sq2(j) = imb_avg_sq2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
+    !imb_sq2(j) = imb_sq2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
 
-    idecay = 0
     do j = 2, steps
-      imb_p = imbalance_Sz0(nspin, dim_Sz0, state)
       state = matmul(UF,state)
       norm = real(dot_product(state,state))
       state = state / sqrt(norm)
-      if (idecay == 0) then
-        if(imb_p*imbalance_Sz0(nspin, dim_Sz0, state) > 0) then
-          t_decay(iteration) = (j-1)*T0
-          idecay = 1
-          n_decays = n_decays + 1
-        endif
-      endif
 
       imb_avg(j) = imb_avg(j) + imbalance_Sz0(nspin, dim_Sz0, state) 
-      imb_avg_sq(j) = imb_avg_sq(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
+      imb_sq(j) = imb_sq(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
 
       !state2 = matmul(U,state2)
       !norm = real(dot_product(state2,state2))
       !state2 = state2 / sqrt(norm)
       !imb_avg2(j) = imb_avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2) 
-      !imb_sq2(j) = imb_avg_sq2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
+      !imb_sq2(j) = imb_sq2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
     enddo
 
   enddo
@@ -223,21 +213,19 @@ program swap
 
 
   imb_avg = imb_avg/n_iterations
-  imb_avg_sq = sqrt( (imb_sq/n_iterations - imb_avg**2) / n_iterations )
+  imb_sq = sqrt( (imb_sq/n_iterations - imb_avg**2) / n_iterations )
   !imb_avg2 = imb_avg2/n_iterations
   !imb_sq2 = sqrt(imb_sq2/n_iterations - imb_avg2**2)/sqrt(real(n_iterations))
   j = 1
-  write(unit_avg,*) j*T0, avg(j), imb_avg_sq(j)!, imb_avg2(j), imb_avg_sq2(j)
+  write(unit_avg,*) j*T0, imb_avg(j), imb_sq(j)!, imb_avg2(j), imb_sq2(j)
   do j = 2, steps
-    write(unit_avg,*) j*T0, imb_avg(j), imb_avg_sq(j)!, imb_avg2(j), imb_avg_sq2(j)
+    write(unit_avg,*) j*T0, imb_avg(j), imb_sq(j)!, imb_avg2(j), imb_sq2(j)
   enddo
 
   start = int(100/T0) !The average starts from the step for which 100 = start*T0
-  call time_avg('T', steps, start, imb_avg, imb_avg_sq, imb_t_avg, imb_t_sigma)
-  !call time_avg('F', steps, start, imb_avg2, imb_avg_sq2, imb_t_avg2, imb_t_sigma2)
+  call time_avg('T', steps, start, imb_avg, imb_sq, imb_t_avg, imb_t_sigma)
+  !call time_avg('F', steps, start, imb_avg2, imb_sq2, imb_t_avg2, imb_t_sigma2)
 
-  t_decay_avg = sum(t_decay)/n_iterations
-  avg_sq_t_decay = sqrt((sum(t_decay**2)/n_iterations - t_decay_avg**2)/n_iterations)
 
   write(unit_avg,*) "Imbalance Time Averages and Errors of Imbalance"
   write(unit_avg,*) imb_t_avg, imb_t_sigma!, imb_t_avg2, imb_t_sigma2
@@ -246,7 +234,7 @@ program swap
   print *, imb_t_avg, imb_t_sigma!, imb_t_avg2, imb_t_sigma2
 
   deallocate(Jint, Vint, h_z)
-  deallocate(imb_avg, imb_avg_sq)
+  deallocate(imb_avg, imb_sq)
   deallocate(H,E,W_r,U)
   deallocate(USwap)
   deallocate(PH, W)

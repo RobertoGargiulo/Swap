@@ -4,8 +4,8 @@
 # sed -i '/^$/d' <filename>
 
 
-n_threads=1
-export OMP_NUM_THREADS=$n_threads 
+file="sort_Swap_decay_times.txt"
+
   j=0
   for J in $(seq 0.02 0.02 0.10)
   do
@@ -23,7 +23,6 @@ ${line}i
 w
 q
 *
-        file="sort_Swap_decay_times.txt"
         ed $file < ed_script.ed >> out_ed.txt
       done
     done

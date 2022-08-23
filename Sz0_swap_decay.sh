@@ -10,14 +10,14 @@ output="Swap_decay_times_varying_J.txt"
 #mv $output ../Trash
 
 iterations_2=5120
-for nspin in 10 #4 6 8 10 #12
+for nspin in 12 #4 6 8 10 #12
 do
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
   for kick in 0.00 #$(seq 0.00 0.05 0.20) 
   do
     for period in 1.00 
     do
-      for J in 0.05 #$(seq 0.05 0.05 0.30) 
+      for J in $(seq 0.05 0.05 0.30) 
       do
         for V in 0.25 #$(seq 0.00 0.40 1.60) 
         do
@@ -31,18 +31,20 @@ do
                 total_time=$((10**5))
                 n_periods=1
               elif [ $nspin -gt 8 ] && [ $nspin -le 12 ]; then
-                total_time=$((5*10**5))
-                n_periods=10
+                total_time=$((10**6))
+                n_periods=50
               fi
-            elif (( $(echo "$J < 0.15" |bc -l) )) && [ $nspin -le 4 ]; then
-              total_time=$((10**(nspin/2+3)))
-              n_periods=1
-            elif (( $(echo "$J < 0.15" |bc -l) )) && [ $nspin -gt 4 ] && [ $nspin -le 8 ]; then
-              total_time=$((10**(nspin/2+4)))
-              n_periods=10
-            elif (( $(echo "$J < 0.15" |bc -l) )) && [ $nspin -gt 8 ] && [ $nspin -le 12 ]; then
-              total_time=$((10**(nspin/2+4)))
-              n_periods=1000
+            elif (( $(echo "$J < 0.15" |bc -l) )); then
+              if [ $nspin -le 4 ]; then
+                total_time=$((10**(nspin/2+3)))
+                n_periods=1
+              elif [ $nspin -gt 4 ] && [ $nspin -le 8 ]; then
+                total_time=$((10**(nspin/2+4)))
+                n_periods=10
+              elif [ $nspin -gt 8 ] && [ $nspin -le 12 ]; then
+                total_time=$((5*10**(nspin/2+5)))
+                n_periods=1000000
+              fi
             fi
             steps=`echo $total_time $period $n_periods | awk '{print $1/$2/$3}'`
 
@@ -57,14 +59,14 @@ $V
 $hz
 $kick
 *
-            file_out="out5.txt"
+            file_out="out2.txt"
   	        ./$filestring < input.txt | tee $file_out
             echo "nspin = $nspin "
             echo "J = $J  V = $V  hz = $hz  epsilon = $kick"
             echo "period = $period  n_periods = $n_periods  steps = $steps   total_time = $total_time "
             echo "iterations = $iterations   n_threads = $n_threads "
             decay_times=`grep -a -A1 "Decay Time" $file_out | tail -1`
-            echo $nspin $J $V $hz $kick $period $decay_times $iterations $n_periods $steps >> $output
+            echo $nspin $J $V $hz $kick $period $decay_times $iterations $total_time $n_periods $steps >> $output
           done
           echo "" >> $output
           echo ""

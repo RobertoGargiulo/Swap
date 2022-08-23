@@ -32,6 +32,11 @@ contains
         96 format('|',(*(1X,I0)))
         !print*,""
       enddo
+    else if (t == 'A') then
+      do i = 1,dim
+        write (*,"('|',*(f5.1))",advance='no') abs(M(i,:))
+        print *, "|"
+      enddo
     end if
     print *,""
 

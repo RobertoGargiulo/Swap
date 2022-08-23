@@ -651,22 +651,24 @@ contains
   end subroutine buildStaggState_Sz0
 
 
-  subroutine buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, state_Sz0, state)
+  subroutine buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
     !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
     !simply by constructing a vector which has zero components outside the Sz=0 subspace
 
     integer (c_int), intent(in) :: nspin, dim, dim_Sz0
-    complex (c_double_complex), intent(in) :: state_Sz0(dim_Sz0)
-    complex (c_double_complex), intent(out) :: state(dim)
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    complex (c_double_complex), intent(out) :: psi(dim)
 
     integer :: i, l, states(dim_Sz0)
 
     call zero_mag_states(nspin, dim_Sz0, states)
 
-    state = 0
+    psi = 0
+    !print *, "psi initialized"
     do i = 1, dim_Sz0
       l = states(i) + 1
-      state(l) = state_Sz0(i)
+      psi(l) = psi_Sz0(i)
+      !print *,l, psi(l)
       !print *, l, dim, i, dim_Sz0
     enddo
 
@@ -938,31 +940,133 @@ contains
       imbaux = imbaux * abs(state(i))**2
       imb = imb + imbaux
     enddo
-    imb = imb/nspin
+    imb = imb/nspin**2
     imbalance_sq_Sz0 = imb
 
   end function imbalance_sq_Sz0
 
-  real function imbalance_sq_basis(nspin, dim_Sz0, i)
+  function imbalance_basis(nspin, i)
 
-    integer(c_int), intent(in) :: nspin, dim_Sz0, i
-    real(c_double) :: imb
-    integer :: config(nspin), k1, k2
-
-    imb = 0
+    integer(c_int), intent(in) :: nspin, i
+    real (c_double) :: imb, imbalance_basis
+    integer :: config(nspin), k
 
     call decode(i,nspin,config)
     imb = 0
-    do k1 = 1, nspin
-      do k2 = 1, nspin
-        imb = imb + (-1)**k1 * (1 - 2 * config(k1)) * (-1)**k2 * (1 - 2 * config(k2))
-      enddo
+    do k = 1, nspin
+        imb = imb + (-1)**k * (1 - 2 * config(k))
+        !print *, k, imb
     enddo
-    imb = imb/nspin
-    imbalance_sq_basis = imb
+    imb = imb/(2*nspin - 2*sum(config))
+    imbalance_basis = imb
+
+  end function imbalance_basis
+
+  function imbalance_sq_basis(nspin, i)
+
+    integer(c_int), intent(in) :: nspin, i
+    real (c_double) :: imb, imbalance_sq_basis
+    integer :: config(nspin), k
+
+    call decode(i,nspin,config)
+    imb = 0
+    do k = 1, nspin
+        imb = imb + (-1)**k * (1 - 2 * config(k))
+        !print *, k, imb
+    enddo
+    imb = imb/(2*nspin - 2*sum(config))
+    imbalance_sq_basis = imb**2
 
   end function imbalance_sq_basis
 
+  function local_imbalance_basis(nspin, i)
+    integer (c_int), intent(in) :: nspin, i
+    real (c_double) :: local_imbalance_basis
+
+    integer (c_int) :: k, config(nspin)
+    real (c_double) :: LI
+
+    LI = 0
+    call decode(i, nspin, config)
+    do k = 1, nspin/2
+
+      LI = LI + (config(2*k) - config(2*k-1))**2
+    enddo
+    LI = 4 * LI / nspin
+    local_imbalance_basis = LI
+
+  end function
+
+  function local_imbalance(nspin, dim, psi)
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: psi(dim)
+    real (c_double) :: local_imbalance
+
+    integer (c_int) :: i, k, config(nspin)
+    real (c_double) :: LI, LI_part
+
+    LI = 0
+    do i = 1, dim
+    call decode(i-1, nspin, config)
+      LI_part = 0
+      do k = 1, nspin/2
+        LI_part = LI_part + (config(2*k) - config(2*k-1))**2
+      enddo
+      LI = LI + abs(psi(i))**2 * 4 * LI_part / nspin
+    enddo
+    local_imbalance = LI
+
+  end function
+
+  function local_imbalance_Sz0(nspin, dim_Sz0, psi_Sz0)
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: local_imbalance_Sz0
+
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
+    real (c_double) :: LI, LI_part
+
+    call zero_mag_states(nspin, dim_Sz0, states)
+    LI = 0
+    do i = 1, dim_Sz0
+      l = states(i)
+      call decode(l, nspin, config)
+      LI_part = 0
+      do k = 1, nspin/2
+        LI_part = LI_part + (config(2*k) - config(2*k-1))**2
+      enddo
+      LI = LI + abs(psi_Sz0(i))**2 * 4 * LI_part / nspin
+    enddo
+    local_imbalance_Sz0 = LI
+
+  end function
+
+  function sigmaz_corr_c(nspin, dim, q, p, psi)
+
+    integer (c_int), intent(in) :: nspin, dim, q, p
+    complex (c_double_complex), intent(in) :: psi(dim)
+    real (c_double) :: sigmaz_corr_c
+
+    integer (c_int) :: i, k, config(nspin)
+    real (c_double) :: corr, avgq, avgp
+
+    avgq = 0
+    avgp = 0
+    corr = 0
+    do i = 1, dim
+      
+      call decode(i-1,nspin,config)
+
+      corr = corr + abs(psi(i))**2 * (1 - 2 * config(q)) * (1 - 2 * config(p))
+      avgq = avgq + abs(psi(i))**2 * (1 - 2 * config(q))
+      avgp = avgp + abs(psi(i))**2 * (1 - 2 * config(p))
+        
+    enddo
+
+    sigmaz_corr_c = corr - avgq * avgp
+
+
+  end function
 
   subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)
     character, intent(in) :: option*1

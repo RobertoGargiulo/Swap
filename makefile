@@ -24,9 +24,14 @@ swap_spectrum_Sz0: $(MOD) swap_spectrum_Sz0.o
 swap_decay: $(MOD) swap_decay.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+swap_entanglement_Sz0: $(MOD) swap_entanglement_Sz0.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 entanglement: $(MOD) entanglement.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+imbalance_states: $(MOD) imbalance_states.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 dense_Sz0: $(MOD) dense_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
@@ -39,7 +44,7 @@ spectrum_Sz0: $(MOD) spectrum_Sz0.o
 
 
 
-all: swap swap_dense_Sz0 swap_spectrum_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
+all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
 
 
 clean:
