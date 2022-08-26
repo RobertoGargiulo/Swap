@@ -136,7 +136,7 @@ program swap_decay
   !$OMP & imb_p, idecay)
   do iteration = 1, n_iterations
     
-    if (mod(iteration,10)==0) then 
+    if (mod(iteration,n_iterations/10)==0) then 
       print *, "iteration = ", iteration
     endif
 

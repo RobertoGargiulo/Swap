@@ -1068,6 +1068,66 @@ contains
 
   end function
 
+  function sigmaz_corr_c_Sz0(nspin, dim_Sz0, q, p, psi_Sz0)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0, q, p
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: sigmaz_corr_c_Sz0
+
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
+    real (c_double) :: corr, avgq, avgp
+
+    avgq = 0
+    avgp = 0
+    corr = 0
+    call zero_mag_states(nspin, dim_Sz0, states)
+    do i = 1, dim_Sz0
+      
+      l = states(i)
+      call decode(l,nspin,config)
+
+      corr = corr + abs(psi_Sz0(i))**2 * (1 - 2 * config(q)) * (1 - 2 * config(p))
+      avgq = avgq + abs(psi_Sz0(i))**2 * (1 - 2 * config(q))
+      avgp = avgp + abs(psi_Sz0(i))**2 * (1 - 2 * config(p))
+        
+    enddo
+
+    sigmaz_corr_c_Sz0 = corr - avgq * avgp
+
+
+  end function
+
+  subroutine exact_quasi_energies_Sz0(nspin, dim_Sz0, V_coupling, h_z, QE)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    real (c_double), intent(in) :: V_coupling, h_z(nspin)
+    real (c_double), intent(out) :: QE(dim_Sz0)
+
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
+
+    call zero_mag_states(nspin, dim_Sz0, states)
+    do i = 1, dim_Sz0
+
+      l = states(i)
+      call decode(l, nspin, config)
+      QE(i) = 0
+      do k = 1, nspin/2 - 1
+        QE(i) = QE(i) + ( V_coupling * ( 2*(1 - 2*config(2*k-1))*(1-2*config(2*k)) + (1-2*config(2*k))*(1-2*config(2*k+1)) + &
+          & (1-2*config(2*k-1))*(1-2*config(2*k+2)) ) + &
+          & h_z(2*k) * (1 - 2*config(2*k) + 1 - 2*config(2*k-1)) + &
+          & h_z(2*k-1) * (1 - 2*config(2*k) + 1 - 2*config(2*k-1))  )/2
+      enddo
+      k = nspin/2
+      QE(i) = QE(i) + ( V_coupling * ( 2*(1 - 2*config(2*k-1))*(1-2*config(2*k)) ) + &
+        & h_z(2*k) * (1 - 2*config(2*k) + 1 - 2*config(2*k-1)) + &
+        & h_z(2*k-1) * (1 - 2*config(2*k) + 1 - 2*config(2*k-1))  )/2
+
+      print "( F15.10,4X,*(I0)  )", QE(i), config(:)
+    enddo
+
+    end subroutine
+
+
   subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)
     character, intent(in) :: option*1
     integer (c_int), intent(in) :: steps, start

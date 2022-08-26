@@ -54,7 +54,7 @@ do
                 n_periods=100
               elif [ $nspin -gt 8 ] && [ $nspin -le 12 ]; then
                 total_time=$((5*10**(nspin/2+5)))
-                n_periods=5000000
+                n_periods=500000
               fi
             fi
             steps=`echo $total_time $period $n_periods | awk '{print $1/$2/$3}'`

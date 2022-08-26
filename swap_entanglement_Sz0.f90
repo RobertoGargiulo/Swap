@@ -21,18 +21,19 @@ program swap
 
   integer (c_int)     ::  nspin, dim, iteration, n_iterations
   integer (c_int)     ::  i, j, k, p, l, dim_Sz0
+  integer (c_int)     ::  unit_ent
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
 
-  real (c_double), dimension(:), allocatable :: E
+  real (c_double), dimension(:), allocatable :: E, QE
   real (c_double), dimension(:,:), allocatable :: H, W_r
   complex(c_double_complex), dimension(:), allocatable :: PH, psi_Sz0
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
 
   real (c_double), allocatable :: MI(:,:,:), MI_avg(:,:), MI_dis_avg(:)
   integer (c_int) :: nspin_A, dim_A, n_lim
-  real (c_double) :: MBE
+  real (c_double), allocatable, dimension(:,:) :: MBE, IPR_arr, LI, IMBsq, CORR_Z
 
   integer (c_int), allocatable :: idx(:), config(:), states(:)
 
@@ -40,7 +41,7 @@ program swap
   EXTERNAL SELECT
 
   integer(c_int) :: count_beginning, count_end, count_rate, time_min, count1, count2
-  character(len=200) :: filestring
+  character(len=300) :: filestring, string
 
   !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine
@@ -91,7 +92,7 @@ program swap
     & nspin, "_period", T0, "_iterations", n_iterations, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
-  !open(newunit=unit_ph,file=filestring)
+  open(newunit=unit_ent,file=filestring)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -117,30 +118,37 @@ program swap
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
   allocate(U(dim_Sz0,dim_Sz0))
   allocate(idx(dim_Sz0))
+  allocate(QE(dim_Sz0))
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim_Sz0))
   allocate(W(dim_Sz0,dim_Sz0))
 
   !Allocate for Entanglement
-  allocate(MI(nspin/2,n_iterations,dim_Sz0), MI_avg(nspin/2,n_iterations), MI_dis_avg(nspin/2))
+  n_lim = min(nspin/2,2)
+  allocate(MI(n_lim,n_iterations,dim_Sz0), MI_avg(n_lim,n_iterations), MI_dis_avg(n_lim))
+  allocate(LI(n_iterations,dim_Sz0), IMBsq(n_iterations,dim_Sz0), MBE(n_iterations,dim_Sz0), IPR_arr(n_iterations,dim_Sz0) )
+  allocate(CORR_Z(n_iterations,dim_Sz0))
 
 
   allocate(config(nspin), states(dim_Sz0))
   call zero_mag_states(nspin, dim_Sz0, states)
 
-  n_lim = min(nspin/2,1)
-
   !$OMP PARALLEL
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP DO private(iteration, h_z, H, E, W_r, &
-  !$OMP & U, W, PH, nspin_A, dim_A, i)
+  !$OMP DO private(iteration, h_z, H, W_r, &
+  !$OMP & U, W, PH, nspin_A, dim_A, i, psi_Sz0) 
+  !E <- Put this back after looking at single iterations !!!!!!!!!
   do iteration = 1, n_iterations
     
-    if (mod(iteration,10)==0) then 
-      print *, "iteration = ", iteration
+    if (n_iterations < 10) then
+     print *, "iteration = ", iteration
+    else
+      if (mod(iteration,n_iterations/10)==0) then 
+        print *, "iteration = ", iteration
+      endif
     endif
 
     !-------------------------------------------------
@@ -150,62 +158,75 @@ program swap
     !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
     Jint = -J_coupling
 
-    !call random_number(Vint)
-    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-V,V]
-    Vint = -V_coupling
+    call random_number(Vint)
+    Vint = V_coupling + V_coupling*(Vint - 0.5) !Jint in [-V,V]
+    !Vint = -V_coupling
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
-  
-    !write (*,*) "Jint = ", Jint(:)
-    !write (*,*) "Vint = ", Vint(:)
-    !write (*,*) "h_z = ", h_z(:)
-    !print *, ""
+
+    !print *, "J = ", Jint(:)
+    !print *, "Vint = ", Vint(:)
+    !print *, "hz = ", h_z(:)
   
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
+    !do i = 1, dim_Sz0
+    !  print *, E(i)
+    !enddo
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     E = real(C_UNIT*log(PH))
-    !call sort_index(E, idx)
-    call dpquicksort(E)
+    !call dpquicksort(E)
     !print *, E(:)
+    !call exact_quasi_energies_Sz0(nspin, dim_Sz0, V_coupling, h_z, QE)
 
-    print *, "       I       I^2        LI       IPR       MBE        MI"
+    !do i = 1, dim_Sz0
+    !  print *, E(i), QE(i), C_UNIT*log(exp(-C_UNIT*QE(i)))
+    !enddo
+
+    
+    !write(string,"(A12)") "MI"
+    !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "CORR", "E"
     do i = 1, dim_Sz0
+
       psi_Sz0 = W(1:dim_Sz0,i)
+
       !print *, "psi = "
       !call printvec(dim_Sz0, psi_Sz0, 'A')
-      MBE = max_bipartite_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
-      !if ( abs(imbalance_sq_Sz0(nspin, dim_Sz0, psi_Sz0)) > 1.0e-10 ) then
-      !  print *, "          I             I^2                     LI                      IPR                MBE"
-      !  print *, imbalance_Sz0(nspin, dim_Sz0, psi_Sz0), imbalance_sq_Sz0(nspin, dim_Sz0, psi_Sz0), &
-      !  & local_imbalance(nspin, dim, psi_Sz0), IPR(psi_Sz0), MBE
-      !endif
-
       !print *, "   abs(c_i)^2     I^2     IPR       l    config"
-      do k = 1, dim_Sz0
-          l = states(k)
-          call decode(l, nspin, config)
-          !print 1, abs(psi_Sz0(k))**2, imbalance_sq_basis(nspin, l), IPR(psi_Sz0), l, config(:)
-      enddo
+      !do k = 1, dim_Sz0
+      !    l = states(k)
+      !    call decode(l, nspin, config)
+      !    print 1, abs(psi_Sz0(k))**2, imbalance_sq_basis(nspin, l), IPR(psi_Sz0), l, config(:)
+      !enddo
+      !1 format (10X,F4.2, 4X,F5.2, 4X,F4.2, 4X,I3, 4X,*(I0))
 
-      1 format (10X,F4.2, 4X,F5.2, 4X,F4.2, 4X,I3, 4X,*(I0))
+      IMBsq(iteration,i) = imbalance_sq_Sz0(nspin,dim_Sz0,psi_Sz0)
+      LI(iteration,i) = local_imbalance_Sz0(nspin,dim_Sz0,psi_Sz0)
+      IPR_arr(iteration,i) = IPR(psi_Sz0)
+      MBE(iteration,i) = max_bipartite_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
+      CORR_Z(iteration,i) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, 1, nspin, psi_Sz0)
 
       do nspin_A = 1, n_lim
-        !print *, "   nspin_A  eigenvector        MI"
         dim_A = 2**nspin_A
-        MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, W(1:dim_Sz0,i))
-        !print *, "       I       I^2        LI       IPR       MBE        MI"
-        print "(*(4X,F15.7) )", imbalance_Sz0(nspin, dim_Sz0, psi_Sz0), imbalance_sq_Sz0(nspin, dim_Sz0, psi_Sz0), &
-        & local_imbalance(nspin, dim, psi_Sz0), IPR(psi_Sz0), MBE, MI(nspin_A,iteration,i)
-        !print *, nspin_A, i, MI(nspin_A,iteration,i)
+        MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
       enddo
+      !print "(*(4X,F8.4) )", MI(:,iteration,i), LI(iteration,i), &
+      !  & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), &
+      !  & CORR_Z(iteration,i), E(i)
       !print *, ""
+
+      !do k = 1, nspin
+        !do j = k, nspin
+          !print *, k, j, sigmaz_corr_c_Sz0(nspin, dim_Sz0, k, j, psi_Sz0)
+       ! enddo
+      !enddo
+
     enddo
 
   enddo
@@ -213,9 +234,15 @@ program swap
   !$OMP END PARALLEL 
 
   !print *, E(:)
-  !do j = 1, dim_Sz0
-  !  write(unit_ph,*) E(j), pair_gaps(j), near_gaps(j), log_gap(j)
-  !enddo
+  write(string,"(A12)") "MI"
+  write(unit_ent, "(A,*(4X,A8))") repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "E"
+  do iteration = 1, n_iterations
+    do i = 1, dim_Sz0
+      write(unit_ent, "(*(4X,F8.4) )") MI(:,iteration,i), LI(iteration,i), &
+        & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), & 
+        & CORR_Z(iteration,i), E(i)
+    enddo
+  enddo
 
   MI_avg = 0
   MI_dis_avg = 0

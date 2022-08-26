@@ -239,6 +239,7 @@ set title "nspin = ".nspin.", n_{iter} = ".iter.", period = ".period.", J = ".J.
 #Fixed nspin,J,hz,kick,iter,steps, varying V
 
 file_time="sort_Swap_decay_times2.txt"
+file_time_J="sort_Swap_decay_times_varying_J.txt"
 file_time_V="sort_Swap_decay_times_varying_V.txt"
 file_time_hz="sort_Swap_decay_times_varying_hz.txt"
 file_time_eps="sort_Swap_decay_times_varying_eps.txt"
@@ -251,8 +252,8 @@ set logscale y
 unset logscale x
 
 
-list_L = "2 4 6 8 10"
-list_iter = "5120 2560 1280 640 320"
+list_L = "2 4 6 8 10 12"
+list_iter = "5120 2560 1280 640 320 160"
 list_J = "0.02 0.04 0.06 0.08 0.10"
 list_V = "0.25 0.50"
 list_hz = "3.00 6.00 12.00"
@@ -286,12 +287,18 @@ set ytics 0.001, 10, 10e10 format "10^{%T}"
 j = 0; k = 0
 #set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{6}, period = ".period.", V = ".word(list_V,j+1).", hz = ".word(list_hz,k+1).", kick = ".kick
 
+list_J = "0.05 0.10 0.15 0.20 0.25 0.30"
 num_J = words(list_J)
 num_V = 1
 num_hz = 1
-set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{6}, period = ".period.", V = ".V.", hz = ".hz.", kick = ".kick
-#set output "figures/Scaling_Decay_Time_varying_J.png"
-#plot for [i=0:num_J-1] file_time every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:9:10 w errorlines title "J = ".word(list_J,i+1)
+V = "0.25"
+hz = "6.00"
+set yrange [1:1e9]
+set xrange [2:12]
+set key left top box 3
+set title "n_{iter} = 2^{1-L/2}5120, period = ".period.", V = ".V.", hz = ".hz.", kick = ".kick
+set output "figures/Scaling_Decay_Time_varying_J.png"
+plot for [i=0:num_J-1] file_time_J every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:7:8 w errorlines title "J = ".word(list_J,i+1)
 
 i = 0; k = 0
 list_V = "0.00 0.40 0.80 1.20 1.60"
@@ -322,9 +329,9 @@ set title "n_{iter} = 2^{1-L/2}5120, steps = 10^{6}, period = ".period.", J = ".
 set yrange [1:1e9]
 set xrange [2:12]
 set key left top box 3
-file_hz="sort_Swap_decay_times_hz.txt"
-#set output "figures/Scaling_Decay_Time_varying_hz.png"
-#plot for [k=0:num_hz-1] file_hz every :::k::k u 1:7:8 w errorlines title "hz = ".word(list_hz,k+1)
+file_hz="sort_Swap_decay_times_varying_hz.txt"
+set output "figures/Scaling_Decay_Time_varying_hz.png"
+plot for [k=0:num_hz-1] file_hz every :::k::k u 1:7:8 w errorlines title "hz = ".word(list_hz,k+1)
 
 i = 1; j = 0; k = 0
 do for [i=0:num_J-1] {
