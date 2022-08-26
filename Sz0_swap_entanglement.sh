@@ -12,7 +12,7 @@ export OMP_NUM_THREADS=$n_threads
 #mv $output ../Trash
 
 iterations_2=5120
-for nspin in 12 #8 10 #10 12 14 #{6..16..2}
+for nspin in 4 #12 #8 10 #10 12 14 #{6..16..2}
 do
   #iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
   #iterations=100
@@ -21,7 +21,7 @@ do
   do
     for period in 1.00
     do
-      for J in 0.00 0.05 #0.05 #$(seq 0.00 0.05 0.50)
+      for J in 0.00 #0.05 #0.05 #$(seq 0.00 0.05 0.50)
       do
         for V in 0.50 #$(seq 0.00 0.20 1.60)
         do

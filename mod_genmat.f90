@@ -1097,11 +1097,33 @@ contains
 
   end function
 
-  subroutine exact_quasi_energies_Sz0(nspin, dim_Sz0, V_coupling, h_z, QE)
+  function exact_energy(nspin, V_int, h_z, i)
+
+    integer (c_int), intent(in) :: nspin, i
+    real (c_double), intent(in) :: V_int(nspin), h_z(nspin)
+    real (c_double) :: exact_energy
+
+    integer (c_int) :: k, config(nspin)
+    real (c_double) :: E
+
+    call decode(i, nspin, config)
+    config = 1 - 2*config
+    E = 0
+    do k = 1, nspin - 1
+      E = E + V_int(k) * config(k) * config(k+1) + h_z(k) * config(k)
+    enddo
+    k = nspin
+    E = E + h_z(k) * config(k)
+
+    exact_energy = E
+
+  end function
+
+  subroutine exact_energies_Sz0(nspin, dim_Sz0, V_int, h_z, E)
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
-    real (c_double), intent(in) :: V_coupling, h_z(nspin)
-    real (c_double), intent(out) :: QE(dim_Sz0)
+    real (c_double), intent(in) :: V_int(nspin), h_z(nspin)
+    real (c_double), intent(out) :: E(dim_Sz0)
 
     integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
 
@@ -1110,22 +1132,102 @@ contains
 
       l = states(i)
       call decode(l, nspin, config)
-      QE(i) = 0
-      do k = 1, nspin/2 - 1
-        QE(i) = QE(i) + ( V_coupling * ( 2*(1 - 2*config(2*k-1))*(1-2*config(2*k)) + (1-2*config(2*k))*(1-2*config(2*k+1)) + &
-          & (1-2*config(2*k-1))*(1-2*config(2*k+2)) ) + &
-          & h_z(2*k) * (1 - 2*config(2*k) + 1 - 2*config(2*k-1)) + &
-          & h_z(2*k-1) * (1 - 2*config(2*k) + 1 - 2*config(2*k-1))  )/2
-      enddo
-      k = nspin/2
-      QE(i) = QE(i) + ( V_coupling * ( 2*(1 - 2*config(2*k-1))*(1-2*config(2*k)) ) + &
-        & h_z(2*k) * (1 - 2*config(2*k) + 1 - 2*config(2*k-1)) + &
-        & h_z(2*k-1) * (1 - 2*config(2*k) + 1 - 2*config(2*k-1))  )/2
+      config = 1 - 2*config
+      E = exact_energy(nspin, V_int, h_z, i)
 
-      print "( F15.10,4X,*(I0)  )", QE(i), config(:)
     enddo
 
-    end subroutine
+  end subroutine
+
+  subroutine exact_quasi_energies_Sz0(nspin, dim_Sz0, V_int, h_z, QE) !E, Es, QE, QE_alt)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    real (c_double), intent(in) :: V_int(nspin-1), h_z(nspin)
+    real (c_double), intent(out) :: QE(dim_Sz0)
+
+    integer (c_int) :: i, k, l, m, config(nspin), states(dim_Sz0)
+    !real (c_double) :: E(dim_Sz0), Es(dim_Sz0), QE_alt(dim_Sz0)
+
+    QE = 0
+    !QE_alt = 0
+    !E = 0
+    !Es = 0
+    call zero_mag_states(nspin, dim_Sz0, states)
+    do i = 1, dim_Sz0
+
+      l = states(i)
+      call decode(l, nspin, config)
+      m = 0
+      do k = 1, nspin/2
+        m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
+      enddo
+      QE(i) = (exact_energy(nspin, V_int, h_z, l) + exact_energy(nspin, V_int, h_z, m)) / 2
+
+      !print "(*(I0))", config(:)
+      !config = 1 - 2*config
+      !do k = 1, nspin/2 - 1
+      !  print *, "k = ", k
+      !  E(i) = E(i) + V_int(2*k-1) * config(2*k-1) * config(2*k) + V_int(2*k) * config(2*k) * config(2*k+1) + &
+      !   &  h_z(2*k-1) * config(2*k-1) + h_z(2*k) * config(2*k) 
+      !  Es(i) = Es(i) + V_int(2*k-1) * config(2*k) * config(2*k-1) + V_int(2*k) * config(2*k-1) * config(2*k+2) + &
+      !   &  h_z(2*k-1) * config(2*k) + h_z(2*k) * config(2*k-1) 
+
+      !  print *, "Normal contribution V"
+      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", V_int(2*k-1) * config(2*k-1) * config(2*k), &
+      !    & V_int(2*k) * config(2*k) * config(2*k+1), &
+      !    & 2*k-1, config(2*k-1), 2*k, config(2*k), 2*k+1, config(2*k+1)
+      !  print *, "Swap contribution V"
+      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", V_int(2*k-1) * config(2*k) * config(2*k-1), &
+      !    & V_int(2*k) * config(2*k-1) * config(2*k+2), &
+      !    & 2*k, config(2*k), 2*k-1, config(2*k-1), 2*k+2, config(2*k+2)
+      !  print *, "Normal contribution h"
+      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", h_z(2*k-1) * config(2*k-1), h_z(2*k) * config(2*k), &
+      !    & 2*k-1, config(2*k-1), 2*k, config(2*k)
+      !  print *, "Swap contribution h"
+      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", h_z(2*k-1) * config(2*k), h_z(2*k) * config(2*k-1), &
+      !    & 2*k, config(2*k), 2*k-1, config(2*k-1)
+      !  print *, ""
+
+      !enddo
+      !k = nspin/2
+      !  print *, "k = ", k
+      !E(i) = E(i) + V_int(2*k-1) * config(2*k-1) * config(2*k) + &
+      !  & + h_z(2*k-1) * config(2*k-1) + h_z(2*k) * config(2*k)
+      !Es(i) = Es(i) + V_int(2*k-1) * config(2*k) * config(2*k-1) + &
+      !  & + h_z(2*k-1) * config(2*k) + h_z(2*k) * config(2*k-1)
+      !  print *, "Normal contribution V"
+      !  print "( F20.15,4X, *(2I0,2X)  )", V_int(2*k-1) * config(2*k-1) * config(2*k), &
+      !    & 2*k-1, config(2*k-1), 2*k, config(2*k)
+      !  print *, "Swap contribution V"
+      !  print "( F20.15,4X, *(2I0,2X)  )", V_int(2*k-1) * config(2*k) * config(2*k-1), &
+      !    & 2*k, config(2*k), 2*k-1, config(2*k-1)
+      !  print *, "Normal contribution h"
+      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", h_z(2*k-1) * config(2*k-1), h_z(2*k) * config(2*k), &
+      !    & 2*k-1, config(2*k-1), 2*k, config(2*k)
+      !  print *, "Swap contribution h"
+      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", h_z(2*k-1) * config(2*k), h_z(2*k) * config(2*k-1), &
+      !    & 2*k, config(2*k), 2*k-1, config(2*k-1)
+      !  print *, ""
+
+      !print "( F15.10,4X,*(I0)  )", E(i), (1 - config(:))/2
+      !print *, E(i), Es(i), exact_energy(nspin, V_int, h_z, l), exact_energy(nspin, V_int, h_z, m)
+
+      !QE_alt(i) = (E(i) + Es(i)) / 2
+
+      !do k = 1, nspin/2 - 1
+      !  QE(i) = QE(i) + ( ( V_int(2*k-1) * 2 * config(2*k-1) * config(2*k) + &
+      !    & V_int(2*k) * ( config(2*k-1) * config(2*k+2) + config(2*k) * config(2*k+1) )) + &
+      !    & ( h_z(2*k-1) + h_z(2*k) ) * (config(2*k) + config(2*k-1)) )/2
+      !enddo
+      !k = nspin/2
+      !QE(i) = QE(i) + ( ( V_int(2*k-1) * 2 * config(2*k-1) * config(2*k) ) + &
+      !  & ( h_z(2*k-1) + h_z(2*k) ) * (config(2*k) + config(2*k-1)) )/2
+
+      !print "( A,4X, A,4X, A  )", "(E + Esigma)/2", "QE", "config"
+      !print "( F15.10,4X, F15.10,4X, *(I0)  )", QE_alt(i), QE(i), (1 - config(:))/2 
+    enddo
+
+  end subroutine
 
 
   subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)

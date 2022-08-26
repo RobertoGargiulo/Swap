@@ -26,7 +26,7 @@ program swap
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
 
-  real (c_double), dimension(:), allocatable :: E, QE
+  real (c_double), dimension(:), allocatable :: E, QE_old, QE, QE_new, Es, QE_alt
   real (c_double), dimension(:,:), allocatable :: H, W_r
   complex(c_double_complex), dimension(:), allocatable :: PH, psi_Sz0
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
@@ -92,7 +92,7 @@ program swap
     & nspin, "_period", T0, "_iterations", n_iterations, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
-  open(newunit=unit_ent,file=filestring)
+  !open(newunit=unit_ent,file=filestring)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -118,7 +118,7 @@ program swap
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
   allocate(U(dim_Sz0,dim_Sz0))
   allocate(idx(dim_Sz0))
-  allocate(QE(dim_Sz0))
+  allocate(QE(dim_Sz0), QE_new(dim_Sz0), QE_old(dim_Sz0), Es(dim_Sz0), QE_alt(dim_Sz0))
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim_Sz0))
@@ -158,36 +158,74 @@ program swap
     !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
     Jint = -J_coupling
 
-    call random_number(Vint)
-    Vint = V_coupling + V_coupling*(Vint - 0.5) !Jint in [-V,V]
-    !Vint = -V_coupling
+    !call random_number(Vint)
+    !Vint = V_coupling + V_coupling*(Vint - 0.5) !Jint in [-V,V]
+    Vint = -V_coupling
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
 
-    !print *, "J = ", Jint(:)
-    !print *, "Vint = ", Vint(:)
-    !print *, "hz = ", h_z(:)
+    print *, "J = ", Jint(:)
+    print *, "Vint = ", Vint(:)
+    print *, "hz = ", h_z(:)
   
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
-    !do i = 1, dim_Sz0
-    !  print *, E(i)
-    !enddo
+    print *, "H_MBL diagonalized"
+
+    !call exact_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE)
+    !call dpquicksort(QE)
+    call exact_quasi_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE) !QE_new, Es, QE_old, QE_alt)
+    !call dpquicksort(QE_new)
+    !call dpquicksort(Es)
+    do i = 1, dim_Sz0
+      !print *, E(i), QE(i), QE_new(i), Es(i)
+
+      ! Check for eigenvalues of HMBL (E(:)), they equal the exact (QE(:), QE_new(:)), exact exchange energies (Es(:))
+      ! E = eigenvalues(H_MBL)
+      ! QE = sum_{k=1}^{L-1} V_k s_{k-1}s_k + sum_{k=1}^L h_k s_k
+      ! QE_new = sum_{k=1}^{L/2} V_{2k-1} s_{2k-1} s_{2k} + sum_{k=1}^{L/2-1} V_{2k} s_{2k} s_{2k+1} + 
+      !sum_{k=1}^{L/2} ( h_{2k-1} s_{2k-1} + h_{2k} s_{2k} )
+      ! Es = sum_{k=1}^{L/2} V_{2k-1} s_{2k} s_{2k-1} + sum_{k=1}^{L/2-1} V_{2k} s_{2k-1} s_{2k+2} + 
+      !sum_{k=1}^{L/2} ( h_{2k-1} s_{2k} + h_{2k} s_{2k-1} )
+    enddo
+    print *, ""
+
+    !QE_new = real(C_UNIT*log(exp(-C_UNIT*E)))
+    !call dpquicksort(QE_new)
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
+    call diagUN( SELECT, dim_Sz0, U, PH, W)
+    print *, "U_MBL diagonalized"
+    E = real(C_UNIT*log(PH))
+    call dpquicksort(E)
+    do i = 1, dim_Sz0
+      !print *, E(i), QE_new(i)
+
+      ! Check for quasi-energies of U_MBL (E(:)), they equal the quasi-energies (QE_new(:)) obtainted 
+      !from the energies of of H_MBL alone
+      ! E = C_UNIT * log( eigenvalues(U_MBL) )
+      ! QE_new = C_UNIT * log( exp( -C_UNIT * eigenvalues(H_MBL) ) )
+    enddo
+    print *, ""
+
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
+    print *, "UF diagonalized"
     E = real(C_UNIT*log(PH))
     !call dpquicksort(E)
-    !print *, E(:)
-    !call exact_quasi_energies_Sz0(nspin, dim_Sz0, V_coupling, h_z, QE)
+    !call exact_quasi_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE) !QE_new, Es, QE, QE_alt)
+    !call dpquicksort(QE)
 
-    !do i = 1, dim_Sz0
-    !  print *, E(i), QE(i), C_UNIT*log(exp(-C_UNIT*QE(i)))
-    !enddo
+    !QE_new = real(C_UNIT*log(exp(-C_UNIT*QE)))
+    !call dpquicksort(QE_new)
+
+    do i = 1, dim_Sz0
+      !print *, E(i), QE_new(i)
+     ! Check for quasi energies of UF (E(:)), so far they do not equal the
+    enddo
 
     
     !write(string,"(A12)") "MI"
@@ -235,14 +273,14 @@ program swap
 
   !print *, E(:)
   write(string,"(A12)") "MI"
-  write(unit_ent, "(A,*(4X,A8))") repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "E"
-  do iteration = 1, n_iterations
-    do i = 1, dim_Sz0
-      write(unit_ent, "(*(4X,F8.4) )") MI(:,iteration,i), LI(iteration,i), &
-        & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), & 
-        & CORR_Z(iteration,i), E(i)
-    enddo
-  enddo
+  !write(unit_ent, "(A,*(4X,A8))") repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "E"
+  !do iteration = 1, n_iterations
+  !  do i = 1, dim_Sz0
+  !    write(unit_ent, "(*(4X,F8.4) )") MI(:,iteration,i), LI(iteration,i), &
+  !      & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), & 
+  !      & CORR_Z(iteration,i), E(i)
+  !  enddo
+  !enddo
 
   MI_avg = 0
   MI_dis_avg = 0
