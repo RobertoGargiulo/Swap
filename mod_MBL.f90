@@ -103,10 +103,6 @@ contains
     i = nspin
     dim_B = dim/dim_A
     rho_A = 0
-
-
-    !print *, nspin, nspin_A, dim, dim_A
-    !print *, "jA         kA       dim_A          iB       dim_B           i           j         dim"
     do jA = 0, dim_A-1
       do kA = 0, dim_A-1
         do iB = 0, dim_B-1
@@ -114,12 +110,6 @@ contains
           i = jA + 2**(nspin_A) * iB + 1
           j = kA + 2**(nspin_A) * iB + 1
 
-          !if ( i > dim ) then
-          !  print *, jA, kA, dim_A, iB, dim_B, i, j, dim
-          !else if ( j > dim ) then
-          !  print *, jA, kA, dim_A, iB, dim_B, i, j, dim
-          !endif
-          !2^(N_A) - 1 + 2^(N_A) * (2^(N_B) - 1) + 1 = 2^(N_A) + 2^(N_A+N_B) - 2^(N_A)
           rho_A(jA+1,kA+1) = rho_A(jA+1,kA+1) + psi(i) * dconjg( psi(j) )
 
         enddo

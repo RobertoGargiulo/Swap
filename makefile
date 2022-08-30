@@ -1,5 +1,5 @@
 FC =  gfortran
-FFLAGS = -O3 -Wall -Wextra -g -fbacktrace -fcheck=all -pedantic 
+FFLAGS = -O3 -Wall -Wextra -g -fbacktrace -fcheck=all -pedantic -pg
 #-ffpe-trap= invalid, zero, overflow
 #-Werror -ffree-line-length-500 #-fpp -D IFORT -qopenmp 
 #-pg -> per debugging   $ gprof <program-name> <gmon.out>
@@ -27,10 +27,16 @@ swap_decay: $(MOD) swap_decay.o
 swap_entanglement_Sz0: $(MOD) swap_entanglement_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+swap_overlap: $(MOD) swap_overlap.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 entanglement: $(MOD) entanglement.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 imbalance_states: $(MOD) imbalance_states.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+prova: $(MOD) prova.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 dense_Sz0: $(MOD) dense_Sz0.o

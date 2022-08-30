@@ -532,6 +532,57 @@ contains
 
   end subroutine buildSz0_HMBL
 
+  subroutine buildSz0_HMBL_NNN(nspin, dim_Sz0, Jint, Vint, Vint2, hz, H)
+
+    !dim_Sz0 is the dimensione of the Sz=0 subsapce
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), Vint2(nspin-2), hz(nspin)
+    real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
+
+    integer :: config(nspin), states(dim_Sz0)
+    integer (c_int) :: i, j, k, m, n, l, r, rflag
+    
+    H = 0
+    call zero_mag_states(nspin, dim_Sz0, states)
+    do l = 1, dim_Sz0
+
+      i = states(l)
+      call decode(i,nspin,config)
+      config = 1 - 2*config
+
+      do k = 1, nspin-2
+
+        H(l,l) = H(l,l) + Vint(k) * config(k) * &
+          & config(k+1) + Vint2(k) * config(k) * config(k+2) + hz(k) * config(k)
+
+        if (config(k)/=config(k+1)) then
+          j = i + config(k)*2**(k-1) + config(k+1)*2**(k)
+          r = binsearch(j,states)
+
+          H(r,l) = H(r,l) + Jint(k) * (config(k) - config(k+1))**2/2
+        endif
+      enddo
+
+      k = nspin - 1
+      H(l,l) = H(l,l) + Vint(k) * config(k) * &
+        & config(k+1) + hz(k) * config(k)
+
+      if (config(k)/=config(k+1)) then
+        j = i + config(k)*2**(k-1) + config(k+1)*2**(k)
+        r = binsearch(j,states)
+
+        H(r,l) = H(r,l) + Jint(k) * (config(k) - config(k+1))**2/2
+      endif
+
+      k = nspin
+      H(l,l) = H(l,l) + hz(k) * config(k)
+    enddo
+
+  end subroutine buildSz0_HMBL_NNN
+
+
+
   subroutine buildSz0_HSwap(nspin, dim_Sz0, H)
 
     !dim_Sz0 is the dimensione of the Sz=0 subsapce
@@ -624,7 +675,37 @@ contains
 
   end subroutine buildStaggState
 
-  subroutine buildStaggState_Sz0(nspin, dim_Sz0, state)
+  subroutine buildStaggState_Sz0(nspin,dim_Sz0,alpha,beta,state)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: alpha, beta
+    complex (c_double_complex), intent(out) :: state(dim_Sz0)
+    
+    integer :: config(nspin), i, k, l, indx(dim_Sz0)
+    complex (c_double_complex) :: alpha_n, beta_n
+    real (c_double) :: norm
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+
+    norm = sqrt(abs(alpha)**2 + abs(beta)**2)
+    alpha_n = alpha/norm
+    beta_n = beta/norm
+    state = 1
+    call zero_mag_states(nspin, dim_Sz0, indx)
+    do i = 1, dim_Sz0
+      l = indx(i)
+      call decode(i,nspin,config)
+
+      do k = 1, nspin/2
+        state(i) = state(i) * ( (1-config(2*k-1)) * alpha_n + config(2*k-1) * beta_n ) * &
+          & ( config(2*k) * alpha_n + (1-config(2*k)) * beta_n )
+      enddo
+    enddo
+
+
+  end subroutine buildStaggState_Sz0
+
+  subroutine buildNeelState_Sz0(nspin, dim_Sz0, state)
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
     complex (c_double_complex), intent(out) :: state(dim_Sz0)
@@ -648,7 +729,7 @@ contains
       endif
     enddo
 
-  end subroutine buildStaggState_Sz0
+  end subroutine buildNeelState_Sz0
 
 
   subroutine buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
@@ -772,6 +853,44 @@ contains
     enddo
 
   end subroutine finite_imbalance_states
+
+  subroutine finite_imbalance_states_Sz0(nspin, dim_Sz0, IMB, states)
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    real (c_double), intent(in) :: IMB
+    integer (c_int), intent(out) :: states(dim_Sz0)
+
+    integer (c_int) :: i, k, m, l, config(nspin), sum_even, sum_odd, idxSz0(dim_Sz0)
+    real (c_double) :: loc_imb
+
+    m = 0
+    call zero_mag_states(nspin, dim_Sz0, idxSz0)
+    print *, "       i     l  config"
+    do i = 1, dim_Sz0
+      l = idxSz0(i)
+      call decode(l, nspin, config)
+      sum_odd = 0
+      sum_even = 0
+      !print *, i, sum_even, sum_odd
+      do k = 1, nspin/2
+        sum_odd = sum_odd + config(2*k-1)
+        sum_even = sum_even + config(2*k)
+        !print *, k, sum_even, sum_odd
+      enddo
+      loc_imb = real(sum_odd - sum_even, c_double) / real(nspin - sum_odd - sum_even, c_double)
+      !print *, loc_imb
+      if(abs(IMB) < 1.0e-10 .AND. sum_odd == sum_even) then
+        m = m+1
+        states(m) = l
+        print "(2(8X,I0),4X,*(I0))", l, m, config(:)
+      else if(abs(IMB) > 1.0e-10 .AND. abs(loc_imb - IMB) < 1.0e-10) then
+        m = m+1
+        states(m) = l
+        print "(2(8X,I0),4X,*(I0))", l, m, config(:)
+      endif
+    enddo
+
+  end subroutine
+
 
 
 
@@ -992,7 +1111,7 @@ contains
 
       LI = LI + (config(2*k) - config(2*k-1))**2
     enddo
-    LI = 4 * LI / nspin
+    LI = 2 * LI / nspin
     local_imbalance_basis = LI
 
   end function
@@ -1012,7 +1131,7 @@ contains
       do k = 1, nspin/2
         LI_part = LI_part + (config(2*k) - config(2*k-1))**2
       enddo
-      LI = LI + abs(psi(i))**2 * 4 * LI_part / nspin
+      LI = LI + abs(psi(i))**2 * 2 * LI_part / nspin
     enddo
     local_imbalance = LI
 
@@ -1035,7 +1154,7 @@ contains
       do k = 1, nspin/2
         LI_part = LI_part + (config(2*k) - config(2*k-1))**2
       enddo
-      LI = LI + abs(psi_Sz0(i))**2 * 4 * LI_part / nspin
+      LI = LI + abs(psi_Sz0(i))**2 * 2 * LI_part / nspin
     enddo
     local_imbalance_Sz0 = LI
 
@@ -1132,12 +1251,31 @@ contains
 
       l = states(i)
       call decode(l, nspin, config)
-      config = 1 - 2*config
-      E = exact_energy(nspin, V_int, h_z, i)
+      E(i) = exact_energy(nspin, V_int, h_z, l)
 
     enddo
 
   end subroutine
+
+  function exact_quasi_energy(nspin, V_int, h_z, i)
+
+    integer (c_int), intent(in) :: nspin, i
+    real (c_double), intent(in) :: V_int(nspin-1), h_z(nspin)
+    real (c_double) :: exact_quasi_energy
+
+    integer (c_int) :: k, m, config(nspin)
+    real (c_double) :: QE
+
+    call decode(i, nspin, config)
+    m = 0
+    do k = 1, nspin/2
+      m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
+    enddo
+    QE = (exact_energy(nspin, V_int, h_z, i) + exact_energy(nspin, V_int, h_z, m)) / 2
+    exact_quasi_energy = QE
+
+  end function
+
 
   subroutine exact_quasi_energies_Sz0(nspin, dim_Sz0, V_int, h_z, QE) !E, Es, QE, QE_alt)
 

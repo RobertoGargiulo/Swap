@@ -28,8 +28,9 @@ program swap
 
   real (c_double), dimension(:), allocatable :: E, QE_old, QE, QE_new, Es, QE_alt
   real (c_double), dimension(:,:), allocatable :: H, W_r
-  complex(c_double_complex), dimension(:), allocatable :: PH, psi_Sz0
+  complex(c_double_complex), dimension(:), allocatable :: PH, psi_Sz0, init_state
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
+  complex (c_double_complex) :: alpha, beta
 
   real (c_double), allocatable :: MI(:,:,:), MI_avg(:,:), MI_dis_avg(:)
   integer (c_int) :: nspin_A, dim_A, n_lim
@@ -41,7 +42,7 @@ program swap
   EXTERNAL SELECT
 
   integer(c_int) :: count_beginning, count_end, count_rate, time_min, count1, count2
-  character(len=300) :: filestring, string
+  character(len=300) :: filestring, filestring_disV, string
 
   !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine
@@ -81,7 +82,10 @@ program swap
   
   T1 = pi/4 + kick
 
-    !Coefficienti dello stato iniziale |psi> = (alpha|up>+beta|down>)^L
+  !---Coefficients for the reference state |psi> = \otimes_{k=1}^L P^{k-1}(alpha|0> + beta|1>)
+  ! where P|0> = |1>, P|1> = |0>
+  alpha = cos(pi/8)
+  beta = sin(pi/8)
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
@@ -93,6 +97,12 @@ program swap
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
   !open(newunit=unit_ent,file=filestring)
+
+  write(filestring_disV,93) "data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Entanglement_nspin", &
+    & nspin, "_period", T0, "_iterations", n_iterations, &
+    & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
+  open(newunit=unit_ent,file=filestring_disV)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -130,6 +140,15 @@ program swap
   allocate(LI(n_iterations,dim_Sz0), IMBsq(n_iterations,dim_Sz0), MBE(n_iterations,dim_Sz0), IPR_arr(n_iterations,dim_Sz0) )
   allocate(CORR_Z(n_iterations,dim_Sz0))
 
+  IMBsq = 0
+  MBE = 0
+  IPR_arr = 0
+  CORR_Z = 0
+  MI = 0
+
+  !Allocate reference state
+  allocate(init_state(dim_Sz0))
+  call buildStaggState_Sz0(nspin, dim_Sz0, alpha, beta, init_state)
 
   allocate(config(nspin), states(dim_Sz0))
   call zero_mag_states(nspin, dim_Sz0, states)
@@ -140,7 +159,7 @@ program swap
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
   !$OMP DO private(iteration, h_z, H, W_r, &
   !$OMP & U, W, PH, nspin_A, dim_A, i, psi_Sz0) 
-  !E <- Put this back after looking at single iterations !!!!!!!!!
+  !!!!!!E <- Put this back after looking at single iterations !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   do iteration = 1, n_iterations
     
     if (n_iterations < 10) then
@@ -154,14 +173,14 @@ program swap
     !-------------------------------------------------
     !PARAMETERS
   
+    Jint = -J_coupling
     !call random_number(Jint)
     !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
-    Jint = -J_coupling
 
-    !call random_number(Vint)
-    !Vint = V_coupling + V_coupling*(Vint - 0.5) !Jint in [-V,V]
     Vint = -V_coupling
-  
+    call random_number(Vint)
+    Vint = -V_coupling + V_coupling*(Vint - 0.5) !Vint in [V/2,3V/2]
+
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
 
@@ -174,61 +193,28 @@ program swap
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
-    print *, "H_MBL diagonalized"
-
-    !call exact_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE)
-    !call dpquicksort(QE)
-    call exact_quasi_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE) !QE_new, Es, QE_old, QE_alt)
-    !call dpquicksort(QE_new)
-    !call dpquicksort(Es)
-    do i = 1, dim_Sz0
-      !print *, E(i), QE(i), QE_new(i), Es(i)
-
-      ! Check for eigenvalues of HMBL (E(:)), they equal the exact (QE(:), QE_new(:)), exact exchange energies (Es(:))
-      ! E = eigenvalues(H_MBL)
-      ! QE = sum_{k=1}^{L-1} V_k s_{k-1}s_k + sum_{k=1}^L h_k s_k
-      ! QE_new = sum_{k=1}^{L/2} V_{2k-1} s_{2k-1} s_{2k} + sum_{k=1}^{L/2-1} V_{2k} s_{2k} s_{2k+1} + 
-      !sum_{k=1}^{L/2} ( h_{2k-1} s_{2k-1} + h_{2k} s_{2k} )
-      ! Es = sum_{k=1}^{L/2} V_{2k-1} s_{2k} s_{2k-1} + sum_{k=1}^{L/2-1} V_{2k} s_{2k-1} s_{2k+2} + 
-      !sum_{k=1}^{L/2} ( h_{2k-1} s_{2k} + h_{2k} s_{2k-1} )
-    enddo
-    print *, ""
-
-    !QE_new = real(C_UNIT*log(exp(-C_UNIT*E)))
-    !call dpquicksort(QE_new)
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
-    call diagUN( SELECT, dim_Sz0, U, PH, W)
-    print *, "U_MBL diagonalized"
-    E = real(C_UNIT*log(PH))
-    call dpquicksort(E)
-    do i = 1, dim_Sz0
-      !print *, E(i), QE_new(i)
-
-      ! Check for quasi-energies of U_MBL (E(:)), they equal the quasi-energies (QE_new(:)) obtainted 
-      !from the energies of of H_MBL alone
-      ! E = C_UNIT * log( eigenvalues(U_MBL) )
-      ! QE_new = C_UNIT * log( exp( -C_UNIT * eigenvalues(H_MBL) ) )
-    enddo
-    print *, ""
-
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
-    print *, "UF diagonalized"
+    !print *, "UF diagonalized"
     E = real(C_UNIT*log(PH))
     !call dpquicksort(E)
-    !call exact_quasi_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE) !QE_new, Es, QE, QE_alt)
+    !call exact_quasi_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE)
+    !do i = 1, dim_Sz0
+    !  print *, "Before:", QE(:)
+    !  if( ANY(QE(i+1:dim_Sz0) == QE(i)) ) QE(i) = QE(i) + pi
+    !  print *, "After:", QE(:), i
+    !enddo
+    !QE = real(C_UNIT*log(exp(-C_UNIT*QE)))
     !call dpquicksort(QE)
 
-    !QE_new = real(C_UNIT*log(exp(-C_UNIT*QE)))
-    !call dpquicksort(QE_new)
-
-    do i = 1, dim_Sz0
-      !print *, E(i), QE_new(i)
+    !do i = 1, dim_Sz0
+    !  print *, E(i), QE(i)
      ! Check for quasi energies of UF (E(:)), so far they do not equal the
-    enddo
+    !enddo
 
     
-    !write(string,"(A12)") "MI"
+    write(string,"(A12)") "MI"
     !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "CORR", "E"
     do i = 1, dim_Sz0
 
@@ -236,27 +222,38 @@ program swap
 
       !print *, "psi = "
       !call printvec(dim_Sz0, psi_Sz0, 'A')
-      !print *, "   abs(c_i)^2     I^2     IPR       l    config"
+      !print *, "     E(i)     abs(c_i)^2     l    config"
+      !print *, "     E(i)      E_ex(i)    QE_ex(i)          c_i              l      config"
       !do k = 1, dim_Sz0
+      !  if( abs(psi_Sz0(k))**2 > 1.0e-4) then
       !    l = states(k)
       !    call decode(l, nspin, config)
-      !    print 1, abs(psi_Sz0(k))**2, imbalance_sq_basis(nspin, l), IPR(psi_Sz0), l, config(:)
+      !    !print 1, E(i), abs(psi_Sz0(k))**2, l, config(:)
+      !    print 2, E(i), exact_energy(nspin, Vint, h_z, l), &
+      !      & exact_quasi_energy(nspin, Vint, h_z, l), &
+      !      & psi_Sz0(k), &
+      !      & l, config(:)
+      !  endif
       !enddo
-      !1 format (10X,F4.2, 4X,F5.2, 4X,F4.2, 4X,I3, 4X,*(I0))
+      !print *, ""
+      !1 format (4X,F6.3, 4X,F6.3, 4X,I3, 4X,*(I0))
+      !2 format (4X,F6.3, 4X,F8.3, 4X,F8.3, 4X, 1(F8.3,F8.3X'i':X), 4X,I3, 4X,*(I0))
 
-      IMBsq(iteration,i) = imbalance_sq_Sz0(nspin,dim_Sz0,psi_Sz0)
+      !IMBsq(iteration,i) = imbalance_sq_Sz0(nspin,dim_Sz0,psi_Sz0)
       LI(iteration,i) = local_imbalance_Sz0(nspin,dim_Sz0,psi_Sz0)
       IPR_arr(iteration,i) = IPR(psi_Sz0)
-      MBE(iteration,i) = max_bipartite_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
-      CORR_Z(iteration,i) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, 1, nspin, psi_Sz0)
+      !MBE(iteration,i) = max_bipartite_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
+      !CORR_Z(iteration,i) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, 1, nspin, psi_Sz0)
 
       do nspin_A = 1, n_lim
         dim_A = 2**nspin_A
         MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
       enddo
+      write(string,"(A12)") "MI"
+      !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "CORR"
       !print "(*(4X,F8.4) )", MI(:,iteration,i), LI(iteration,i), &
       !  & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), &
-      !  & CORR_Z(iteration,i), E(i)
+      !  & CORR_Z(iteration,i)
       !print *, ""
 
       !do k = 1, nspin
@@ -273,14 +270,14 @@ program swap
 
   !print *, E(:)
   write(string,"(A12)") "MI"
-  !write(unit_ent, "(A,*(4X,A8))") repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "E"
-  !do iteration = 1, n_iterations
-  !  do i = 1, dim_Sz0
-  !    write(unit_ent, "(*(4X,F8.4) )") MI(:,iteration,i), LI(iteration,i), &
-  !      & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), & 
-  !      & CORR_Z(iteration,i), E(i)
-  !  enddo
-  !enddo
+  write(unit_ent, "(A,*(4X,A8))") repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "CORR_Z", "E"
+  do iteration = 1, n_iterations
+    do i = 1, dim_Sz0
+      write(unit_ent, "(*(4X,F8.4) )") MI(:,iteration,i), LI(iteration,i), &
+        & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), & 
+        & CORR_Z(iteration,i), E(i)
+    enddo
+  enddo
 
   MI_avg = 0
   MI_dis_avg = 0

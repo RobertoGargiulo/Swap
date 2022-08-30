@@ -8,7 +8,7 @@ min(x, y) = (x < y ? x : y)
 
 ###### Parameters
 nspin = "12"
-n_lim = min(nspin/2, 4)
+n_lim = min(nspin/2, 2)
 nspin_A = 2
 period="1.00"
 J = "0.00"
@@ -35,14 +35,17 @@ set ylabel "Mutual Information, L_A = ".nspin_A
 
 
 
+################ Only LI vs MI (at different J)
 set yrange [-0.1:2.1]
 set xrange [-0.1:nspin_A*log(2)+0.1]
 set xlabel "Mutual Information L_A =".nspin_A 
 set ylabel "Local Imbalance" 
-set output "figures/figure.png"
-plot file1 u nspin_A:n_lim+1 title "J = 0.00", file2 u nspin_A:n_lim+1 title "J = 0.05"
+#set output "figures/figure.png"
+#plot file1 u nspin_A:n_lim+1 title "J = 0.00", file2 u nspin_A:n_lim+1 title "J = 0.05"
+################
 
 
+##### LI, IPR, MBE, I^2 vs MI
 
 plot_title = "nspin = ".nspin.", J = ".J.", V = ".V.", hz = ".hz.", kick = ".kick.", period = ".period
 
@@ -50,7 +53,7 @@ plot_title = "nspin = ".nspin.", J = ".J.", V = ".V.", hz = ".hz.", kick = ".kic
 unset title
 set xtics 0, nspin_A*log(2)/3, nspin_A*log(2) format "%.1f"
 
-set multiplot layout 2,2 columnsfirst scale 1,1 title plot_title
+#set multiplot layout 2,2 columnsfirst scale 1,1 title plot_title
 
 set xrange [-0.1:nspin_A*log(2)+0.1]
 set yrange [-0.1:2.1]
@@ -86,5 +89,72 @@ set ylabel "Imbalance Square"
 #plot file u nspin_A:n_lim+4
 
 unset multiplot
+
+
+
+
+
+
+########## Varying nspin/L
+
+
+list_L = "6 8 10 12 14"
+num_L = words(list_L)
+n_lim = 2 #min(nspin/2, 2)
+period="1.00"
+J = "0.05"
+V = "0.50"
+hz = "30.00"
+kick = "0.00"
+
+#file_start="data/eigen/Sz0_DENSE_SWAP_hz_Disorder_Entanglement_nspin"
+#file_end="_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".txt"
+#figure_LI_IPR = "figures/Swap_Entanglement_LI_vs_IPR_Uniform_V_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".png"
+#figure_MI_LI = "figures/Swap_Entanglement_MI_vs_LI_Uniform_V_nspinA".nspin_A."_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".png"
+
+file_start="data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Entanglement_nspin"
+file_end="_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".txt"
+figure_LI_IPR = "figures/Swap_Entanglement_LI_vs_IPR_Disordered_V_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".png"
+figure_MI_LI = "figures/Swap_Entanglement_MI_vs_LI_Disordered_V_nspinA".nspin_A."_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".png"
+
+plot_title = "J = ".J.", V = ".V.", hz = ".hz.", kick = ".kick.", period = ".period
+
+#set output figure_LI_IPR
+set output figure_MI_LI
+unset title
+set key
+
+set terminal png size 600,500 # tikz color # standalone
+set size ratio 0.4
+unset margins #-1,2,0,0
+
+set multiplot layout 3,2 columnsfirst title plot_title scale 1,1
+
+set xrange [-0.1:1.1]
+set yrange [-0.1:1.1]
+set xlabel "Local Imbalance"
+set ylabel "IPR"
+set xtics 0, 0.25, 1 format "%.2f"
+set ytics 0, 0.5, 1 format "%.1f"
+do for [i=1:num_L] {
+  set title "L = ".word(list_L,i) offset 0,-2.4
+  #plot file_start.word(list_L,i).file_end u n_lim+1:n_lim+2 pt 7 notitle
+}
+
+
+nspin_A = 2
+set xrange [-0.1:nspin_A*log(2)+0.1]
+set yrange [-0.1:1.1]
+set xlabel "Mutual Information, L_A =".nspin_A 
+set ylabel "Local Imbalance" 
+set ytics format "%.1f"
+set xtics format "%.1f"
+do for [i=1:num_L] {
+  set title "L = ".word(list_L,i) offset 0,-2.4
+  plot file_start.word(list_L,i).file_end u nspin_A:n_lim+1 pt 7 notitle
+}
+
+unset multiplot
+
 
 set output
