@@ -35,8 +35,10 @@ program swap
   real (c_double), allocatable :: MI(:,:,:), MI_avg(:,:), MI_dis_avg(:)
   integer (c_int) :: nspin_A, dim_A, n_lim
   real (c_double), allocatable, dimension(:,:) :: MBE, IPR_arr, LI, IMBsq, CORR_Z
+  real (c_double) :: IMB_min, LI_min
 
-  integer (c_int), allocatable :: idx(:), config(:), states(:)
+  integer (c_int), allocatable :: idx(:), config(:), states(:), idx_Sz0(:)
+  integer (c_int) :: idx_state
 
   logical :: SELECT
   EXTERNAL SELECT
@@ -96,12 +98,12 @@ program swap
     & nspin, "_period", T0, "_iterations", n_iterations, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
-  !open(newunit=unit_ent,file=filestring)
 
   write(filestring_disV,93) "data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Entanglement_nspin", &
     & nspin, "_period", T0, "_iterations", n_iterations, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
+
   open(newunit=unit_ent,file=filestring_disV)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -128,7 +130,7 @@ program swap
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
   allocate(U(dim_Sz0,dim_Sz0))
   allocate(idx(dim_Sz0))
-  allocate(QE(dim_Sz0), QE_new(dim_Sz0), QE_old(dim_Sz0), Es(dim_Sz0), QE_alt(dim_Sz0))
+  !allocate(QE(dim_Sz0), QE_new(dim_Sz0), QE_old(dim_Sz0), Es(dim_Sz0), QE_alt(dim_Sz0))
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim_Sz0))
@@ -137,18 +139,16 @@ program swap
   !Allocate for Entanglement
   n_lim = min(nspin/2,2)
   allocate(MI(n_lim,n_iterations,dim_Sz0), MI_avg(n_lim,n_iterations), MI_dis_avg(n_lim))
-  allocate(LI(n_iterations,dim_Sz0), IMBsq(n_iterations,dim_Sz0), MBE(n_iterations,dim_Sz0), IPR_arr(n_iterations,dim_Sz0) )
-  allocate(CORR_Z(n_iterations,dim_Sz0))
+  allocate(LI(n_iterations,dim_Sz0),IPR_arr(n_iterations,dim_Sz0))
+  !allocate( IMBsq(n_iterations,dim_Sz0), MBE(n_iterations,dim_Sz0) )
+  !allocate(CORR_Z(n_iterations,dim_Sz0))
 
-  IMBsq = 0
-  MBE = 0
-  IPR_arr = 0
-  CORR_Z = 0
+  !CORR_Z = 0
   MI = 0
+  IPR_arr = 0
+  !IMBsq = 0
+  !MBE = 0
 
-  !Allocate reference state
-  allocate(init_state(dim_Sz0))
-  call buildStaggState_Sz0(nspin, dim_Sz0, alpha, beta, init_state)
 
   allocate(config(nspin), states(dim_Sz0))
   call zero_mag_states(nspin, dim_Sz0, states)
@@ -197,7 +197,7 @@ program swap
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     !print *, "UF diagonalized"
-    E = real(C_UNIT*log(PH))
+    !E = real(C_UNIT*log(PH))
     !call dpquicksort(E)
     !call exact_quasi_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE)
     !do i = 1, dim_Sz0
@@ -215,8 +215,10 @@ program swap
 
     
     write(string,"(A12)") "MI"
-    !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "CORR", "E"
+    !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "CORR"
     do i = 1, dim_Sz0
+
+
 
       psi_Sz0 = W(1:dim_Sz0,i)
 
@@ -239,10 +241,8 @@ program swap
       !1 format (4X,F6.3, 4X,F6.3, 4X,I3, 4X,*(I0))
       !2 format (4X,F6.3, 4X,F8.3, 4X,F8.3, 4X, 1(F8.3,F8.3X'i':X), 4X,I3, 4X,*(I0))
 
-      !IMBsq(iteration,i) = imbalance_sq_Sz0(nspin,dim_Sz0,psi_Sz0)
       LI(iteration,i) = local_imbalance_Sz0(nspin,dim_Sz0,psi_Sz0)
       IPR_arr(iteration,i) = IPR(psi_Sz0)
-      !MBE(iteration,i) = max_bipartite_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
       !CORR_Z(iteration,i) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, 1, nspin, psi_Sz0)
 
       do nspin_A = 1, n_lim
@@ -250,9 +250,9 @@ program swap
         MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
       enddo
       write(string,"(A12)") "MI"
-      !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "CORR"
+      !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "CORR"
       !print "(*(4X,F8.4) )", MI(:,iteration,i), LI(iteration,i), &
-      !  & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), &
+      !  & IPR_arr(iteration,i), &
       !  & CORR_Z(iteration,i)
       !print *, ""
 
@@ -269,32 +269,32 @@ program swap
   !$OMP END PARALLEL 
 
   !print *, E(:)
-  write(string,"(A12)") "MI"
-  write(unit_ent, "(A,*(4X,A8))") repeat(trim(string),n_lim), "LI", "IPR", "MBE", "I^2", "CORR_Z", "E"
+  write(string,"(A26)") "MI"
+  write(unit_ent, "(A,*(A24,2X))") repeat(trim(string),n_lim), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
   do iteration = 1, n_iterations
     do i = 1, dim_Sz0
-      write(unit_ent, "(*(4X,F8.4) )") MI(:,iteration,i), LI(iteration,i), &
-        & IPR_arr(iteration,i), MBE(iteration,i), IMBsq(iteration,i), & 
-        & CORR_Z(iteration,i), E(i)
+      write(unit_ent, *) MI(:,iteration,i), LI(iteration,i), &
+        & IPR_arr(iteration,i)!, MBE(iteration,i), IMBsq(iteration,i), & 
+        !& CORR_Z(iteration,i), E(i)
     enddo
   enddo
 
-  MI_avg = 0
-  MI_dis_avg = 0
-  !print *, "Mutual Information (MI, nspin_A, iteration)"
-  do nspin_A = 1, n_lim
-    do iteration = 1, n_iterations
-      do i = 1, dim_Sz0
-        MI_avg(nspin_A,iteration) = MI_avg(nspin_A,iteration) + MI(nspin_A,iteration,i)
-      enddo
-      MI_avg = MI_avg/dim_Sz0
-      !print *, MI_avg(nspin_A,iteration), nspin_A, iteration
-      MI_dis_avg(nspin_A) = MI_dis_avg(nspin_A) + MI_avg(nspin_A,iteration)
-    enddo
-    MI_dis_avg = MI_dis_avg/n_iterations
-    !print *, MI_dis_avg(nspin_A), nspin_A
-    !print *, ""
-  enddo
+  !MI_avg = 0
+  !MI_dis_avg = 0
+  !!print *, "Mutual Information (MI, nspin_A, iteration)"
+  !do nspin_A = 1, n_lim
+  !  do iteration = 1, n_iterations
+  !    do i = 1, dim_Sz0
+  !      MI_avg(nspin_A,iteration) = MI_avg(nspin_A,iteration) + MI(nspin_A,iteration,i)
+  !    enddo
+  !    MI_avg = MI_avg/dim_Sz0
+  !    !print *, MI_avg(nspin_A,iteration), nspin_A, iteration
+  !    MI_dis_avg(nspin_A) = MI_dis_avg(nspin_A) + MI_avg(nspin_A,iteration)
+  !  enddo
+  !  MI_dis_avg = MI_dis_avg/n_iterations
+  !  !print *, MI_dis_avg(nspin_A), nspin_A
+  !  !print *, ""
+  !enddo
 
   deallocate(Jint, Vint, h_z)
   deallocate(H,E,W_r)

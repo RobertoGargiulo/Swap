@@ -1,4 +1,4 @@
-file_string="swap"
+file_string=$1
 
 for j in {1..10000..1}
 do

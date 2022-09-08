@@ -17,27 +17,32 @@ program swap
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
-  integer (c_int)     ::  j, dim_Sz0
+  integer (c_int)     ::  j, l, i, dim_Sz0
   integer (c_int)     ::  unit_avg
   integer (c_int)     ::  start
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
 
-  real(c_double) :: imb_t_avg, imb_t_sigma!, imb_t_avg2, imb_t_sigma2
+  real(c_double) :: imb_t_avg, imb_t_sigma, imb_t_avg2, imb_t_sigma2
   
   real (c_double) :: norm
-  real (c_double), dimension(:), allocatable :: imb_avg, imb_sq!, imb_avg2, imb_sq2
+  real (c_double), dimension(:), allocatable :: imb_avg, imb_sq, imb_avg2, imb_sq2
 
   real (c_double), dimension(:), allocatable :: E
   real (c_double), dimension(:,:), allocatable :: H, W_r
   complex(c_double_complex), dimension(:), allocatable :: PH
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap, UF
 
-  complex(c_double_complex), dimension(:), allocatable :: init_state, state!, state2
+  complex(c_double_complex), dimension(:), allocatable :: init_state, state, state2
 
   integer(c_int) :: count_beginning, count_end, count_rate!, time_min, count1, count2
-  character(len=200) :: filestring
+  character(len=200) :: filestring, filestring_Neel, filestring_Nayak
+
+  real (c_double) :: IMB, LI
+  integer (c_int) :: idx_state
+  integer (c_int), allocatable :: idxSz0(:), config(:)
+  complex (c_double_complex) :: alpha, beta
 
   !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine, Steps di Evoluzione, Stato Iniziale
@@ -84,12 +89,18 @@ program swap
   !---------------------------------------------
 
   !DATA FILES
-  
-  write(filestring,93) "data/magnetizations/Sz0_DENSE_SWAP_hz_Disorder_AVG_FLUCT_Imbalance_nspin", &
+
+  write(filestring_Neel,93) "data/magnetizations/Sz0_DENSE_SWAP_hz_V_Disorder_Neel_AVG_FLUCT_Imbalance_nspin", &
     & nspin, "_steps", steps, "_period", T0, "_iterations", n_iterations, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
-  open(newunit=unit_avg,file=filestring)
+
+  write(filestring_Nayak,93) "data/magnetizations/Sz0_DENSE_SWAP_hz_V_Disorder_Nayak_AVG_FLUCT_Imbalance_nspin", &
+    & nspin, "_steps", steps, "_period", T0, "_iterations", n_iterations, &
+    & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
+
+  open(newunit=unit_avg,file=filestring_Nayak)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -100,7 +111,22 @@ program swap
 
   !BUILD INITIAL STATE (of type staggered)
   allocate(init_state(dim_Sz0))
-  call buildStaggState_Sz0(nspin, dim_Sz0, init_state)
+
+  alpha = cos(pi/8)
+  beta = sin(pi/8)
+  call buildNayakState_Sz0(nspin, dim_Sz0, alpha, beta, init_state)
+  !call buildNeelState_Sz0(nspin, dim_Sz0, init_state)
+  
+  !call printvec(dim_Sz0, init_state, 'A')
+
+  allocate(idxSz0(dim_Sz0), config(nspin))
+  call zero_mag_states(nspin, dim_Sz0, idxSz0)
+  do i = 1, dim_Sz0
+    l = idxSz0(i)
+    call decode(l, nspin, config)
+    print "( 4X,F8.4, 4X,I4, 4X,*(I0) )", abs(init_state(i))**2, l, config(:)
+  enddo
+
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0), USwap(dim_Sz0,dim_Sz0))
@@ -127,29 +153,35 @@ program swap
 
   !Allocate initial and generic state
   allocate( state(dim_Sz0) )
+  allocate( state2(dim_Sz0) )
 
   !Allocate observables and averages
   allocate( imb_avg(steps), imb_sq(steps))
-  !allocate( avg2(steps), imb_sq2(steps))
+  allocate( imb_avg2(steps), imb_sq2(steps))
 
   !Allocate for Eigenvalues/Eigenvectors
-  allocate(PH(dim_Sz0))
-  allocate(W(dim_Sz0,dim_Sz0))
+  !allocate(PH(dim_Sz0))
+  !allocate(W(dim_Sz0,dim_Sz0))
 
   imb_avg = 0
   imb_sq = 0
-  !imb_avg2 = 0
-  !imb_sq2 = 0
+  imb_avg2 = 0
+  imb_sq2 = 0
   !$OMP PARALLEL
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+:imb_avg, imb_sq) private(iteration, h_z, norm, j, &
-  !$OMP & state, H, E, W_r, U, PH, W, UF)
+  !$OMP do reduction(+:imb_avg, imb_sq, imb_avg2, imb_sq2) private(iteration, h_z, norm, j, &
+  !$OMP & state, H, E, W_r, U, UF, state2)
+  !PH, W)
   do iteration = 1, n_iterations
     
-    if (mod(iteration,10)==0) then 
-      print *, "iteration = ", iteration
+    if (n_iterations < 10) then
+     print *, "iteration = ", iteration
+    else
+      if (mod(iteration,n_iterations/10)==0) then 
+        print *, "iteration = ", iteration
+      endif
     endif
 
     !-------------------------------------------------
@@ -159,9 +191,9 @@ program swap
     !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
     Jint = -J_coupling
 
-    !call random_number(Vint)
-    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-V,V]
     Vint = -V_coupling
+    call random_number(Vint)
+    Vint = -V_coupling + V_coupling*(Vint - 0.5) !Jint in [-V,V]
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
@@ -180,17 +212,18 @@ program swap
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     UF = matmul(USwap,U)
 
+    j = 1
     state = init_state
     norm = real(dot_product(state,state))
-    j = 1
+    state = state/sqrt(norm)
     imb_avg(j) = imb_avg(j) + imbalance_Sz0(nspin, dim_Sz0, state)
     imb_sq(j) = imb_sq(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
 
-    !state2 = init_state
-    !norm = real(dot_product(state2,state2))
-    !j = 1
-    !imb_avg2(j) = imb_avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)
-    !imb_sq2(j) = imb_sq2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
+    state2 = init_state
+    norm = real(dot_product(state2,state2))
+    state2 = state2/sqrt(norm)
+    imb_avg2(j) = imb_avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)
+    imb_sq2(j) = imb_sq2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
 
     do j = 2, steps
       state = matmul(UF,state)
@@ -200,11 +233,11 @@ program swap
       imb_avg(j) = imb_avg(j) + imbalance_Sz0(nspin, dim_Sz0, state) 
       imb_sq(j) = imb_sq(j) + imbalance_Sz0(nspin, dim_Sz0, state)**2
 
-      !state2 = matmul(U,state2)
-      !norm = real(dot_product(state2,state2))
-      !state2 = state2 / sqrt(norm)
-      !imb_avg2(j) = imb_avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2) 
-      !imb_sq2(j) = imb_sq2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
+      state2 = matmul(U,state2)
+      norm = real(dot_product(state2,state2))
+      state2 = state2 / sqrt(norm)
+      imb_avg2(j) = imb_avg2(j) + imbalance_Sz0(nspin, dim_Sz0, state2) 
+      imb_sq2(j) = imb_sq2(j) + imbalance_Sz0(nspin, dim_Sz0, state2)**2
     enddo
 
   enddo
@@ -214,30 +247,33 @@ program swap
 
   imb_avg = imb_avg/n_iterations
   imb_sq = sqrt( (imb_sq/n_iterations - imb_avg**2) / n_iterations )
-  !imb_avg2 = imb_avg2/n_iterations
-  !imb_sq2 = sqrt(imb_sq2/n_iterations - imb_avg2**2)/sqrt(real(n_iterations))
+  imb_avg2 = imb_avg2/n_iterations
+  imb_sq2 = sqrt(imb_sq2/n_iterations - imb_avg2**2)/sqrt(real(n_iterations))
   j = 1
-  write(unit_avg,*) j*T0, imb_avg(j), imb_sq(j)!, imb_avg2(j), imb_sq2(j)
+  write(unit_avg,*) j*T0, imb_avg(j), imb_sq(j), imb_avg2(j), imb_sq2(j)
+  !print *, j*T0, imb_avg(j), imb_sq(j), imb_avg2(j), imb_sq2(j)
   do j = 2, steps
-    write(unit_avg,*) j*T0, imb_avg(j), imb_sq(j)!, imb_avg2(j), imb_sq2(j)
+    write(unit_avg,*) j*T0, imb_avg(j), imb_sq(j), imb_avg2(j), imb_sq2(j)
+    !print *, j*T0, imb_avg(j), imb_sq(j), imb_avg2(j), imb_sq2(j)
   enddo
 
   start = int(100/T0) !The average starts from the step for which 100 = start*T0
   call time_avg('T', steps, start, imb_avg, imb_sq, imb_t_avg, imb_t_sigma)
-  !call time_avg('F', steps, start, imb_avg2, imb_sq2, imb_t_avg2, imb_t_sigma2)
+  call time_avg('F', steps, start, imb_avg2, imb_sq2, imb_t_avg2, imb_t_sigma2)
 
 
-  write(unit_avg,*) "Imbalance Time Averages and Errors of Imbalance"
-  write(unit_avg,*) imb_t_avg, imb_t_sigma!, imb_t_avg2, imb_t_sigma2
+  !write(unit_avg,*) "Imbalance Time Averages and Errors of Imbalance"
+  !write(unit_avg,*) imb_t_avg, imb_t_sigma, imb_t_avg2, imb_t_sigma2
 
   print *,"Imbalance Time Averages and Errors"
-  print *, imb_t_avg, imb_t_sigma!, imb_t_avg2, imb_t_sigma2
+  print *, imb_t_avg, imb_t_sigma, imb_t_avg2, imb_t_sigma2
 
   deallocate(Jint, Vint, h_z)
   deallocate(imb_avg, imb_sq)
+  deallocate(imb_avg2, imb_sq2)
   deallocate(H,E,W_r,U)
-  deallocate(USwap)
-  deallocate(PH, W)
+  !deallocate(USwap, UF)
+  !deallocate(PH, W)
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 

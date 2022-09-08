@@ -1,5 +1,4 @@
 set terminal png # tikz color # standalone
-#set output "figures/figure.png"
 set size ratio 0.5
 # set title "It would be nice if this were converted into a caption!"
 set xtics 10000 nomirror
@@ -71,9 +70,26 @@ list_V3 = list(0.00,4.00,0.10)  #at J = 0.10, hz = 6.00, kick = 0.00
 
 #Varying L
 
-set title "n_{iter} = 2^{1-L/2} 2560, period = ".period.", J = ".J.", V = ".V.", hz = ".hz.", kick = ".kick
-#set output "figures/Avg_Imbalance_Evolution_Sz0_SWAP_hz_Disorder_period".period."_J".J."_V".V."_hz".hz."_kick".kick.".png"
-#plot for [i=1:6] filetype."".word(list_L,i)."_steps".steps."_period".period."_iterations".word(list_iter1,i)."_J".J."_V".V."_hz".hz."_kick".kick.".txt" every density u 1:(abs($2)) w l title "Swap, nspin =".word(list_L,i), \
+period = "1.00"
+J = "0.05"
+V = "0.50"
+hz = "6.00"
+kick = "0.00"
+steps = "10000"
+
+list_L = "2 4 6 8 10 12 14 16"
+list_iter = "2560 1280 640 320 160 80 40 20 10"
+
+init_state = "Nayak"
+filetype = "data/magnetizations/Sz0_DENSE_SWAP_hz_V_Disorder_".init_state."_AVG_FLUCT_Imbalance_nspin"
+figure = "figures/Avg_Imbalance_Evolution_Sz0_SWAP_hz_V_Disorder_".init_state."_Init_State_period".period."_J".J."_V".V."_hz".hz."_kick".kick.".png"
+
+set key left bottom box 3
+set xrange [1:steps]
+set title "n_{iter} = 2^{1-L/2} 2560, period = ".period.", J = ".J.", V = ".V.", hz = ".hz.", kick = ".kick."\n{/*0.8 ".init_state." initial state}"
+set output figure
+plot for [i=1:6] filetype."".word(list_L,i)."_steps".steps."_period".period."_iterations".word(list_iter,i)."_J".J."_V".V."_hz".hz."_kick".kick.".txt" every density u 1:(($2)*(-1)**($1/period)) w l title "L =".word(list_L,i)
+
 
 #Varying J
 V = "0.50"
@@ -95,13 +111,13 @@ j = 5
 #unset logscale x
 
 set title "nspin = ".word(list_L,j).", n_{iter} = ".word(list_iter3,j).", period = ".period.", J = ".J.", hz = ".hz.", kick = ".kick
-set output "figures/Avg_Imbalance_Evolution_Sz0_SWAP_hz_Disorder_nspin".word(list_L,j)."_period".period."_J".J."_hz".hz."_kick".kick."_varying_V_log.png"
+#set output "figures/Avg_Imbalance_Evolution_Sz0_SWAP_hz_Disorder_nspin".word(list_L,j)."_period".period."_J".J."_hz".hz."_kick".kick."_varying_V_log.png"
 
 #plot for [i=1:3] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter1,j)."_J".J."_V".word(list_V1,i)."_hz".hz."_kick".kick.".txt" every density u 1:(abs($2)) w l title "Swap, V =".word(list_V1,i)
 
 #plot for [i=2:7] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter2,j)."_J".J."_V".word(list_V2,i)."_hz".hz."_kick".kick.".txt" every density::::steps  u 1:(abs($2)) w l title "Swap, V =".word(list_V2,i)
 
-plot for [i=1:20] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter3,j)."_J".J."_V".word(list_V3,i)."_hz".hz."_kick".kick.".txt" every density::::steps  u 1:(abs($2)) w l title "Swap, V =".word(list_V3,i)
+#plot for [i=1:20] filetype."".word(list_L,j)."_steps".steps."_period".period."_iterations".word(list_iter3,j)."_J".J."_V".word(list_V3,i)."_hz".hz."_kick".kick.".txt" every density::::steps  u 1:(abs($2)) w l title "Swap, V =".word(list_V3,i)
 
 
 
@@ -225,60 +241,7 @@ Jint = '0.00'
 #filename = "data/magnetizations/Sz0_vs_Full_MBL_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin10_steps100000_iterations1_J0.50_V1.00_hz3.00_kdim30.txt"
 #filename = "data/magnetizations/Sz0_vs_Full_MBL_hz_Disorder_SPARSE_AVG_FLUCT_Imbalance_nspin10_steps4000_iterations30_J0.50_V1.00_hz3.00_kdim30.txt"
 filename = "data/magnetizations/Sz0_SPARSE_vs_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin12_steps12000_iterations1_J0.50_V1.00_hz3.00_kdim30.txt"
-### Plot AVG difference between two computations
-Jint = '0.50'
-Vint = '1.00'
-hz = '3.00'
-iter=30
-steps=100000
-unset yrange #[-0.01:0.01]
-set xrange [0.5:0.5*steps]
-set ytics format "%.1s*10^{%T}"
-set xtics format "10^{%T}"
-set output "figures/Sz0_Sparse_vs_Dense_Imb_AVG_J".Jint."_V".Vint."_hz".hz.".png"
-set title "Sparse vs Dense H in Sz=0\nImbalance over Single Iteration, J = ".Jint.", V = ".Vint.", hz = ".hz
-#plot filename u 5:($1-$3) w l
 
 
-
-#Scaling Plot
-
-steps="4000"
-iter="30"
-J = "0.50"
-V = "1.00"
-time_step="0.5"
-filetype = "PT_Sz0_DENSE_MBL_hz_Disorder_AVG_FLUCT_Imbalance_nspin"
-#list(start,end,increment)=system(sprintf("seq %g %g %g", start, increment, end))
-start=0.; end=6.; inc=0.6
-list = ""; a=start-inc; while (a<end) {list=list.sprintf(" %.2f",a=a+inc)}
-list = "6 8 10 12"
-
-unset logscale x
-#set yrange [-0.1:1.1]
-unset xrange
-unset xtics
-unset ytics
-#set xrange [time_step:time_step*steps]
-#set xtics (0.1, 1, 10, 1e2, 1e3, 1e4, 1e5, 1e6) format "10^{%T}"
-set ytics format "%.1s"
-set xtics format "%.1s"
-#set output "figures/MBL_PT_Scaling_Imbalance_J".J."_V".V."_Dense_close_to_hz1.00.png"
-#set output "figures/figure.png"
-set title 'no kick, |1010...> state, n_{iter} = '.iter.', J = '.J.' V = '.V
-set ylabel 'I(t)'
-set xlabel 'h_{z}/J'
-#plot for [nspin in list] filetype.nspin."_time_step".time_step."_steps".steps.".txt"u ($6/$4):(-$2) w l title 'L ='.nspin
-
-
-set output "figures/figure.png"
-#plot "data.txt"  u  4:11 w l
-
-unset xrange
-unset yrange
-unset title
-unset ylabel
-plot "plot_data.txt" u 1:2
 
 set output
-unset logscale x

@@ -646,7 +646,7 @@ contains
 
   end subroutine buildProdState
 
-  subroutine buildStaggState(nspin,dim,alpha,beta,state)
+  subroutine buildNayakState(nspin,dim,alpha,beta,state)
 
     integer (c_int), intent(in) :: nspin, dim
     complex (c_double_complex), intent(in) :: alpha, beta
@@ -673,9 +673,9 @@ contains
     enddo
 
 
-  end subroutine buildStaggState
+  end subroutine buildNayakState
 
-  subroutine buildStaggState_Sz0(nspin,dim_Sz0,alpha,beta,state)
+  subroutine buildNayakState_Sz0(nspin,dim_Sz0,alpha,beta,state)
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
     complex (c_double_complex), intent(in) :: alpha, beta
@@ -694,7 +694,7 @@ contains
     call zero_mag_states(nspin, dim_Sz0, indx)
     do i = 1, dim_Sz0
       l = indx(i)
-      call decode(i,nspin,config)
+      call decode(l,nspin,config)
 
       do k = 1, nspin/2
         state(i) = state(i) * ( (1-config(2*k-1)) * alpha_n + config(2*k-1) * beta_n ) * &
@@ -703,19 +703,19 @@ contains
     enddo
 
 
-  end subroutine buildStaggState_Sz0
+  end subroutine buildNayakState_Sz0
 
-  subroutine buildNeelState_Sz0(nspin, dim_Sz0, state)
+  subroutine buildNeelState_Sz0(nspin, dim_Sz0, psi)
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
-    complex (c_double_complex), intent(out) :: state(dim_Sz0)
+    complex (c_double_complex), intent(out) :: psi(dim_Sz0)
     
     integer :: config(nspin), i, k, indx(dim_Sz0), l
 
     if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
     call zero_mag_states(nspin, dim_Sz0, indx)
 
-    state = 0
+    psi = 0
     l = 0
     do k = 1, nspin/2
       l = l + 2**(2*k-1)
@@ -724,12 +724,121 @@ contains
     
     do i = 1, dim_Sz0
       if(indx(i)==l) then
-        state(i) = 1
+        psi(i) = 1
         exit
       endif
     enddo
 
   end subroutine buildNeelState_Sz0
+
+  subroutine buildRndLarge_IMB_LI_State_Sz0(nspin, dim_Sz0, IMB, LI, psi)
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    real (c_double), intent(in) :: IMB, LI
+    complex (c_double_complex), intent(out) :: psi(dim_Sz0)
+
+    integer (c_int) :: idxSz0(dim_Sz0), nz, l, i, config(nspin)
+    integer (c_int), allocatable :: idx(:)
+    real (c_double) :: rand
+
+    call large_IMB_LI_states_Sz0(nspin, dim_Sz0, IMB, LI, idxSz0)
+
+    do i = 1, dim_Sz0
+      if(idxSz0(i) == 0) then
+        nz = i-1
+        exit
+      endif
+    enddo
+
+    allocate(idx(nz))
+
+    idx = idxSz0(1:nz)
+
+    call zero_mag_states(nspin, dim_Sz0, idxSz0)
+    call init_random_seed()
+    do i = 1, nz
+      l = idx(i)
+      call random_number(rand)
+      psi(binsearch(l,idxSz0)) = rand
+    enddo
+    psi = psi/sqrt(dot_product(psi,psi))
+
+    !print *, imbalance_Sz0(nspin, dim_Sz0, psi), local_imbalance_Sz0(nspin, dim_Sz0, psi)
+
+  end subroutine
+
+
+  subroutine buildRndLarge_IMB_LI_State_basis_Sz0(nspin, dim_Sz0, IMB, LI, psi)
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    real (c_double), intent(in) :: IMB, LI
+    complex (c_double_complex), intent(out) :: psi(dim_Sz0)
+
+    integer (c_int) :: idxSz0(dim_Sz0), nz, l, i, config(nspin)
+    integer (c_int), allocatable :: idx(:)
+    real (c_double) :: rand
+
+    call large_IMB_LI_states_Sz0(nspin, dim_Sz0, IMB, LI, idxSz0)
+
+    do i = 1, dim_Sz0
+      if(idxSz0(i) == 0) then
+        nz = i-1
+        exit
+      endif
+    enddo
+
+    allocate(idx(nz))
+
+    idx = idxSz0(1:nz)
+
+    call zero_mag_states(nspin, dim_Sz0, idxSz0)
+    call init_random_seed()
+    call random_number(rand)
+    l = idx(floor(nz*rand + 1))
+    i = binsearch(l,idxSz0)
+
+    psi = 0
+    psi(i) = 1
+
+    call decode(l, nspin, config)
+    !print *, IMB, LI
+    !print *, imbalance_basis(nspin,l), local_imbalance_basis(nspin,l), l
+    1 format ( 4X,F6.3, 4X,F6.3, 4X,I4, 4X,I0 )
+
+
+  end subroutine
+    
+  subroutine buildLarge_IMB_LI_State_basis_Sz0(nspin, dim_Sz0, i, IMB, LI, psi)
+    integer (c_int), intent(in) :: nspin, dim_Sz0, i
+    real (c_double), intent(in) :: IMB, LI
+    complex (c_double_complex), intent(out) :: psi(dim_Sz0)
+
+    integer (c_int) :: idxSz0(dim_Sz0), nz, j, l, config(nspin)
+    integer (c_int), allocatable :: idx(:)
+    real (c_double) :: rand
+
+    call large_IMB_LI_states_Sz0(nspin, dim_Sz0, IMB, LI, idxSz0)
+
+    do j = 1, dim_Sz0
+      if(idxSz0(j) == 0) then
+        nz = j-1
+        exit
+      endif
+    enddo
+    print *, "nz = ", nz, "i = ", i
+    if (i>nz) stop "Error: Not enough number of states."
+
+    l = idxSz0(i)
+    call zero_mag_states(nspin, dim_Sz0, idxSz0)
+    j = binsearch(l, idxSz0)
+    psi = 0
+    psi(j) = 1
+
+    call decode(l, nspin, config)
+    print *, "build Large IMB, LI basis state"
+    print *, IMB, LI
+    print *, imbalance_basis(nspin,l), local_imbalance_basis(nspin,l), l
+    1 format ( 4X,F6.3, 4X,F6.3, 4X,I4, 4X,I0 )
+
+  end subroutine
 
 
   subroutine buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
@@ -853,6 +962,42 @@ contains
     enddo
 
   end subroutine finite_imbalance_states
+
+  subroutine large_IMB_LI_states_Sz0(nspin, dim_Sz0, IMB, LI, states)
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    real (c_double), intent(in) :: IMB, LI
+    integer (c_int), intent(out) :: states(dim_Sz0)
+
+    integer :: i, l, m, idxSz0(dim_Sz0)
+    real (c_double) :: IMBc, LIc
+
+    call zero_mag_states(nspin, dim_Sz0, idxSz0)
+    m = 0
+    states = 0
+    !print "( 4X,A4, 4X,A4, 4X,A6, 4X,A6 )", "m", "l", "IMB", "LI"
+    do i = 1, dim_Sz0
+
+      l = idxSz0(i)
+      IMBc = imbalance_basis(nspin, l)
+      LIc = local_imbalance_basis(nspin, l)
+      if (IMB >= 0) then
+        if (IMBc >= IMB .AND. LIc >= LI) then
+          m = m+1
+          states(m) = l
+          !print "(4X,I4, 4X,I4, 4X,F6.3, 4X,F6.3, 4X,F6.3)", m, l, IMBc, LIc
+        endif
+      else if (IMB < 0) then
+        if (IMBc <= IMB .AND. LIc >= LI) then
+          m = m+1
+          states(m) = l
+          !print "(4X,I4, 4X,I4, 4X,F6.3, 4X,F6.3)", m, l, IMBc, LIc
+        endif
+      endif
+    enddo
+
+    !print *, "states = ", states(1:m)
+
+  end subroutine
 
   subroutine finite_imbalance_states_Sz0(nspin, dim_Sz0, IMB, states)
     integer (c_int), intent(in) :: nspin, dim_Sz0

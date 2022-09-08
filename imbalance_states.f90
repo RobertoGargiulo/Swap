@@ -13,24 +13,18 @@ program prova
   integer (c_int) :: nspin, dim, dim_Sz0, i, j, k, l
   integer (c_int) :: count_rate, count_start, count_end
   real (c_double), dimension(:), allocatable :: E, IMB_arr
-  complex (c_double_complex), dimension(:), allocatable :: PH
+  complex (c_double_complex), dimension(:), allocatable :: PH, psi
   real (c_double) :: IMB, LI, tol
   integer (c_int), allocatable :: states(:), idxSz0(:), config(:)
   integer (c_int) :: int_1d, int_2d(2), idx
 
-do nspin = 2, 4, 2
+do nspin = 8, 12, 2
   print *, "nspin = ", nspin
-  !read (*,*) nspin
   dim = 2**nspin
   dim_Sz0 = binom(nspin,nspin/2)
 
-  !print *, "Imbalance = "
-  !read (*,*) IMB
-
   call system_clock(count_start, count_rate)
 
-
-  !allocate(states(dim))
   allocate(states(dim_Sz0))
 
   tol = 1.0e-10
@@ -49,7 +43,7 @@ do nspin = 2, 4, 2
     call decode(l, nspin, config)
     IMB = imbalance_basis(nspin, l)
     LI = local_imbalance_basis(nspin, l)
-    print "(4X,I4, 4X,F6.3, 4X,F6.3, 2X,*(I0))", l, IMB, LI, config(:)
+    !print "(4X,I4, 4X,F6.3, 4X,F6.3, 2X,*(I0))", l, IMB, LI, config(:)
 
     if (idx == 0 .AND. abs(IMB) < tol) then
       idx = 1
@@ -65,19 +59,32 @@ do nspin = 2, 4, 2
   
   call dpquicksort(IMB_arr(1:k))
   do i = 1, k
-    print *, "Imbalance = ", IMB_arr(i)
-    call finite_imbalance_states_Sz0(nspin, dim_Sz0, IMB_arr(i), states)
+    !print *, "Imbalance = ", IMB_arr(i)
+    !call finite_imbalance_states_Sz0(nspin, dim_Sz0, IMB_arr(i), states)
   enddo
   print *, ""
 
-  !do i = 1, dim_Sz0
 
 
-  call take_time(count_rate, count_start, count_end, 'T', "Program")
+  IMB = 0.5
+  LI = 0.5
+  call large_IMB_LI_states_Sz0(nspin, dim_Sz0, IMB, LI, states)
 
+  allocate(psi(dim_Sz0))
+  call buildRndLarge_IMB_LI_State_basis_Sz0(nspin, dim_Sz0, IMB, LI, psi)
+  call buildRndLarge_IMB_LI_State_Sz0(nspin, dim_Sz0, IMB, LI, psi)
+  call buildLarge_IMB_LI_State_basis_Sz0(nspin, dim_Sz0, 3, IMB, LI, psi)
+  deallocate(psi)
   !deallocate(states)
   deallocate(IMB_arr, idxSz0, config, states )
 
+  call take_time(count_rate, count_start, count_end, 'T', "Program")
+  print *, ""
+
 enddo
 
+
 end program prova
+
+
+

@@ -1,5 +1,4 @@
 set terminal png # tikz color # standalone
-#set output "figures/figure.png"
 set size ratio 0.5
 set margins -1,2,0,0
 
@@ -297,8 +296,8 @@ set yrange [1:1e9]
 set xrange [2:12]
 set key left top box 3
 set title "n_{iter} = 2^{1-L/2}5120, period = ".period.", V = ".V.", hz = ".hz.", kick = ".kick
-set output "figures/Scaling_Decay_Time_varying_J.png"
-plot for [i=0:num_J-1] file_time_J every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:7:8 w errorlines title "J = ".word(list_J,i+1)
+#set output "figures/Scaling_Decay_Time_varying_J.png"
+#plot for [i=0:num_J-1] file_time_J every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:7:8 w errorlines title "J = ".word(list_J,i+1)
 
 i = 0; k = 0
 list_V = "0.00 0.40 0.80 1.20 1.60"
@@ -330,8 +329,8 @@ set yrange [1:1e9]
 set xrange [2:12]
 set key left top box 3
 file_hz="sort_Swap_decay_times_varying_hz.txt"
-set output "figures/Scaling_Decay_Time_varying_hz.png"
-plot for [k=0:num_hz-1] file_hz every :::k::k u 1:7:8 w errorlines title "hz = ".word(list_hz,k+1)
+#set output "figures/Scaling_Decay_Time_varying_hz.png"
+#plot for [k=0:num_hz-1] file_hz every :::k::k u 1:7:8 w errorlines title "hz = ".word(list_hz,k+1)
 
 i = 1; j = 0; k = 0
 do for [i=0:num_J-1] {
@@ -344,5 +343,27 @@ do for [i=0:num_J-1] {
 
 
 
+period = "1.00"
+V = "0.50"
+hz = "6.00"
+kick = "0.00"
+
+list_L = "2 4 6 8 10 12 14 16"
+list_iter = "2560 1280 640 320 160 80 40 20 10"
+list_J = "0.05 0.10 0.15 0.20 0.25 0.30 0.40 0.50 1.00"
+
+init_state = "Neel"
+file_time_J = "sort_Swap_".init_state."_decay_times_varying_J.txt"
+num_J = words(list_J)
+num_V = 1
+num_hz = 1
+V = "0.25"
+hz = "6.00"
+set yrange [1:1e9]
+set xrange [2-0.3:10+0.3]
+set key left top box 3
+set title "n_{iter} = 2^{1-L/2} 2560, period = ".period.", J = ".J.", V = ".V.", hz = ".hz.", kick = ".kick."\n{/*0.8 ".init_state." initial state}"
+set output "figures/Scaling_Decay_Time_".init_state."_varying_J.png"
+plot for [i=0:num_J-1] file_time_J every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:7:8 w errorlines title "J = ".word(list_J,i+1)
 
 set output

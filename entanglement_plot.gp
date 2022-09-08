@@ -117,18 +117,32 @@ file_end="_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".txt"
 figure_LI_IPR = "figures/Swap_Entanglement_LI_vs_IPR_Disordered_V_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".png"
 figure_MI_LI = "figures/Swap_Entanglement_MI_vs_LI_Disordered_V_nspinA".nspin_A."_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".png"
 
+list_L = "8 10 12 14"
+num_L = words(list_L)
+n_lim = min(nspin/2,2)
+period="1.00"
+J = "0.05"
+V = "0.50"
+hz = "16.00"
+kick = "0.05"
+
+
+#file_start = "data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Neel_Overlap_nspin"
+file_start="data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Entanglement_nspin"
+file_end="_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".txt"
+figure_MI_LI = "figures/Swap_Entanglement_MI_vs_LI_hz_V_Disorder_nspinA".nspin_A."_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".png"
+
 plot_title = "J = ".J.", V = ".V.", hz = ".hz.", kick = ".kick.", period = ".period
 
-#set output figure_LI_IPR
-set output figure_MI_LI
+#set output figure_MI_LI
 unset title
 set key
 
-set terminal png size 600,500 # tikz color # standalone
+set terminal png size 700,400 # tikz color # standalone
 set size ratio 0.4
 unset margins #-1,2,0,0
 
-set multiplot layout 3,2 columnsfirst title plot_title scale 1,1
+#set multiplot layout 2,2 columnsfirst title plot_title scale 1,1
 
 set xrange [-0.1:1.1]
 set yrange [-0.1:1.1]
@@ -148,13 +162,44 @@ set yrange [-0.1:1.1]
 set xlabel "Mutual Information, L_A =".nspin_A 
 set ylabel "Local Imbalance" 
 set ytics format "%.1f"
-set xtics format "%.1f"
+set xtics 0,nspin_A*log(2)/4, nspin_A*log(2)+0.1 format "%.1f"
 do for [i=1:num_L] {
   set title "L = ".word(list_L,i) offset 0,-2.4
-  plot file_start.word(list_L,i).file_end u nspin_A:n_lim+1 pt 7 notitle
+  #plot file_start.word(list_L,i).file_end u nspin_A:n_lim+1 pt 7 notitle
 }
 
-unset multiplot
+#unset multiplot
+
+reset session
+
+list_L = "8 10 12 14"
+num_L = words(list_L)
+n_lim = 2 #min(nspin/2,2)
+period="1.00"
+J = "0.05"
+V = "0.50"
+hz = "16.00"
+kick = "0.05"
+
+init_state = "Nayak"
+file_start = "data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_".init_state."_Overlap_nspin"
+file_end="_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".txt"
+figure_Ovrlp_LI = "figures/Swap_Entanglement_".init_state."_Overlap_vs_LI_hz_V_Disorder_period".period."_iterations1_J".J."_V".V."_hz".hz."_kick".kick.".png"
+
+plot_title = "J = ".J.", V = ".V.", hz = ".hz.", kick = ".kick.", period = ".period."\n{/*0.8 ".init_state." initial state}"
+
+
+set xrange [-0.1:0.6]
+set yrange [-0.1:1.1]
+set xlabel "Overlap"
+set ylabel "Local Imbalance" 
+set ytics format "%.1f"
+set xtics format "%.1f"
+set title plot_title
+
+set key bottom right box
+set output figure_Ovrlp_LI
+plot for [i=1:num_L] file_start.word(list_L,i).file_end u n_lim+2:n_lim+1 title "L = ".word(list_L,i) ps 2
 
 
 set output

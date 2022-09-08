@@ -17,7 +17,7 @@ program swap_decay
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
   integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
-  integer (c_int)     ::  j, dim_Sz0
+  integer (c_int)     ::  j, dim_Sz0, i, l
   integer (c_int)     ::  unit_avg
   integer (c_int)     ::  start
 
@@ -43,6 +43,11 @@ program swap_decay
   real (c_double) :: imb_p, t_decay_avg, sigma_t_decay, tau_avg, tau_sigma
   integer (c_int) :: n_periods, idecay, idecay2, n_decays
 
+  real (c_double) :: IMB, LI
+  integer (c_int) :: idx_state
+
+  integer (c_int), allocatable :: idxSz0(:), config(:)
+  complex (c_double_complex) :: alpha, beta
 
   !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine, Steps di Evoluzione, Stato Iniziale
@@ -99,7 +104,23 @@ program swap_decay
 
   !BUILD INITIAL STATE (of type staggered)
   allocate(init_state(dim_Sz0))
-  call buildStaggState_Sz0(nspin, dim_Sz0, init_state)
+
+  alpha = cos(pi/8)
+  beta = sin(pi/8)
+  !call buildNayakState_Sz0(nspin, dim_Sz0, alpha, beta, init_state)
+  call buildNeelState_Sz0(nspin, dim_Sz0, init_state)
+  
+  !call printvec(dim_Sz0, init_state, 'A')
+
+  allocate(idxSz0(dim_Sz0), config(nspin))
+  call zero_mag_states(nspin, dim_Sz0, idxSz0)
+  do i = 1, dim_Sz0
+    if (abs(init_state(i))**2 > 1.0e-6) then
+      l = idxSz0(i)
+      call decode(l, nspin, config)
+      print "( 4X,F8.4, 4X,I4, 4X,*(I0) )", abs(init_state(i))**2, l, config(:)
+    endif
+  enddo
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0), USwap(dim_Sz0,dim_Sz0))
@@ -136,8 +157,12 @@ program swap_decay
   !$OMP & imb_p, idecay)
   do iteration = 1, n_iterations
     
-    if (mod(iteration,n_iterations/10)==0) then 
-      print *, "iteration = ", iteration
+    if (n_iterations < 10) then
+     print *, "iteration = ", iteration
+    else
+      if (mod(iteration,n_iterations/10)==0) then 
+        print *, "iteration = ", iteration
+      endif
     endif
 
     !-------------------------------------------------
@@ -147,9 +172,9 @@ program swap_decay
     !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
     Jint = -J_coupling
 
-    !call random_number(Vint)
-    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-V,V]
     Vint = -V_coupling
+    call random_number(Vint)
+    Vint = -V_coupling + V_coupling*(Vint - 0.5) !Jint in [-V,V]
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
@@ -170,6 +195,7 @@ program swap_decay
     idecay = 0
     do j = 2, steps
       imb_p = imbalance_Sz0(nspin, dim_Sz0, state)
+      !print *, imb_p
       state = matmul(UF,state)
       norm = real(dot_product(state,state))
       state = state / sqrt(norm)
