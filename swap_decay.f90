@@ -16,18 +16,16 @@ program swap_decay
 
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
-  integer (c_int)     ::  nspin, dim, iteration, steps, n_iterations
-  integer (c_int)     ::  j, dim_Sz0, i, l
-  integer (c_int)     ::  unit_avg
+  integer (c_int)     ::  nspin, dim, iteration, n_iterations
+  integer (c_long)    ::  steps, j
+  integer (c_int)     ::  dim_Sz0, i, l
+  integer (c_int)     ::  unit_decay
   integer (c_int)     ::  start
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
-
-  real(c_double) :: t_avg, t_sigma, r_dis_avg, r_dis_sigma, t_avg2, t_sigma2
   
   real (c_double) :: norm
-  real (c_double), dimension(:), allocatable :: avg, sigma, avg2, sigma2, r_avg, r_sigma
 
   real (c_double), dimension(:), allocatable :: E
   real (c_double), dimension(:,:), allocatable :: H, W_r
@@ -36,15 +34,16 @@ program swap_decay
 
   complex(c_double_complex), dimension(:), allocatable :: init_state, state, state2
 
-  integer(c_int) :: count_beginning, count_end, count_rate!, time_min, count1, count2
-  character(len=200) :: filestring
+  integer(c_int) :: count_beginning, count_end, count_rate
+  character(len=200) :: filestring, filestring_Neel, filestring_Nayak
 
   real (c_double), allocatable, dimension(:) :: t_decay
-  real (c_double) :: imb_p, t_decay_avg, sigma_t_decay, tau_avg, tau_sigma
-  integer (c_int) :: n_periods, idecay, idecay2, n_decays
+  real (c_double)   :: imb_p, t_decay_avg, sigma_t_decay
+  integer (c_int)   :: idecay, idecay2, n_decays
+  integer (c_long)  :: n_periods
 
-  real (c_double) :: IMB, LI
-  integer (c_int) :: idx_state
+  real (c_double)   :: IMB, LI
+  integer (c_int)   :: idx_state
 
   integer (c_int), allocatable :: idxSz0(:), config(:)
   complex (c_double_complex) :: alpha, beta
@@ -99,7 +98,20 @@ program swap_decay
 
   !DATA FILES
   
+  write(filestring_Neel,93) "data/magnetizations/Sz0_DENSE_SWAP_hz_V_Disorder_Neel_Decay_Times_Imbalance_nspin", &
+    & nspin, "_steps", steps, "_nperiods", n_periods, "_period", T0, "_iterations", n_iterations, &
+    & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
+
+  write(filestring_Nayak,93) "data/magnetizations/Sz0_DENSE_SWAP_hz_V_Disorder_Nayak_Decay_Times_Imbalance_nspin", &
+    & nspin, "_steps", steps, "_nperiods", n_periods, "_period", T0, "_iterations", n_iterations, &
+    & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
+
+  open(newunit=unit_decay,file=filestring_Neel)
  
+  93  format(A,I0, A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
+
   !------------------------------------------------
 
   !BUILD INITIAL STATE (of type staggered)
@@ -118,7 +130,7 @@ program swap_decay
     if (abs(init_state(i))**2 > 1.0e-6) then
       l = idxSz0(i)
       call decode(l, nspin, config)
-      print "( 4X,F8.4, 4X,I4, 4X,*(I0) )", abs(init_state(i))**2, l, config(:)
+      print "( 4X,F8.4, 4X,I6, 4X,*(I0) )", abs(init_state(i))**2, l, config(:)
     endif
   enddo
 
@@ -135,7 +147,6 @@ program swap_decay
   allocate( Jint(nspin-1), Vint(nspin-1), h_z(nspin))
 
   !Allocate Floquet and MBL Operators
-  !allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
   allocate(U(dim_Sz0,dim_Sz0), H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
 
   !Allocate initial and generic state
@@ -152,9 +163,10 @@ program swap_decay
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+: n_decays) private(iteration, h_z, norm, j, &
-  !$OMP & state, H, E, W_r, U, PH, W, UF, &
+  !$OMP do reduction(+: n_decays) private(iteration, h_z, Vint, norm, j, &
+  !$OMP & state, H, E, W_r, U, PH, W, &
   !$OMP & imb_p, idecay)
+  !, UF)
   do iteration = 1, n_iterations
     
     if (n_iterations < 10) then
@@ -186,7 +198,7 @@ program swap_decay
     call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
     call expSYM( dim_Sz0, -C_UNIT*n_periods*T0, E, W_r, U )
-    UF = matmul(USwap,U)
+    U = matmul(USwap,U) !U -> UF
 
     state = init_state
     norm = real(dot_product(state,state))
@@ -196,7 +208,7 @@ program swap_decay
     do j = 2, steps
       imb_p = imbalance_Sz0(nspin, dim_Sz0, state)
       !print *, imb_p
-      state = matmul(UF,state)
+      state = matmul(U,state)
       norm = real(dot_product(state,state))
       state = state / sqrt(norm)
       if (idecay == 0) then
@@ -204,6 +216,7 @@ program swap_decay
           t_decay(iteration) = j*n_periods*T0
           idecay = 1
           n_decays = n_decays + 1
+          exit
         endif
       endif
 
@@ -214,12 +227,18 @@ program swap_decay
   !$OMP END PARALLEL 
 
 
-  t_decay_avg = sum(t_decay)/n_iterations
-  sigma_t_decay = sqrt((sum(t_decay**2)/n_iterations - t_decay_avg**2)/n_iterations)
+  t_decay_avg = sum(t_decay) / n_iterations
+  sigma_t_decay = sqrt( (sum(t_decay**2)/n_iterations - t_decay_avg**2) / n_iterations )
+  do iteration = 1, n_iterations
+    write(unit_decay,*) t_decay(iteration), iteration
+  enddo
+  write(unit_decay,*) "Decay Time ( t*, sigma(t*), n_decays )"
+  write(unit_decay,*) t_decay_avg, sigma_t_decay, n_decays
+  close(unit_decay)
 
 
   print *, "Decay Time ( t*, sigma(t*), n_decays)"
-  print*, t_decay_avg, sigma_t_decay, n_decays!, tau_avg, tau_sigma
+  print*, t_decay_avg, sigma_t_decay, n_decays
     
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
@@ -228,7 +247,6 @@ program swap_decay
   deallocate(H,E,W_r,U)
   deallocate(USwap)
 
-  !close(unit_avg)
 
   !call take_time(count_rate, count_beginning, count_end)
 

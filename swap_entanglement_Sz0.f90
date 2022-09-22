@@ -26,15 +26,15 @@ program swap
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
 
-  real (c_double), dimension(:), allocatable :: E, QE_old, QE, QE_new, Es, QE_alt
+  real (c_double), dimension(:), allocatable :: E
   real (c_double), dimension(:,:), allocatable :: H, W_r
   complex(c_double_complex), dimension(:), allocatable :: PH, psi_Sz0, init_state
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
   complex (c_double_complex) :: alpha, beta
 
-  real (c_double), allocatable :: MI(:,:,:), MI_avg(:,:), MI_dis_avg(:)
-  integer (c_int) :: nspin_A, dim_A, n_lim
-  real (c_double), allocatable, dimension(:,:) :: MBE, IPR_arr, LI, IMBsq, CORR_Z
+  real (c_double), allocatable :: MI(:,:,:)
+  integer (c_int) :: nspin_A, dim_A, n_lim, n_min, n_max
+  real (c_double), allocatable, dimension(:,:) :: LI, QE, CEE, IPR_arr, CORR_Z, MBE, IMBsq
   real (c_double) :: IMB_min, LI_min
 
   integer (c_int), allocatable :: idx(:), config(:), states(:), idx_Sz0(:)
@@ -43,7 +43,7 @@ program swap
   logical :: SELECT
   EXTERNAL SELECT
 
-  integer(c_int) :: count_beginning, count_end, count_rate, time_min, count1, count2
+  integer(c_int) :: count_beginning, count_end, count_rate
   character(len=300) :: filestring, filestring_disV, string
 
   !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
@@ -137,15 +137,19 @@ program swap
   allocate(W(dim_Sz0,dim_Sz0))
 
   !Allocate for Entanglement
-  n_lim = min(nspin/2,2)
-  allocate(MI(n_lim,n_iterations,dim_Sz0), MI_avg(n_lim,n_iterations), MI_dis_avg(n_lim))
+  n_max = min(nspin/2,4)
+  n_min = min(nspin/2,2)
+  n_lim = n_max - n_min + 1
+  allocate(MI(n_lim,n_iterations,dim_Sz0))
   allocate(LI(n_iterations,dim_Sz0),IPR_arr(n_iterations,dim_Sz0))
+  allocate(CEE(n_iterations,dim_Sz0))
   !allocate( IMBsq(n_iterations,dim_Sz0), MBE(n_iterations,dim_Sz0) )
   !allocate(CORR_Z(n_iterations,dim_Sz0))
 
-  !CORR_Z = 0
   MI = 0
   IPR_arr = 0
+  CEE = 0
+  !CORR_Z = 0
   !IMBsq = 0
   !MBE = 0
 
@@ -157,9 +161,9 @@ program swap
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP DO private(iteration, h_z, H, W_r, &
-  !$OMP & U, W, PH, nspin_A, dim_A, i, psi_Sz0) 
-  !!!!!!E <- Put this back after looking at single iterations !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !$OMP DO private(iteration, h_z, Vint, H, E, W_r, &
+  !$OMP & U, W, PH, nspin_A, dim_A, i, k, psi_Sz0)
+  !E <- Put this back after looking at single iterations !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   do iteration = 1, n_iterations
     
     if (n_iterations < 10) then
@@ -184,33 +188,22 @@ program swap
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
 
-    print *, "J = ", Jint(:)
-    print *, "Vint = ", Vint(:)
-    print *, "hz = ", h_z(:)
+    !print *, "J = ", Jint(:)
+    !print *, "Vint = ", Vint(:)
+    !print *, "hz = ", h_z(:)
   
     !---------------------------------------------------
-    !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
-    !print *, "UF diagonalized"
     !E = real(C_UNIT*log(PH))
     !call dpquicksort(E)
-    !call exact_quasi_energies_Sz0(nspin, dim_Sz0, Vint, h_z, QE)
-    !do i = 1, dim_Sz0
-    !  print *, "Before:", QE(:)
-    !  if( ANY(QE(i+1:dim_Sz0) == QE(i)) ) QE(i) = QE(i) + pi
-    !  print *, "After:", QE(:), i
-    !enddo
-    !QE = real(C_UNIT*log(exp(-C_UNIT*QE)))
-    !call dpquicksort(QE)
 
     !do i = 1, dim_Sz0
     !  print *, E(i), QE(i)
-     ! Check for quasi energies of UF (E(:)), so far they do not equal the
     !enddo
 
     
@@ -218,49 +211,48 @@ program swap
     !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "CORR"
     do i = 1, dim_Sz0
 
-
-
       psi_Sz0 = W(1:dim_Sz0,i)
 
-      !print *, "psi = "
-      !call printvec(dim_Sz0, psi_Sz0, 'A')
-      !print *, "     E(i)     abs(c_i)^2     l    config"
-      !print *, "     E(i)      E_ex(i)    QE_ex(i)          c_i              l      config"
-      !do k = 1, dim_Sz0
-      !  if( abs(psi_Sz0(k))**2 > 1.0e-4) then
-      !    l = states(k)
-      !    call decode(l, nspin, config)
-      !    !print 1, E(i), abs(psi_Sz0(k))**2, l, config(:)
-      !    print 2, E(i), exact_energy(nspin, Vint, h_z, l), &
-      !      & exact_quasi_energy(nspin, Vint, h_z, l), &
-      !      & psi_Sz0(k), &
-      !      & l, config(:)
-      !  endif
-      !enddo
-      !print *, ""
-      !1 format (4X,F6.3, 4X,F6.3, 4X,I3, 4X,*(I0))
-      !2 format (4X,F6.3, 4X,F8.3, 4X,F8.3, 4X, 1(F8.3,F8.3X'i':X), 4X,I3, 4X,*(I0))
-
-      LI(iteration,i) = local_imbalance_Sz0(nspin,dim_Sz0,psi_Sz0)
+      LI(iteration,i) = local_imbalance_Sz0(nspin, dim_Sz0, psi_Sz0)
       IPR_arr(iteration,i) = IPR(psi_Sz0)
-      !CORR_Z(iteration,i) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, 1, nspin, psi_Sz0)
+      CEE(iteration,i) = comb_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
 
-      do nspin_A = 1, n_lim
-        dim_A = 2**nspin_A
-        MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
-      enddo
-      write(string,"(A12)") "MI"
-      !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "CORR"
-      !print "(*(4X,F8.4) )", MI(:,iteration,i), LI(iteration,i), &
-      !  & IPR_arr(iteration,i), &
-      !  & CORR_Z(iteration,i)
-      !print *, ""
+      !do nspin_A = n_min, n_max
+      !  dim_A = 2**nspin_A
+      !  MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
+      !enddo
+
 
       !do k = 1, nspin
         !do j = k, nspin
           !print *, k, j, sigmaz_corr_c_Sz0(nspin, dim_Sz0, k, j, psi_Sz0)
        ! enddo
       !enddo
+      !CORR_Z(iteration,i) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, 1, nspin, psi_Sz0)
+
+
+      !!---- Print to output -------!!!!
+      !print *, "     abs(c_i)^2     l    config"
+      !do k = 1, dim_Sz0
+      !  if( abs(psi_Sz0(k))**2 > 1.0e-4) then
+      !    l = states(k)
+      !    call decode(l, nspin, config)
+      !    print 1, abs(psi_Sz0(k))**2, l, config(:)
+      !    !print 2, E(i), exact_energy(nspin, Vint, h_z, l), &
+      !    !  & exact_quasi_energy(nspin, Vint, h_z, l), &
+      !    !  & psi_Sz0(k), &
+      !    !  & l, config(:)
+      !  endif
+      !enddo
+      !1 format (4X,F6.3, 4X,I3, 4X,*(I0))
+      !2 format (4X,F6.3, 4X,F8.3, 4X,F8.3, 4X, 1(F8.3,F8.3X'i':X), 4X,I3, 4X,*(I0))
+
+      !write(string,"(A26)") "MI"
+      !print "(A12,A,*(A24,2X))", "Iteration" , repeat(trim(string),n_lim), "CEE", "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
+      !print *, iteration, MI(:,iteration,i), CEE(iteration,i), &
+      !  &  LI(iteration,i), IPR_arr(iteration,i)!, CORR_Z(iteration,i), E(i)
+      !---------------------------------------------------------------------
+      !print*, ""
 
     enddo
 
@@ -270,12 +262,11 @@ program swap
 
   !print *, E(:)
   write(string,"(A26)") "MI"
-  write(unit_ent, "(A,*(A24,2X))") repeat(trim(string),n_lim), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
+  write(unit_ent, "(A12,A,*(A24,2X))") "Iteration" , repeat(trim(string),n_lim), "CEE", "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
   do iteration = 1, n_iterations
     do i = 1, dim_Sz0
-      write(unit_ent, *) MI(:,iteration,i), LI(iteration,i), &
-        & IPR_arr(iteration,i)!, MBE(iteration,i), IMBsq(iteration,i), & 
-        !& CORR_Z(iteration,i), E(i)
+      write(unit_ent, *) iteration, MI(:,iteration,i), CEE(iteration,i), &
+        &  LI(iteration,i), IPR_arr(iteration,i)!, CORR_Z(iteration,i), E(i)
     enddo
   enddo
 
@@ -301,7 +292,7 @@ program swap
   deallocate(USwap)
   deallocate(U, PH, W)
 
-  call take_time(count_rate, count_beginning, count1, 'T', "Program")
+  call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 
 end program swap
 

@@ -342,6 +342,7 @@ do for [i=0:num_J-1] {
 }
 
 
+reset session
 
 period = "1.00"
 V = "0.50"
@@ -349,21 +350,38 @@ hz = "6.00"
 kick = "0.00"
 
 list_L = "2 4 6 8 10 12 14 16"
-list_iter = "2560 1280 640 320 160 80 40 20 10"
-list_J = "0.05 0.10 0.15 0.20 0.25 0.30 0.40 0.50 1.00"
+list_iter = "5120 2560 1280 640 320 160 80 40 20 10"
+list_J = "0.05 0.10 0.15 0.20 0.25 0.30 0.40 0.50 1.00 2.00"
 
 init_state = "Neel"
-file_time_J = "sort_Swap_".init_state."_decay_times_varying_J.txt"
+#file_time_J = "sort_Swap_".init_state."_decay_times_varying_J.txt"
+Lmax = "16"
+file_time_J = "sort_Swap_".init_state."_decay_times_hz_V_disorder_uptoL".Lmax."_varying_J.txt"
+Lmax = "12"
 num_J = words(list_J)
 num_V = 1
 num_hz = 1
 V = "0.25"
 hz = "6.00"
-set yrange [1:1e9]
-set xrange [2-0.3:10+0.3]
-set key left top box 3
-set title "n_{iter} = 2^{1-L/2} 2560, period = ".period.", J = ".J.", V = ".V.", hz = ".hz.", kick = ".kick."\n{/*0.8 ".init_state." initial state}"
-set output "figures/Scaling_Decay_Time_".init_state."_varying_J.png"
-plot for [i=0:num_J-1] file_time_J every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:7:8 w errorlines title "J = ".word(list_J,i+1)
+
+j = 0
+k = 0
+
+set yrange [1:1e7]
+set xrange [2-0.3:Lmax+0.3]
+unset key
+set key out right box 3
+unset colorbox
+set size ratio 0.8
+set logscale y
+set ytics 0.001, 10, 10e10 format "$10^{%T}$"
+set xtics list_L
+set xlabel "$L$"
+set ylabel "$\\overline{t^*}$"
+
+set terminal tikz color standalone font ",13"
+#set terminal png font ",13"
+set output "figures/Scaling_Decay_Time_".init_state."_varying_J.tex"
+plot for [i=0:num_J-1] file_time_J every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:7:8 w errorlines title "$J = ".word(list_J,i+1)."$" lt palette frac (i+0.0)/num_J
 
 set output

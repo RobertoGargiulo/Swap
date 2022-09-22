@@ -21,7 +21,7 @@ program swap
 
   integer (c_int)     ::  nspin, dim, iteration, n_iterations
   integer (c_int)     ::  i, j, k, p, dim_Sz0
-  integer (c_int)     ::  unit_mag, unit_ph, unit_w, unit_avg
+  integer (c_int)     ::  unit_ph
 
   real(c_double), dimension(:), allocatable :: Jint, Vint, h_z
   real(c_double) :: T0, T1, J_coupling, V_coupling, hz_coupling, kick 
@@ -30,7 +30,7 @@ program swap
   real (c_double), dimension(:), allocatable :: r_avg, r_sq, r_avg2, r_sq2
 
   real (c_double), dimension(:), allocatable :: E
-  real (c_double), dimension(:,:), allocatable :: H, W_r
+  real (c_double), dimension(:,:), allocatable :: H, W_r, QE, E_MBL
   complex(c_double_complex), dimension(:), allocatable :: PH
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
 
@@ -95,7 +95,7 @@ program swap
     & nspin, "_period", T0, "_iterations", n_iterations, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
-  !open(newunit=unit_ph,file=filestring)
+  open(newunit=unit_ph,file=filestring)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -121,7 +121,7 @@ program swap
   !allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
   allocate(U(dim_Sz0,dim_Sz0))
-  allocate(idx(dim_Sz0))
+  !allocate(idx(dim_Sz0))
 
   !Allocate observables and averages
   allocate( r_avg(n_iterations), r_sq(n_iterations))
@@ -133,6 +133,7 @@ program swap
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim_Sz0))
   allocate(W(dim_Sz0,dim_Sz0))
+  allocate(E_MBL(n_iterations,dim_Sz0),QE(n_iterations,dim_Sz0))
 
   allocate(config(nspin), states(dim_Sz0))
 
@@ -148,7 +149,7 @@ program swap
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP DO private(iteration, h_z, H, E, W_r, &
+  !$OMP DO private(iteration, h_z, Vint, H, E, W_r, &
   !$OMP & U, W, PH)
   do iteration = 1, n_iterations
     
@@ -163,9 +164,9 @@ program swap
     !Jint = 2*J_coupling*(Jint - 0.5) !Jint in [-J,J]
     Jint = -J_coupling
 
-    !call random_number(Vint)
-    !Vint = 2*V_coupling*(Vint - 0.5) !Jint in [-V,V]
     Vint = -V_coupling
+    call random_number(Vint)
+    Vint = -V_coupling + V_coupling*(Vint - 0.5) !Jint in [-V,V]
   
     call random_number(h_z)
     h_z = 2*hz_coupling*(h_z-0.5) !h_z in [-hz_coupling, hz_coupling]
@@ -180,28 +181,30 @@ program swap
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
+    E_MBL(iteration,:) = E
     call gap_ratio(dim_Sz0, E, r_avg2(iteration), r_sq2(iteration))
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     E = real(C_UNIT*log(PH))
-    !call sort_index(E, idx)
     call dpquicksort(E)
-    !print *, E(:)
+    call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sq(iteration))
+    QE(iteration,:) = E
+
     call log_gap_difference(dim_Sz0, E, log_pair_avg(iteration), log_near_avg(iteration), log_avg(iteration), log_sq(iteration))
     !print *, iteration, log_pair_avg(iteration), log_near_avg(iteration), log_avg(iteration), log_sq(iteration)
-    
-
-    call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sq(iteration))
 
   enddo
   !$OMP END DO
   !$OMP END PARALLEL 
 
   !print *, E(:)
-  !do j = 1, dim_Sz0
-  !  write(unit_ph,*) E(j), pair_gaps(j), near_gaps(j), log_gap(j)
-  !enddo
+  do iteration = 1, n_iterations
+    do i = 1, dim_Sz0
+      write (unit_ph,*) iteration, QE(iteration,i), E_MBL(iteration,i)
+    enddo
+  enddo
+
   r_dis_avg = sum(r_avg) / n_iterations
   r_dis_sigma = sqrt( ( sum(r_sq)/n_iterations - r_dis_avg**2 ) / n_iterations )
   r_dis_avg2 = sum(r_avg2) / n_iterations
@@ -224,6 +227,8 @@ program swap
   deallocate(H,E,W_r)
   deallocate(USwap)
   deallocate(U, PH, W)
+  
+  close(unit_ph)
 
   call take_time(count_rate, count_beginning, count1, 'T', "Program")
 

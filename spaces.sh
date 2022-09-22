@@ -9,9 +9,9 @@ sort -n -k2 -k1 $file -o sort_$file
 # sed -i '/^$/d' <filename>
 sed -i '/^$/d' sort_$file
 
-step=6 #16 #20 #Number of block length plus one ( # of J + 1)
+step=7 #16 #20 #Number of block length plus one ( # of J + 1)
   j=0
-for J in $(seq 0.05 0.05 0.30) 0.40 0.50
+for J in $(seq 0.05 0.05 0.30) 0.40 0.50 1.00 2.00
 do
   for V in 0.50
   do

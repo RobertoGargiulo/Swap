@@ -186,6 +186,83 @@ contains
 
   end subroutine edges_reduced_DM
 
+  subroutine odd_reduced_DM(nspin, dim, dim_A, psi, rho_A)
+
+    !Computes the reduced density matrix for a pure state of the odd spins in the chain
+    ! rho_A = Tr_B(rho) = Tr_B( |psi> <psi| )
+    !Traces out the remaining nspin/2 spins
+    !Works in the full Hilbert Space (with the correspondence j<->{b_k})
+
+    integer, intent(in) :: nspin, dim, dim_A
+    complex (c_double_complex), intent(in) :: psi(dim)
+    complex (c_double_complex), intent(out) :: rho_A(dim_A,dim_A)
+
+    integer :: jA, kA, iB, dim_B, i, j, configA1(nspin/2), configA2(nspin/2), configB(nspin/2), k
+
+    i = nspin
+    dim_B = dim/dim_A
+    rho_A = 0
+    do jA = 0, dim_A-1
+      do kA = 0, dim_A-1
+        do iB = 0, dim_B-1
+
+          call decode(jA, nspin/2, configA1)
+          call decode(kA, nspin/2, configA2)
+          call decode(iB, nspin/2, configB)
+          i = 0
+          j = 0
+          do k = 1, nspin/2
+            i = i + configA1(k) * 2**(2*k-2) + configB(k) * 2**(2*k-1)
+            j = j + configA2(k) * 2**(2*k-2) + configB(k) * 2**(2*k-1)
+          enddo
+
+          rho_A(jA+1,kA+1) = rho_A(jA+1,kA+1) + psi(i+1) * dconjg( psi(j+1) )
+
+        enddo
+      enddo
+    enddo
+
+  end subroutine
+
+  subroutine even_reduced_DM(nspin, dim, dim_B, psi, rho_B)
+
+    !Computes the reduced density matrix for a pure state of the even spins in the chain
+    ! rho_A = Tr_B(rho) = Tr_B( |psi> <psi| )
+    !Traces out the remaining nspin/2 spins
+    !Works in the full Hilbert Space (with the correspondence j<->{b_k})
+
+    integer, intent(in) :: nspin, dim, dim_B
+    complex (c_double_complex), intent(in) :: psi(dim)
+    complex (c_double_complex), intent(out) :: rho_B(dim_B,dim_B)
+
+    integer :: jB, kB, iA, dim_A, i, j, configA(nspin/2), configB1(nspin/2), configB2(nspin/2), k
+
+    i = nspin
+    dim_A = dim/dim_B
+    rho_B = 0
+    do jB = 0, dim_B-1
+      do kB = 0, dim_B-1
+        do iA = 0, dim_A-1
+
+          call decode(jB, nspin/2, configB1)
+          call decode(kB, nspin/2, configB2)
+          call decode(iA, nspin/2, configA)
+          i = 0
+          j = 0
+          do k = 1, nspin/2
+            i = i + configA(k) * 2**(2*k-2) + configB1(k) * 2**(2*k-1)
+            j = j + configA(k) * 2**(2*k-2) + configB2(k) * 2**(2*k-1)
+          enddo
+
+          rho_B(jB+1,kB+1) = rho_B(jB+1,kB+1) + psi(i+1) * dconjg( psi(j+1) )
+
+        enddo
+      enddo
+    enddo
+
+  end subroutine
+
+
 
 
   function entanglement(dim, rho)
@@ -334,6 +411,63 @@ contains
 
 
   end function max_bipartite_entropy_Sz0
+
+  function comb_entropy(nspin, dim, psi)
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: psi(dim)
+    real (c_double) :: comb_entropy
+
+    integer (c_int) :: dim_A
+    complex (c_double_complex), allocatable :: rho_A(:,:)
+    real (c_double) :: CE!, CE2
+
+    dim_A = 2**(nspin/2)
+    allocate(rho_A(dim_A,dim_A))
+
+    call odd_reduced_DM(nspin, dim, dim_A, psi, rho_A)
+    CE = entanglement(dim_A, rho_A)
+
+    !call even_reduced_DM(nspin, dim, dim_A, psi, rho_A)
+    !CE2 = entanglement(dim_A, rho_A)
+
+    deallocate(rho_A)
+
+    comb_entropy = CE
+    
+
+  end function
+    
+  function comb_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
+
+    integer (c_int), intent(in) :: nspin, dim, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: comb_entropy_Sz0
+
+    integer (c_int) :: dim_A
+    complex (c_double_complex), allocatable :: rho_A(:,:), psi(:)
+    real (c_double) :: CE!1, CE2
+
+    allocate(psi(dim))
+    call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
+
+    dim_A = 2**(nspin/2)
+    allocate(rho_A(dim_A,dim_A))
+
+    call odd_reduced_DM(nspin, dim, dim_A, psi, rho_A)
+    CE = entanglement(dim_A, rho_A)
+
+    !call even_reduced_DM(nspin, dim, dim_A, psi, rho_A)
+    !CE2 = entanglement(dim_A, rho_A)
+
+    deallocate(rho_A)
+
+    !print *, CE1, CE2
+    comb_entropy_Sz0 = CE
+    
+
+  end function
+
 
 
   function IPR(psi)

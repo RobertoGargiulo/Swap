@@ -3,29 +3,30 @@ filestring="swap_decay"
 
 make $filestring
 
-n_threads=60
+n_threads=10
 #total_time=1000000
 export OMP_NUM_THREADS=$n_threads 
-output="Swap_decay_times_Large_IMB_LI.txt"
+#output="Swap_decay_times_Large_IMB_LI.txt"
 #mv $output ../Trash
 
 iterations_2=5120
-for nspin in 4 6 8 10 12
+for nspin in 2
 do
-  iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
-  #iterations=100
-  for kick in $(seq 0.00 0.05 0.20) 
+  #iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
+  iterations=100
+  #iterations=1
+  for kick in 0.05
   do
     for period in 1.00 
     do
-      for J in $(seq 0.05 0.05 0.30) 
+      for J in 0.05
       do
-        for V in $(seq 0.00 0.40 1.60) 
+        for V in 0.50
         do
-          for hz in 0.01 2.00 $(seq 5.00 5.00 20.00)
+          for hz in 10.00
           do
-            total_time=$((5*10**(nspin/2)))
-            n_periods=10
+            total_time=$((10**18))
+            n_periods=$((10**9))
             steps=`echo $total_time $period $n_periods | awk '{print $1/$2/$3}'`
 
             cat > input.txt << *
@@ -39,7 +40,7 @@ $V
 $hz
 $kick
 *
-            file_out="out2.txt"
+            file_out="out.txt"
   	        ./$filestring < input.txt | tee $file_out
             echo "nspin = $nspin "
             echo "J = $J  V = $V  hz = $hz  epsilon = $kick"
