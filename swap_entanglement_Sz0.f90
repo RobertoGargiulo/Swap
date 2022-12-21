@@ -34,7 +34,7 @@ program swap
 
   real (c_double), allocatable :: MI(:,:,:)
   integer (c_int) :: nspin_A, dim_A, n_lim, n_min, n_max
-  real (c_double), allocatable, dimension(:,:) :: LI, QE, CEE, IPR_arr, CORR_Z, MBE, IMBsq
+  real (c_double), allocatable, dimension(:,:) :: LI, QE, avgBE, CEE, IPR_arr, CORR_Z, MBE, IMBsq
   real (c_double) :: IMB_min, LI_min
 
   integer (c_int), allocatable :: idx(:), config(:), states(:), idx_Sz0(:)
@@ -44,7 +44,7 @@ program swap
   EXTERNAL SELECT
 
   integer(c_int) :: count_beginning, count_end, count_rate
-  character(len=300) :: filestring, filestring_disV, string
+  character(len=300) :: string, filestring_MI, filestring_CEE, filestring_BE
 
   !Parametri Modello: J, V, h_z, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine
@@ -93,18 +93,23 @@ program swap
   !---------------------------------------------
 
   !DATA FILES
-  
-  write(filestring,93) "data/eigen/Sz0_DENSE_SWAP_hz_Disorder_Entanglement_nspin", &
+
+  write(filestring_MI,93) "data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Mutual_Information_nspin", &
     & nspin, "_period", T0, "_iterations", n_iterations, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
 
-  write(filestring_disV,93) "data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Entanglement_nspin", &
+  write(filestring_CEE,93) "data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Comb_Entanglement_nspin", &
     & nspin, "_period", T0, "_iterations", n_iterations, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
 
-  open(newunit=unit_ent,file=filestring_disV)
+  write(filestring_BE,93) "data/eigen/Sz0_DENSE_SWAP_hz_V_Disorder_Block_Entanglement_nspin", &
+    & nspin, "_period", T0, "_iterations", n_iterations, &
+    & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
+
+  open(newunit=unit_ent,file=filestring_MI)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -137,18 +142,18 @@ program swap
   allocate(W(dim_Sz0,dim_Sz0))
 
   !Allocate for Entanglement
-  n_max = min(nspin/2,4)
-  n_min = min(nspin/2,2)
-  n_lim = n_max - n_min + 1
+  n_lim = min(nspin/2,3)
   allocate(MI(n_lim,n_iterations,dim_Sz0))
   allocate(LI(n_iterations,dim_Sz0),IPR_arr(n_iterations,dim_Sz0))
-  allocate(CEE(n_iterations,dim_Sz0))
+  !allocate(CEE(n_iterations,dim_Sz0))
+  !allocate(avgBE(n_iterations,dim_Sz0))
   !allocate( IMBsq(n_iterations,dim_Sz0), MBE(n_iterations,dim_Sz0) )
   !allocate(CORR_Z(n_iterations,dim_Sz0))
 
   MI = 0
   IPR_arr = 0
-  CEE = 0
+  !CEE = 0
+  !avgBE = 0
   !CORR_Z = 0
   !IMBsq = 0
   !MBE = 0
@@ -206,8 +211,8 @@ program swap
     !  print *, E(i), QE(i)
     !enddo
 
-    
-    write(string,"(A12)") "MI"
+
+    !write(string,"(A12)") "MI"
     !print "(A,*(4X,A8))", repeat(trim(string),n_lim), "LI", "IPR", "CORR"
     do i = 1, dim_Sz0
 
@@ -215,12 +220,13 @@ program swap
 
       LI(iteration,i) = local_imbalance_Sz0(nspin, dim_Sz0, psi_Sz0)
       IPR_arr(iteration,i) = IPR(psi_Sz0)
-      CEE(iteration,i) = comb_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
+      !CEE(iteration,i) = comb_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
+      !avgBE(iteration,i) = avg_block_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
 
-      !do nspin_A = n_min, n_max
-      !  dim_A = 2**nspin_A
-      !  MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
-      !enddo
+      do nspin_A = 1, n_lim
+        dim_A = 2**nspin_A
+        MI(nspin_A,iteration,i) = mutual_information_Sz0(nspin, nspin_A, dim, dim_Sz0, dim_A, psi_Sz0)
+      enddo
 
 
       !do k = 1, nspin
@@ -260,15 +266,30 @@ program swap
   !$OMP END DO
   !$OMP END PARALLEL 
 
-  !print *, E(:)
   write(string,"(A26)") "MI"
-  write(unit_ent, "(A12,A,*(A24,2X))") "Iteration" , repeat(trim(string),n_lim), "CEE", "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
+  write(unit_ent, "(A12,A,*(A24,2X))") "Iteration" , repeat(trim(string),n_lim), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
   do iteration = 1, n_iterations
     do i = 1, dim_Sz0
-      write(unit_ent, *) iteration, MI(:,iteration,i), CEE(iteration,i), &
-        &  LI(iteration,i), IPR_arr(iteration,i)!, CORR_Z(iteration,i), E(i)
+      write(unit_ent, *) iteration, MI(:,iteration,i), &
+        &  LI(iteration,i), IPR_arr(iteration,i)
     enddo
   enddo
+
+  !write(unit_ent, "(A12,*(A24,2X))") "Iteration" , "CEE", "LI", "IPR"
+  !do iteration = 1, n_iterations
+  !  do i = 1, dim_Sz0
+  !    write(unit_ent, *) iteration, CEE(iteration,i), &
+  !      &  LI(iteration,i), IPR_arr(iteration,i)
+  !  enddo
+  !enddo
+
+  !write(unit_ent, "(A12,*(A24,2X))") "Iteration" , "<BE>", "LI", "IPR"
+  !do iteration = 1, n_iterations
+  !  do i = 1, dim_Sz0
+  !    write(unit_ent, *) iteration, avgBE(iteration,i), &
+  !      &  LI(iteration,i), IPR_arr(iteration,i)
+  !  enddo
+  !enddo
 
   !MI_avg = 0
   !MI_dis_avg = 0
@@ -291,6 +312,8 @@ program swap
   deallocate(H,E,W_r)
   deallocate(USwap)
   deallocate(U, PH, W)
+
+  close(unit_ent)
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 

@@ -344,6 +344,9 @@ do for [i=0:num_J-1] {
 
 reset session
 
+
+############ Decay Time J, V, kick ##################
+
 period = "1.00"
 V = "0.50"
 hz = "6.00"
@@ -357,10 +360,21 @@ init_state = "Neel"
 #file_time_J = "sort_Swap_".init_state."_decay_times_varying_J.txt"
 Lmax = "16"
 file_time_J = "sort_Swap_".init_state."_decay_times_hz_V_disorder_uptoL".Lmax."_varying_J.txt"
-Lmax = "12"
+
+file_time_V = "sort_Swap_Neel_decay_times_uptoL14_varying_V.txt"
+list_V = "0.00 0.05 0.10 0.15 0.20 0.30 0.50 0.70 1.00 5.00"
+list_kick = "0.00 0.05 0.10 0.15 0.20 0.30 0.50 0.79"
+list_L = "2 4 6 8 10"
+
+
+file_time_kick = "sort_Swap_Neel_decay_times_uptoL14_varying_kick.txt"
+
+
+Lmax = "10"
 num_J = words(list_J)
-num_V = 1
+num_V = words(list_V)
 num_hz = 1
+num_kick = words(list_kick)
 V = "0.25"
 hz = "6.00"
 
@@ -379,9 +393,102 @@ set xtics list_L
 set xlabel "$L$"
 set ylabel "$\\overline{t^*}$"
 
-set terminal tikz color standalone font ",13"
+set terminal tikz color font ",15" #standalone 
 #set terminal png font ",13"
-set output "figures/Scaling_Decay_Time_".init_state."_varying_J.tex"
-plot for [i=0:num_J-1] file_time_J every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:7:8 w errorlines title "$J = ".word(list_J,i+1)."$" lt palette frac (i+0.0)/num_J
+#set size 0.8
+#set margins -1,2,0,0
+#set output "figures/Scaling_Decay_Time_".init_state."_varying_J.tex"
+#plot for [i=0:num_J-1] file_time_J every :::i+num_J*j+num_J*num_V*k::i+num_J*j+num_J*num_V*k u 1:7:8 w errorlines title "$J = ".word(list_J,i+1)."$" lt palette frac (i+0.0)/num_J
+
+set yrange [1:1e6]
+set output "figures/Scaling_Decay_Time_".init_state."_varying_V.tex"
+plot for [i=0:num_V-2] file_time_V every :::i::i u 1:7:8 w errorlines title "$V = ".word(list_V,i+1)."$" lt palette frac (i+0.0)/num_V
+
+set output "figures/Scaling_Decay_Time_".init_state."_varying_kick.tex"
+plot for [i=0:num_kick-1] file_time_kick every :::i::i u 1:7:8 w errorlines title "$e = ".word(list_kick,i+1)."$" lt palette frac (i+0.0)/num_kick
+
+
+reset session
+
+
+########## Spectrum (r) #############
+
+
+
+file_spectrum = "sort_Swap_spectrum_hz_V_disorder_varying_hz.txt"
+
+
+list_hz = "0.01 0.20 0.40 0.60 0.80 1.00 2.00 4.00 6.00 8.00 10.00 20.00 30.00 40.00 "
+num_hz = words(list_hz)
+list_L = "4 6 8 10 12 14"
+num_L = words(list_L)
+Lmax = "14"
+
+set yrange [0.30:0.60]
+set xrange [4-0.3:Lmax+0.3]
+set key out right box 3
+unset colorbox
+set size ratio 0.8
+set ytics 0.3, 0.05, 0.6 format "%.2f"
+set xtics list_L
+set xlabel "$L$"
+set ylabel "$\\expval{r}$"
+
+
+#set terminal tikz color standalone font ",13"
+#set terminal png font ",13"
+#set output "figures/Scaling_Gap_Ratio_varying_hz_uptoL12.png"
+#plot for [i=1:num_hz-1] file_spectrum every :::i::i u 1:7:8 w errorlines title "$hz = ".word(list_hz,i+1)."$" lt palette frac (i+0.0)/num_hz
+#set output "figures/Scaling_Gap_Ratio_MBL_varying_hz_uptoL12.png"
+#plot for [i=1:num_hz-1] file_spectrum every :::i::i u 1:9:10 w errorlines title "$hz = ".word(list_hz,i+1)."$" lt palette frac (i+0.0)/num_hz
+
+file_unsorted = "Swap_spectrum_hz_V_disorder_varying_hz.txt"
+file_unsorted = "Swap_spectrum_hz_V_disorder_varying_hz_high_accuracy.txt"
+
+list_hz = "0.04 0.08 0.16 0.32 0.64 1.28 2.56 5.12 10.24 20.48 40.96"
+num_hz = words(list_hz)
+
+set yrange [0.35:0.57]
+set xrange [word(list_hz,1)/1.3:1.3*word(list_hz,num_hz)]
+set logscale x
+set key out right box 3
+unset colorbox
+set size ratio 0.8
+set ytics 0.3, 0.05, 0.6 format "%.2f"
+set xtics word(list_hz,1), 4, word(list_hz,num_hz)
+set xlabel "$h_z$"
+set ylabel "$\\expval{r}$"
+
+#i = num_L-1
+#set table $DataSelected
+#plot file_unsorted every ::1:i:1:i u 1:2:3:4:5:6:7:8:9:10 w table
+#unset table
+#print "Table"
+#print $DataSelected
+J = "0.25"
+V = "0.25"
+kick = "0.05"
+T = "1.00"
+
+y0 = 0.386
+y1 = 0.5295
+x0 = word(list_hz,1)
+x1 = word(list_hz,num_hz)
+set arrow from x0,y0 to x1,y0 nohead
+set arrow from x0,y1 to x1,y1 nohead
+
+#set terminal png font ",13"
+#set output "figures/Scaling_Gap_Ratio_varying_log_hz_uptoL14.png"
+#plot for [i=2:num_L-1] file_unsorted every :::i::i u 4:7:8 w errorlines title "$L = ".word(list_L,i+1)."$" lt palette frac (i+0.0)/num_L
+#set output "figures/Scaling_Gap_Ratio_MBL_varying_log_hz_uptoL14.png"
+#plot for [i=2:num_L-1] file_unsorted every :::i::i u 4:9:10 w errorlines title "$L = ".word(list_L,i+1)."$" lt palette frac (i+0.0)/num_L
+#
+#set terminal tikz color standalone font ",13"
+#
+#set output "figures/Scaling_Gap_Ratio_varying_log_hz_uptoL14.tex"
+#plot for [i=2:num_L-1] file_unsorted every :::i::i u 4:7:8 w errorlines title "$L = ".word(list_L,i+1)."$" lt palette frac (i+0.0)/num_L
+#
+#set output "figures/Scaling_Gap_Ratio_MBL_varying_log_hz_uptoL14.tex"
+#plot for [i=2:num_L-1] file_unsorted every :::i::i u 4:9:10 w errorlines title "$L = ".word(list_L,i+1)."$" lt palette frac (i+0.0)/num_L
 
 set output

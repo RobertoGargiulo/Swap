@@ -121,7 +121,7 @@ program swap
 
   !BUILD INITIAL STATE (of type staggered)
   allocate(init_state(dim))
-  call buildStaggState(nspin, dim, alpha, beta, init_state)
+  !call buildNeelState(nspin, dim, init_state)
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
   !------------- NO DRIVING ---------- Uncomment following lines to use the driving

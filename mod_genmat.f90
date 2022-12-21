@@ -592,7 +592,7 @@ contains
 
     integer :: config(nspin), states(dim_Sz0)
     integer (c_int) :: i, j, k, m, n, l, r, rflag
-    
+ 
     H = 0
     call zero_mag_states(nspin, dim_Sz0, states)
     do l = 1, dim_Sz0
@@ -608,6 +608,7 @@ contains
         if (config(2*k-1)/=config(2*k)) then
           j = i + (1-2*config(2*k-1))*2**(2*k-2) + (1-2*config(2*k))*2**(2*k-1)
           r = binsearch(j,states)
+          
 
           H(r,l) = H(r,l) + 2 * (config(2*k-1) - config(2*k))**2
         endif
@@ -622,7 +623,7 @@ contains
   subroutine buildProdState(nspin, dim, alpha, beta, state)
 
     !Builds a product state of the form: (alpha|up> + beta|down) \otimes (alpha|up> + beta|down) \otimes ...
-    
+ 
     integer (c_int), intent(in) :: nspin, dim
     complex (c_double_complex), intent(in) :: alpha, beta
     complex (c_double_complex), intent(out) :: state(dim)
@@ -705,6 +706,44 @@ contains
 
   end subroutine buildNayakState_Sz0
 
+
+  subroutine buildI0LI1ProdState_Sz0(nspin, dim_Sz0, alpha, beta, state)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: alpha, beta
+    complex (c_double_complex), intent(out) :: state(dim_Sz0)
+    
+    integer (c_int) :: config(nspin), i, k, l, indx(dim_Sz0)
+    complex (c_double_complex) :: alpha_n, beta_n
+    real (c_double) :: norm
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+
+    norm = sqrt(abs(alpha)**2 + abs(beta)**2)
+    alpha_n = alpha/norm
+    beta_n = beta/norm
+    state = 1
+    call zero_mag_states(nspin, dim_Sz0, indx)
+    do i = 1, dim_Sz0
+      l = indx(i)
+      call decode(l,nspin,config)
+
+      do k = 1, nspin/4
+        state(i) = state(i) * ( (1-config(4*k-3)) * config(4*k-2) * alpha_n + &
+          &  config(4*k-3) * (1-config(4*k-2)) * beta_n ) * &
+          & ( (1 - config(4*k-1)) * config(4*k) * beta_n + &
+          &  config(4*k-1) * (1-config(4*k)) * alpha_n )
+      enddo
+      if(mod(nspin/2,2) /= 0) then
+        k = nspin/4 + 1
+        state(i) = state(i) * ( (1-config(4*k-3)) * config(4*k-2) * alpha_n + &
+          &  config(4*k-3) * (1-config(4*k-2)) * beta_n )
+      endif
+    enddo
+
+
+  end subroutine
+
   subroutine buildNeelState_Sz0(nspin, dim_Sz0, psi)
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
@@ -730,6 +769,37 @@ contains
     enddo
 
   end subroutine buildNeelState_Sz0
+
+  subroutine buildLI1ProdState_Sz0(nspin, dim_Sz0, alpha, beta, state)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: alpha, beta
+    complex (c_double_complex), intent(out) :: state(dim_Sz0)
+    
+    integer (c_int) :: config(nspin), i, k, l, indx(dim_Sz0)
+    complex (c_double_complex) :: alpha_n, beta_n
+    real (c_double) :: norm
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+
+    norm = sqrt(abs(alpha)**2 + abs(beta)**2)
+    alpha_n = alpha/norm
+    beta_n = beta/norm
+    state = 1
+    call zero_mag_states(nspin, dim_Sz0, indx)
+    do i = 1, dim_Sz0
+      l = indx(i)
+      call decode(l,nspin,config)
+
+      do k = 1, nspin/2
+        state(i) = state(i) * ( (1-config(2*k-1)) * config(2*k) * alpha_n + &
+          &  config(2*k-1) * (1-config(2*k)) * beta_n )
+      enddo
+
+    enddo
+
+  end subroutine
+
 
   subroutine buildRndLarge_IMB_LI_State_Sz0(nspin, dim_Sz0, IMB, LI, psi)
     integer (c_int), intent(in) :: nspin, dim_Sz0
@@ -1305,6 +1375,55 @@ contains
 
   end function
 
+  function local_overlap(nspin, dim, psi)
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: psi(dim)
+    real (c_double) :: local_overlap
+
+    integer (c_int) :: i, j, k, config(nspin)
+    real (c_double) :: LO
+
+    LO = 0
+    do i = 1, dim
+      call decode(i-1, nspin, config)
+      do k = 1, nspin/2
+        if (config(2*k)/=config(2*k-1)) then
+          j = i + (config(2*k-1) - config(2*k)) * (2**(2*k-1) - 2**(2*k-2))
+          LO = LO + abs(psi(i))**2 - psi(i) * dconjg(psi(j))
+        endif
+      enddo
+    enddo
+    LO = LO/(nspin/2)
+    local_overlap = LO
+
+  end function
+
+  function local_overlap_Sz0(nspin, dim_Sz0, psi)
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi(dim_Sz0)
+    real (c_double) :: local_overlap_Sz0
+
+    integer (c_int) :: i, j, k, r, l, config(nspin), states(dim_Sz0)
+    real (c_double) :: LO
+
+    call zero_mag_states(nspin, dim_Sz0, states)
+    LO = 0
+    do i = 1, dim_Sz0
+      l = states(i)
+      call decode(l, nspin, config)
+      do k = 1, nspin/2
+        if(config(2*k)/=config(2*k-1)) then
+          j = i + (config(2*k-1) - config(2*k)) * (2**(2*k-1) - 2**(2*k-2))
+          r = binsearch(j,states)
+          LO = LO + abs(psi(i))**2 - psi(i) * dconjg(psi(r))
+        endif
+      enddo
+    enddo
+    LO = LO/(nspin/2)
+    local_overlap_Sz0 = LO
+
+  end function
+
   function sigmaz_corr_c(nspin, dim, q, p, psi)
 
     integer (c_int), intent(in) :: nspin, dim, q, p
@@ -1360,6 +1479,28 @@ contains
 
 
   end function
+
+  subroutine local_zmag_Sz0(nspin, dim_Sz0, psi_Sz0, sigmaz)
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double), intent(out) :: sigmaz(nspin)
+
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
+
+    call zero_mag_states(nspin, dim_Sz0, states)
+    sigmaz = 0
+    do i = 1, dim_Sz0
+      l = states(i)
+      call decode(l, nspin, config)
+      do k = 1, nspin
+        sigmaz(k) = sigmaz(k) + abs(psi_Sz0(i))**2 * (1-2*config(k))
+      enddo
+    enddo
+
+  end subroutine
+
+
+
 
   function exact_energy(nspin, V_int, h_z, i)
 

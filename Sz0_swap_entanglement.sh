@@ -4,7 +4,7 @@ filestring="swap_entanglement_Sz0"
 make $filestring
 
 #iterations=100 #1280
-n_threads=10
+n_threads=16
 export OMP_NUM_THREADS=$n_threads 
 #j=0
 #output="Swap_entanglement.txt"
@@ -17,15 +17,15 @@ do
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
   #iterations=100
   #iterations=320
-  for kick in 0.05 #0.50
+  for kick in 0.00 #0.50
   do
     for period in 1.00
     do
-      for J in 0.05 #1.00 #$(seq 0.00 0.05 0.50)
+      for J in 0.00 #1.00 #$(seq 0.00 0.05 0.50)
       do
         for V in 0.50 #$(seq 0.00 0.20 1.60)
         do
-          for hz in 10.00 #0.01 2.00 $(seq 4.00 4.00 16.00)
+          for hz in 10.00 #0.00 2.00 $(seq 4.00 4.00 16.00)
           do
             cat > input.txt << *
 $nspin
@@ -36,7 +36,7 @@ $V
 $hz
 $kick
 *
-            file_out="out2.txt"
+            file_out="out.txt"
   	        ./$filestring < input.txt | tee $file_out
             echo "nspin = $nspin "
             echo "J = $J  V = $V  hz = $hz  epsilon = $kick  period = $period"
@@ -45,6 +45,7 @@ $kick
             #echo $nspin $J $V $hz $kick $period $entanglement $iterations >> $output
           done
           #echo "" >> $output
+          echo ""
         done
       done
     done

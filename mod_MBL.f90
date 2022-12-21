@@ -389,14 +389,15 @@ contains
     !print *, "    nspin_A        dim_A     BEE"
     do nspin_A = 1, nspin - 1
       dim_A = 2**nspin_A
-      allocate(rho_A(dim_A,dim_A))
       if (nspin_A <= nspin/2) then
-        !print *, "rho_A allocated"
+        allocate(rho_A(dim_A,dim_A))
         call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
+        BEEvar = entanglement(dim_A,rho_A)
       else 
+        allocate(rho_A(dim/dim_A,dim/dim_A))
         call right_reduced_DM(nspin, nspin-nspin_A, dim, dim/dim_A, psi, rho_A)
+        BEEvar = entanglement(dim/dim_A,rho_A)
       endif
-      BEEvar = entanglement(dim_A,rho_A)
       BEE(nspin_A) = BEEvar
       if (BEEvar > pMBEE) MBEE = BEEvar
       pMBEE = BEEvar
@@ -468,6 +469,44 @@ contains
 
   end function
 
+  function avg_block_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
+
+    !Computes the average block entropy over the possible bipartitions A,B
+    !A has left edge coinciding the left edge of the chain, and its right edge can vary over odd sites
+    !rho_A -> left_reduced_DM
+    !L_A = 1, 3, 5, ..., L-1
+
+    integer, intent(in) :: nspin, dim, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: avg_block_entropy_Sz0
+
+    real (c_double) :: avgBE
+    integer (c_int) :: nspin_A, dim_A
+    complex (c_double_complex), allocatable :: rho_A(:,:) !, rho(dim_Sz0,dim_Sz0)
+    complex (c_double_complex) :: psi(dim)
+
+
+    call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
+    avgBE = 0
+    !print *, "    nspin_A        dim_A     BEE"
+    do nspin_A = 1, nspin - 1, 2
+      dim_A = 2**nspin_A
+      if (nspin_A <= nspin/2) then
+        allocate(rho_A(dim_A,dim_A))
+        call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
+        avgBE = avgBE + entanglement(dim_A,rho_A)
+      else 
+        allocate(rho_A(dim/dim_A,dim/dim_A))
+        call right_reduced_DM(nspin, nspin-nspin_A, dim, dim/dim_A, psi, rho_A)
+        avgBE = avgBE + entanglement(dim/dim_A,rho_A)
+      endif
+      deallocate(rho_A)
+    enddo
+    avgBE = avgBE/(nspin/2)
+
+    avg_block_entropy_Sz0 = avgBE
+
+  end function
 
 
   function IPR(psi)
