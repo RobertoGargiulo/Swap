@@ -138,6 +138,23 @@ contains
 
   end function
 
+  function identity(N)
+
+    integer (c_int), intent(in) :: N
+    real (c_double) :: identity(N,N)
+
+    integer :: i, j
+
+    do i = 1, N
+      do j = 1, N
+        identity(i,j) = KDelta(i,j)
+      enddo
+    enddo
+    
+  end function
+
+  
+
 !  function SigmaZ()
 !
 !    real (c_double) :: SigmaZ(3,3)
@@ -242,8 +259,8 @@ contains
       enddo
     enddo
 
-    print *, "OPR = "
-    call printmat(dimSpin1, OPR, 'R')
+    !print *, "OPR = "
+    !call printmat(dimSpin1, OPR, 'R')
 
     HOneBody = 0
     do i = 0, dim - 1
@@ -263,11 +280,11 @@ contains
       enddo
     enddo
 
-    print*, "h = "
-    print "(*(F5.1))", h(:)
+    !print*, "h = "
+    !print "(*(F5.1))", h(:)
 
-    print*, "H1 = "
-    call printmat(dim,HOneBody, 'R')
+    !print*, "H1 = "
+    !call printmat(dim,HOneBody, 'R')
 
   end subroutine buildOneBody
 
@@ -279,6 +296,8 @@ contains
     ! (defined in the subroutine, although it might be an argument)
     ! In this case OPR = sigma_k^x sigma_{k+1}^x + sigma_k^y sigma_{k+1}^y =
     !                  = (sigma_k^+ sigma_{k+1}^- + sigma_k^- sigma_{k+1}^+)/2
+    ! In the sigma^z basis:
+    ! 
     
     integer (c_int), intent(in) :: nspin, dim
     real (c_double), intent(in) :: Jint(nspin-1)
@@ -292,8 +311,8 @@ contains
       do idx2 = 1, dimSpin1
         do idxp1 = 1, dimSpin1
           do idxp2 = 1, dimSpin1
-            OPR(idxp1, idxp2, idx1, idx2) = KDelta(idxp1, idx1+1) * KDelta(idxp2,idx2-1) + &
-            &  KDelta(idxp1, idx1-1) * KDelta(idxp2, idx2+1)
+            OPR(idxp1, idxp2, idx1, idx2) = ( KDelta(idxp1, idx1+1) * KDelta(idxp2,idx2-1) + &
+            &  KDelta(idxp1, idx1-1) * KDelta(idxp2, idx2+1) )
             !print*, OPR(idxp1, idxp2, idx1, idx2), idxp1, idxp2, idx1, idx2
           enddo
         enddo
@@ -324,13 +343,158 @@ contains
       enddo
     enddo
 
-    print*, "J = "
-    print "(*(F5.1))", Jint(:)
+    !print*, "J = "
+    !print "(*(F5.1))", Jint(:)
 
-    print*, "H2 = "
-    call printmat(dim,HTwoBody, 'R')
+    !print*, "H2 = "
+    !call printmat(dim,HTwoBody, 'R')
 
   end subroutine buildTwoBody
+
+  subroutine buildTwoBodyZZ(nspin, dim, Vint, HTwoBody)
+
+    !Example of TwoBody operator of the form:
+    !HOneBody = sum_{k=1}^L V_k OPR_{k,k+1}  
+    !   where OPR_{k,k+1} is a two-body operator acting on spins 'k' and 'k+1'
+    ! (defined in the subroutine, although it might be an argument)
+    ! In this case OPR = sigma_k^z sigma_{k+1}^z
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Vint(nspin-1)
+    real (c_double), intent(out) :: HTwoBody(dim,dim)
+    real (c_double) :: OPR(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, j, k, idx1, idx2, idxp1, idxp2, s1, s2
+    
+    do idx1 = 1, dimSpin1
+      do idx2 = 1, dimSpin1
+        do idxp1 = 1, dimSpin1
+          do idxp2 = 1, dimSpin1
+            s1 = 2 - idx1
+            s2 = 2 - idx2
+            OPR(idxp1, idxp2, idx1, idx2) = s1 * KDelta(idxp1, idx1) * s2 * KDelta(idxp2,idx2)
+          enddo
+        enddo
+      enddo
+    enddo
+
+!    print *, "OPR = "
+!    call printmat(dimSpin1, OPR, 'R')
+
+    HTwoBody = 0
+    do i = 0, dim - 1
+
+      call decode(i,nspin,config)
+
+      do k = 1, nspin-1
+
+        do idxp1 = 0, dimSpin1-1
+          do idxp2 = 0, dimSpin1-1
+
+            idx1 = config(k)
+            idx2 = config(k+1)
+            j = i + (idxp1 - idx1) * dimSpin1**(k-1) + (idxp2 - idx2) * dimSpin1**k
+            HTwoBody(j+1,i+1) = HTwoBody(j+1,i+1) + Vint(k) * OPR(idxp1+1, idxp2+1, idx1+1, idx2+1)
+
+          enddo
+        enddo
+
+      enddo
+    enddo
+
+    !print*, "V = "
+    !print "(*(F5.1))", Vint(:)
+
+    !print*, "H2 = "
+    !call printmat(dim,HTwoBody, 'R')
+
+  end subroutine buildTwoBodyZZ
+
+  subroutine buildHSwap(nspin, dim, HSwap)
+
+    !Hamiltonian for Swap Operator U_Swap = e^{-i pi/2 * HSwap):
+    !HOneBody = sum_{k=1}^{L/2} OPR_{k,k+1}
+    !   where OPR = OPR2 + OPR1,
+    !   OPR1 = XX + YY + ZZ = ZZ + (+- + -+)/2
+    !   OPR2 = OPR1^2
+    
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(out) :: HSwap(dim,dim)
+    real (c_double) :: OPR1(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+    real (c_double) :: OPR2(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+    real (c_double) :: OPR(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, j, k, idx1, idx2, idxp1, idxp2, idxs1, idxs2, s1, s2
+    
+    OPR1 = 0
+    do idx1 = 1, dimSpin1
+      do idx2 = 1, dimSpin1
+        do idxp1 = 1, dimSpin1
+          do idxp2 = 1, dimSpin1
+            s1 = 2 - idx1
+            s2 = 2 - idx2
+            OPR1(idxp1, idxp2, idx1, idx2) = s1 * KDelta(idxp1, idx1) * s2 * KDelta(idxp2,idx2) + &
+              & ( KDelta(idxp1, idx1+1) * KDelta(idxp2,idx2-1) + &
+              &  KDelta(idxp1, idx1-1) * KDelta(idxp2, idx2+1) )
+          enddo
+        enddo
+      enddo
+    enddo
+
+    OPR2 = 0
+    do idx1 = 1, dimSpin1
+      do idx2 = 1, dimSpin1
+        do idxp1 = 1, dimSpin1
+          do idxp2 = 1, dimSpin1
+
+            do idxs1 = 1, dimSpin1
+              do idxs2 = 1, dimSpin1
+                OPR2(idxp1, idxp2, idx1, idx2) = OPR2(idxp1, idxp2, idx1, idx2) + &
+                  & OPR1(idxp1, idxp2, idxs1, idxs2) * OPR1(idxs1, idxs2, idx1, idx2)
+              enddo
+            enddo
+            OPR(idxp1, idxp2, idx1, idx2) = OPR2(idxp1, idxp2, idx1, idx2) + OPR1(idxp1, idxp2, idx1, idx2) !- &
+            ! & KDelta(idxp1,idx1) * KDelta(idxp2,idx2)
+
+
+          enddo
+        enddo
+      enddo
+    enddo
+
+
+!    print *, "OPR = "
+!    call printmat(dimSpin1, OPR, 'R')
+
+    HSwap = 0
+    do i = 0, dim - 1
+
+      call decode(i,nspin,config)
+
+      do k = 1, nspin/2
+
+        do idxp1 = 0, dimSpin1-1
+          do idxp2 = 0, dimSpin1-1
+
+            idx1 = config(2*k-1)
+            idx2 = config(2*k)
+            j = i + (idxp1 - idx1) * dimSpin1**(2*k-2) + (idxp2 - idx2) * dimSpin1**(2*k-1)
+            HSwap(j+1,i+1) = HSwap(j+1,i+1) + OPR(idxp1+1, idxp2+1, idx1+1, idx2+1)
+
+          enddo
+        enddo
+
+      enddo
+    enddo
+
+
+    !print*, "HSwap = "
+    !call printmat(dim, HSwap, 'R')
+
+  end subroutine buildHSwap
+
 !
 !
 !  subroutine buildHSwap(nspin, dim, HSwap)

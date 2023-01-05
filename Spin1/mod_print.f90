@@ -16,7 +16,7 @@ contains
 
     if (t == 'R') then
       do i = 1,dim
-        write (*,"('|',*(f5.1))",advance='no') real(M(i,:))
+        write (*,"('|',*(f5.2))",advance='no') real(M(i,:))
         print *, "|"
       enddo
     else if (t == 'C') then
@@ -34,7 +34,7 @@ contains
       enddo
     else if (t == 'A') then
       do i = 1,dim
-        write (*,"('|',*(f5.1))",advance='no') abs(M(i,:))
+        write (*,"('|',*(f5.2))",advance='no') abs(M(i,:))
         print *, "|"
       enddo
     end if
@@ -52,7 +52,7 @@ contains
 
     if (t == 'R') then
       do i = 1,dim
-        write (*,"('|',*(f5.1))",advance='no') M(i,:)
+        write (*,"('|',*(f5.2))",advance='no') M(i,:)
         print *, "|"
       enddo
     else if (t == 'I') then
