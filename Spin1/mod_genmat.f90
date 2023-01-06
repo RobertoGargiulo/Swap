@@ -495,65 +495,70 @@ contains
 
   end subroutine buildHSwap
 
-!
-!
-!  subroutine buildHSwap(nspin, dim, HSwap)
-!
-!    integer (c_int), intent(in) :: nspin, dim
-!    real (c_double), intent(out) :: HSwap(dim,dim)
-!
-!    integer :: config(nspin)
-!    integer (c_int) :: i, j, k, m
-!
-!    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
-!    
-!    HSwap = 0
-!    do i = 0, dim - 1
-!
-!      call decode(i,nspin,config)
-!
-!      do k = 1, nspin/2
-!
-!        j = i + (1-2*config(2*k-1))*2**(2*k-2) + (1-2*config(2*k))*2**(2*k-1)
-!
-!        HSwap(i+1,i+1) = HSwap(i+1,i+1) + (1 - 2 * config(2*k-1)) * &
-!          & (1 - 2 * config(2*k))-1
-!
-!        HSwap(j+1,i+1) = HSwap(j+1,i+1) + 2 * (config(2*k) - config(2*k-1))**2
-!
-!      enddo
-!    enddo
-!
-!  end subroutine buildHSwap
-!
-!
-!  subroutine buildHMBL(nspin, dim, Jint, Vint, hz, H)
-!
-!    integer (c_int), intent(in) :: nspin, dim
-!    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
-!    real (c_double), intent(out) :: H(dim,dim)
-!
-!    integer :: config(nspin)
-!    integer (c_int) :: i, j, k, m
-!    
-!    H = 0
-!    do i = 0, dim - 1
-!
-!      call decode(i,nspin,config)
-!
-!      do k = 1, nspin-1
-!
-!        j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
-!
-!        H(i+1,i+1) = H(i+1,i+1) + Vint(k) * (1 - 2 * config(k)) * &
-!          & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
-!        H(j+1,i+1) = H(j+1,i+1) + Jint(k) * 2 * (config(k) - config(k+1))**2
-!      enddo
-!      k = nspin
-!      H(i+1,i+1) = H(i+1,i+1) + hz(k) * (1 - 2 * config(k))
-!    enddo
-!
-!  end subroutine buildHMBL
+
+  subroutine buildHMBL(nspin, dim, Jint, Vint, hz, H)
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(out) :: H(dim,dim)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, j, k, idx1, idx2, idxp1, idxp2, s1, s2
+    real (c_double) :: OPRz(dimSpin1,dimSpin1), OPRzz(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+    real (c_double) :: OPRxy(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+
+    do idx1 = 1, dimSpin1
+      do idx2 = 1, dimSpin1
+
+        OPRz(idx2, idx1) = (2-idx1)*KDelta(idx2, idx1)
+        do idxp1 = 1, dimSpin1
+          do idxp2 = 1, dimSpin1
+            s1 = 2 - idx1
+            s2 = 2 - idx2
+            OPRzz(idxp1, idxp2, idx1, idx2) = s1 * KDelta(idxp1, idx1) * s2 * KDelta(idxp2,idx2)
+            OPRxy(idxp1, idxp2, idx1, idx2) = ( KDelta(idxp1, idx1+1) * KDelta(idxp2,idx2-1) + &
+              &  KDelta(idxp1, idx1-1) * KDelta(idxp2, idx2+1) )
+          enddo
+        enddo
+
+      enddo
+    enddo
+
+    H = 0
+    do i = 0, dim - 1
+
+      call decode(i,nspin,config)
+
+      do k = 1, nspin-1
+
+        do idxp1 = 0, dimSpin1-1
+          do idxp2 = 0, dimSpin1-1
+
+            idx1 = config(k)
+            idx2 = config(k+1)
+            j = i + (idxp1 - idx1) * dimSpin1**(k-1) + (idxp2 - idx2) * dimSpin1**k
+            H(j+1,i+1) = H(j+1,i+1) + Vint(k) * OPRzz(idxp1+1, idxp2+1, idx1+1, idx2+1) + &
+              & Jint(k) * OPRxy(idxp1+1, idxp2+1, idx1+1, idx2+1)
+
+          enddo
+          idx1 = config(k)
+          j = i + (idxp1 - idx1) * dimSpin1**(k-1)
+          H(j+1,i+1) = H(j+1,i+1) + hz(k) * OPRz(idxp1+1, idx1+1)
+
+        enddo
+
+      enddo
+
+      k = nspin
+      do idxp1 = 0, dimSpin1-1
+        idx1 = config(k)
+        j = i + (idxp1 - idx1) * dimSpin1**(k-1)
+        H(j+1,i+1) = H(j+1,i+1) + hz(k) * OPRz(idxp1+1, idx1+1)
+      enddo
+
+    enddo
+
+  end subroutine buildHMBL
 !
 !
 !
@@ -1192,29 +1197,30 @@ contains
 !
 !
 !
-!  subroutine zero_mag_states(nspin, dim_Sz0, states)
-!
-!    !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-!    integer (c_int), intent(in) :: nspin, dim_Sz0
-!    integer (c_int), intent(out) :: states(dim_Sz0)
-!
-!    integer :: config(nspin)
-!    integer (c_int) :: i, j, k, m
-!
-!    k = 0
-!    states = 0
-!    do i = 0, 2**nspin-1
-!
-!      call decode(i, nspin, config)
-!
-!      if (sum(config)==nspin/2) then
-!        k = k+1
-!        states(k) = i
-!        !print *, i, k, states(k)
-!      endif
-!    enddo
-!
-!  end subroutine zero_mag_states
+  subroutine zero_mag_states(nspin, dim_Sz0, states)
+
+    !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    integer (c_int), intent(out) :: states(dim_Sz0)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, j, k, m, dim
+
+    dim = dimSpin1**nspin
+    k = 0
+    states = 0
+    do i = 0, dim-1
+
+      call decode(i, nspin, config)
+
+      if (sum(config)==nspin/2) then
+        k = k+1
+        states(k) = i
+        !print *, i, k, states(k)
+      endif
+    enddo
+
+  end subroutine zero_mag_states
 !
 !  subroutine finite_imbalance_states(nspin, dim, IMB, states)
 !    integer (c_int), intent(in) :: nspin, dim
