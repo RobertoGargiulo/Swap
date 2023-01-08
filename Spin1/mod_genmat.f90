@@ -843,33 +843,46 @@ contains
 !
 !
 !
-!  subroutine buildProdState(nspin, dim, alpha, beta, state)
-!
-!    !Builds a product state of the form: (alpha|up> + beta|down) \otimes (alpha|up> + beta|down) \otimes ...
-! 
-!    integer (c_int), intent(in) :: nspin, dim
-!    complex (c_double_complex), intent(in) :: alpha, beta
-!    complex (c_double_complex), intent(out) :: state(dim)
-!    integer :: config(nspin), un_vec(nspin), n_down
-!    complex (c_double_complex) :: alpha_n, beta_n
-!    real (c_double) :: norm
-!    integer (c_int) :: i, j, k, m
-!
-!    norm = sqrt(abs(alpha)**2 + abs(beta)**2)
-!    alpha_n = alpha/norm
-!    beta_n = beta/norm
-!
-!    state = 0
-!    un_vec = 1
-!    do i = 1, dim
-!      call decode(i-1,nspin,config)
-!      n_down = dot_product(un_vec,config)
-!      state(i) = alpha**(nspin-n_down) * beta**n_down
-!
-!    enddo
-!
-!  end subroutine buildProdState
-!
+  subroutine buildProdState(nspin, dim, alpha, state)
+
+    !Builds a product state of the form: |phi> \otimes |phi> \otimes ...
+    ! where: |phi> = alpha_1|+1> + alpha_2|0> + alpha_3|-1>
+ 
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: alpha(dimSpin1)
+    complex (c_double_complex), intent(out) :: state(dim)
+    integer :: config(nspin), num(dimSpin1)
+    complex (c_double_complex) :: alpha_n(dimSpin1)
+    real (c_double) :: norm
+    integer (c_int) :: i, k, idx
+
+    alpha_n = alpha/dot_product(alpha,alpha)
+    !print *, alpha_n
+
+    !num() contains the number of all spins with a certain orientation
+    ! (up, zero, down) <-> (0,1,2) in a given configuration (encoded in an integer i)
+    ! It counts the number of 0, 1, 2 in 'config'
+    state = 1
+    do i = 1, dim
+      call decode(i-1,nspin,config)
+      !print *, "config = ", config(:)
+      num = 0
+      do k = 1, nspin
+        num(config(k)+1) = num(config(k)+1) + 1
+      enddo
+      !print *, "num = ", num(:)
+
+      do idx = 1, dimSpin1
+        state(i) = state(i) * alpha_n(idx) ** num(idx)
+        !print *, "alpha_n(", idx ,") =", alpha_n(idx) ** num(idx)
+        !print *, "state(i) = ", state(i)
+      enddo
+      !print *, "state = ", state(i)
+
+    enddo
+
+  end subroutine buildProdState
+
 !  subroutine buildNayakState(nspin,dim,alpha,beta,state)
 !
 !    integer (c_int), intent(in) :: nspin, dim

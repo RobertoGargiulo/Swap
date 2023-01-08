@@ -28,22 +28,6 @@ program prova
 
   dim = 3**nspin
 
-!  allocate(HS(dim,dim))
-!
-!  call buildHSwap(nspin, dim, HS)
-!
-!  allocate(E(dim), W_r(dim,dim), USwap(dim,dim))
-!  !H2 = H2 + identity(dim)
-!  call diagSYM( 'V', dim, HS, E, W_r)
-!  print *, "HSwap = "
-!  call printmat(dim, H, 'R')
-!  deallocate(HS)
-!
-!  T1 = pi/2
-!  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap )
-!  deallocate(E, W_r)
-
-
   allocate(Vz(nspin-1), Jxy(nspin-1), hz(nspin))
   allocate(H(dim,dim))
 
