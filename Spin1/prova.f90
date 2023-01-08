@@ -9,12 +9,13 @@ program prova
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
 
   integer (c_int)     ::  nspin, dim
-  integer (c_int), allocatable :: config(:)
+  integer (c_int), allocatable :: config(:), states
   integer (c_int) :: i, j, k
   real (c_double) :: imp(3,3), T1
-  real (c_double), allocatable :: h(:), Jxy(:), H1(:,:), H2(:,:), v(:)
+  real (c_double), allocatable :: Jxy(:), HS(:,:), H(:,:), Vz(:), hz(:)
   real (c_double), allocatable :: E(:), W_r(:,:)
-  complex (c_double_complex), allocatable :: USwap(:,:), PH(:), W(:,:)
+  complex (c_double_complex), allocatable :: USwap(:,:), PH(:), W(:,:), U(:,:)
+
   logical :: SELECT
   EXTERNAL SELECT
 
@@ -24,73 +25,31 @@ program prova
 
   dim = 3**nspin
 
-  allocate(config(nspin))
-  allocate(h(nspin), H1(dim,dim))
-  allocate(Jxy(nspin-1), H2(dim,dim), v(dim))
-  
-!  do i = 0, dim-1
-!    call decode(i, nspin, config)
-!    print*, config(:), i
-!  enddo
-!  
+!  allocate(HS(dim,dim))
 !
-!  imp = reshape((/ (( (2-i)*KDelta(i,j), j=1,3),i=1,3) /), shape(imp))
+!  call buildHSwap(nspin, dim, HS)
 !
-!  do i = 1, 3
-!    print*, imp(i,:)
-!  enddo
-
-  h(:) = 1
-  Jxy(:) = 1
-
-  call buildOneBody(nspin, dim, h, H1)
-
-  call buildTwoBody(nspin, dim, Jxy, H2)
-
-  !do i = 1, dim
-  !  print *, sum(H2(i,:))
-  !enddo
-  
-  call buildTwoBodyZZ(nspin, dim, Jxy, H2)
-
-
-  call buildHSwap(nspin, dim, H2)
-
-  allocate(E(dim), W_r(dim,dim), USwap(dim,dim))
-  !H2 = H2 + identity(dim)
-  call diagSYM( 'V', dim, H2, E, W_r)
+!  allocate(E(dim), W_r(dim,dim), USwap(dim,dim))
+!  !H2 = H2 + identity(dim)
+!  call diagSYM( 'V', dim, HS, E, W_r)
 !  print *, "HSwap = "
 !  call printmat(dim, H, 'R')
-  deallocate(H2)
+!  deallocate(HS)
+!
+!  T1 = pi/2
+!  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap )
+!  deallocate(E, W_r)
+
+
+  allocate(Vz(nspin-1), Jxy(nspin-1), hz(nspin))
+  allocate(H(dim,dim))
+
+  Vz(:) = 1
+  Jxy(:) = 1
+  hz(:) = 1
+  call buildHMBL(nspin, dim, Jxy, Vz, hz, H)
+  call printmat(dim, H, 'R')
   
-  !print*, "E = "
-  !print "(*(F5.2,2X))", E(:)
-
-  T1 = pi/2
-  call expSYM( dim, -C_UNIT*T1, E, W_r, USwap )
-  deallocate(E, W_r)
-  !print*, "USwap = "
-  !call printmat(dim, USwap, 'C')
-
-  allocate(PH(dim),W(dim,dim))
-  call diagUN( SELECT, dim, USwap, PH, W)
-
-  print*, "arg(PH) = "
-  print "(*(F5.2,2X))", atan2(dreal(PH(:)),dimag(PH(:)) )
-
-  USwap = matmul(USwap,USwap)
-  !print*, "USwap^2 = "
-  !call printmat(dim, USwap, 'C')
-  USwap = abs(USwap)
-  !print*, "abs(USwap^2) = "
-  !call printmat(dim, USwap, 'C')
-  if (all( abs(USwap) - identity(dim) <= 1.0e-6)) then
-    print*, "USwap^2 = c * Id"
-  else
-    print*, "USwap^2 != c * Id"
-  endif
-
-  deallocate(PH,W,USwap)
 
 
 
