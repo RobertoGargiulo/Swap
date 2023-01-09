@@ -120,14 +120,32 @@ contains
     integer, parameter :: i8 = selected_int_kind(18)
     integer, parameter :: dp = selected_real_kind(15)
 
-    if (k == n) then
-        binom = 1
-    else if (k == 1) then
-        binom = n
-    else if ((k /= 1) .and. (k /= n)) then
+    !if (k == n) then
+    !    binom = 1
+    !else if (k == 1) then
+    !    binom = n
+    !else if ((k /= 1) .and. (k /= n)) then
       binom = nint(exp(log_gamma(n+1.0_dp)-log_gamma(n-k+1.0_dp)-log_gamma(k+1.0_dp)),kind=i8)
-    end if 
+    !end if 
   end function
+
+  integer function multinom(n,k_vec)
+    integer (c_int), intent(in) :: n
+    integer (c_int), intent(in), allocatable :: k_vec(:)
+    
+
+    integer, parameter :: i8 = selected_int_kind(18)
+    integer, parameter :: dp = selected_real_kind(15)
+    !integer :: i
+
+    !print *, "k_vec = ", k_vec(:), "n = ", n
+    !print *, "sum = ", sum(k_vec)
+    if(sum(k_vec) /= n .OR. any(k_vec<0)) stop "Error in multinom(n,k_vec): sum(k_vec) != n"
+
+    multinom = nint(exp( log_gamma(n+1.0_dp)-sum(log_gamma(k_vec(:)+1.0_dp)) ),kind=i8)
+
+  end function
+
 
   function KDelta(i, j)
 
@@ -1210,6 +1228,31 @@ contains
 !
 !
 !
+  function dimSpin1_Sz0(nspin)
+
+    integer (c_int), intent(in) :: nspin
+    integer (c_int) :: dimSpin1_Sz0
+    integer (c_int) :: n_up, ntot
+    integer (c_int), allocatable :: k_vec(:)
+
+    allocate(k_vec(dimSpin1))
+
+    !In S_z = 0 configurations, N_up = N_down with the constraint N_up + N_down + N_zero = nspin
+    ntot = 0
+    do n_up = 0, nspin/2
+      k_vec(1) = n_up
+      k_vec(2) = n_up
+      k_vec(3) = nspin - 2*n_up
+      ntot = ntot + multinom(nspin,k_vec)
+    enddo
+
+    dimSpin1_Sz0 = ntot
+
+  end function
+
+
+
+
   subroutine zero_mag_states(nspin, dim_Sz0, states)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
@@ -1217,7 +1260,7 @@ contains
     integer (c_int), intent(out) :: states(dim_Sz0)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, m, dim
+    integer (c_int) :: i, j, k, dim
 
     dim = dimSpin1**nspin
     k = 0
@@ -1226,10 +1269,10 @@ contains
 
       call decode(i, nspin, config)
 
-      if (sum(config)==nspin/2) then
+      if (sum(1-config)==0) then
         k = k+1
         states(k) = i
-        !print *, i, k, states(k)
+        print "(2(I4,4X),*(I0))", i, k, config(:)
       endif
     enddo
 
