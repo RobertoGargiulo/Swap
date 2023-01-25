@@ -67,6 +67,81 @@ contains
 
   end subroutine printmat_R
 
+  subroutine printnzmat_C(dim,M,t)
+ 
+     integer, intent(in) :: dim
+     complex(c_double_complex), intent(in), dimension(dim,dim) :: M
+     character, intent(in) :: t*1
+ 
+     integer :: i, j
+ 
+     if (t == 'C') then
+       do i = 1,dim
+         do j = 1, dim
+           if(abs(M(i,j)) > 1.0e-6) then
+             print "(4X,1(sf8.2spf8.2x'i':x), 2(4X,I4))", M(i,j), i, j
+           endif
+         enddo
+       enddo
+     else if (t == 'R') then
+       do i = 1,dim
+         do j = 1, dim
+           if(abs(M(i,j)) > 1.0e-6) then
+             print "(4X,1F5.1, 2(4X,I4))", real(M(i,j)), i, j
+           endif
+         enddo
+       enddo
+     else if (t == 'A') then
+       do i = 1,dim
+         do j = 1, dim
+           if(abs(M(i,j)) > 1.0e-6) then
+             print "(4X,1F5.1, 2(4X,I4))", abs(M(i,j)), i, j
+           endif
+         enddo
+       enddo
+     else if (t == 'I') then
+       do i = 1,dim
+         do j = 1, dim
+           if(abs(M(i,j)) > 1.0e-6) then
+             print "(4X,1I5, 2(4X,I4))", int(M(i,j)), i, j
+           endif
+         enddo
+       enddo
+     end if
+     print *,""
+
+  end subroutine printnzmat_C
+
+  subroutine printnzmat_R(dim,M,t)
+ 
+     integer, intent(in) :: dim
+     real(c_double), intent(in), dimension(dim,dim) :: M
+     character, intent(in) :: t*1
+ 
+     integer :: i, j
+ 
+     if (t == 'R') then
+       do i = 1,dim
+         do j = 1, dim
+           if(abs(M(i,j)) > 1.0e-6) then
+             print "(4X,1F5.1, 2(4X,I4))", M(i,j), i, j
+           endif
+         enddo
+       enddo
+     else if (t == 'I') then
+       do i = 1,dim
+         do j = 1, dim
+           if(abs(M(i,j)) > 1.0e-6) then
+             print "(4X,1I5, 2(4X,I4))", int(M(i,j)), i, j
+           endif
+         enddo
+       enddo
+     end if
+     print *,""
+ 
+   end subroutine
+
+
   subroutine writemat_C(u, dim, M, t)
 
     integer, intent(in) :: dim, u
@@ -289,7 +364,9 @@ module printing
     module procedure printvec_R, printvec_C, printvec_I
   end interface
   
-
+  interface printnzmat
+     module procedure printnzmat_R, printnzmat_C
+   end interface
 
 
 end module printing

@@ -745,7 +745,7 @@ contains
     real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
-    integer :: config(nspin), states(dim_Sz0), config2(nspin)
+    integer :: config(nspin), states(dim_Sz0), config2(nspin), inverse(dimSpin1**n     spin)
     integer (c_int) :: i, j, k, m, n, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2
     real (c_double) :: OPRz(dimSpin1,dimSpin1), OPRzz(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -769,7 +769,7 @@ contains
     enddo
     
     H = 0
-    call zero_mag_states(nspin, dim_Sz0, states)
+    call zero_mag_states_inv(nspin, dim_Sz0, states, inverse)
     print "(4X,1(A5,X),3(A3,3X),A4)", "H(r,l)", "k", "i", "r/l", "conf"
     do l = 1, dim_Sz0
 
@@ -790,7 +790,7 @@ contains
             idx2 = config(k+1)
             if( (idxp1 + idxp2 == idx1 + idx2) .AND. (idxp1 /= idx1) .AND. (idxp2 /= idx2) ) then
               j = i + (idxp1 - idx1) * dimSpin1**(k-1) + (idxp2 - idx2) * dimSpin1**k
-              r = binsearch(j,states)
+              r = inverse(j+1) 
               H(r,l) = H(r,l) + Jint(k) * OPRxy(idxp1+1, idxp2+1, idx1+1, idx2+1)
               call decode(j,nspin, config2)
               print "(4X,1(F5.1,X),3(I3,3X),*(I0))", H(r,l), k, i, l, config(:)
@@ -904,7 +904,7 @@ contains
     integer (c_int), intent(in) :: nspin, dim_Sz0
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
-    integer :: config(nspin), states(dim_Sz0), config2(nspin)
+    integer :: config(nspin), states(dim_Sz0), config2(nspin), inverse(dimSpin1**n     spin)
     integer (c_int) :: i, j, k, m, n, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2, idxs1, idxs2
     real (c_double) :: OPR1(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -948,7 +948,7 @@ contains
     enddo
     
     H = 0
-    call zero_mag_states(nspin, dim_Sz0, states)
+    call zero_mag_states_inv(nspin, dim_Sz0, states, inverse)
     print "(4X,1(A5,X),3(A3,3X),A4)", "H(r,l)", "k", "i", "r/l", "conf"
     do l = 1, dim_Sz0
 
@@ -966,7 +966,7 @@ contains
             idx2 = config(k+1)
             if( (idxp1 + idxp2 == idx1 + idx2) ) then
               j = i + (idxp1 - idx1) * dimSpin1**(k-1) + (idxp2 - idx2) * dimSpin1**k
-              r = binsearch(j,states)
+              r = inverse(j+1) 
               H(r,l) = H(r,l) + OPR(idxp1+1, idxp2+1, idx1+1, idx2+1)
               call decode(j,nspin, config2)
               print "(4X,1(F5.1,X),3(I3,3X),*(I0))", H(r,l), k, i, l, config(:)
@@ -1146,7 +1146,7 @@ contains
 !  end subroutine buildNeelState_Sz0
 !
 !  subroutine buildLI1ProdState_Sz0(nspin, dim_Sz0, alpha, beta, state)
-!
+/
 !    integer (c_int), intent(in) :: nspin, dim_Sz0
 !    complex (c_double_complex), intent(in) :: alpha, beta
 !    complex (c_double_complex), intent(out) :: state(dim_Sz0)
@@ -1371,6 +1371,27 @@ contains
 
   end function
 
+  function dimSpin1_Sz(nspin, Sz)
+
+    integer (c_int), intent(in) :: nspin, Sz
+    integer (c_int) :: dimSpin1_Sz0
+    integer (c_int) :: n_up, ntot
+    integer (c_int), allocatable :: k_vec(:)
+
+    allocate(k_vec(dimSpin1))
+
+    !In S_z = 0 configurations, N_up = N_down with the constraint N_up + N_down + N_zero = nspin
+    ntot = 0
+    do n_up = 0, nspin/2
+      k_vec(1) = n_up
+      k_vec(2) = n_up - Sz
+      k_vec(3) = nspin + Sz - 2*n_up
+      ntot = ntot + multinom(nspin,k_vec)
+    enddo
+
+    dimSpin1_Sz = ntot
+
+  end function
 
 
 
@@ -1398,6 +1419,88 @@ contains
     enddo
 
   end subroutine zero_mag_states
+
+  subroutine zero_mag_states_inv(nspin, dim_Sz0, states, inverse)
+ 
+     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
+     integer (c_int), intent(in) :: nspin, dim_Sz0
+     integer (c_int), intent(out) :: states(dim_Sz0), inverse(dimSpin1**nspin)
+ 
+     integer :: config(nspin)
+     integer (c_int) :: i, j, l, dim
+ 
+     dim = dimSpin1**nspin
+     l = 0
+     states = 0
+     inverse = -1
+ 
+     !print "(2(A4,4X),A4)", "i", "l", "conf"
+     do i = 0, dim-1
+ 
+       call decode(i, nspin, config)
+ 
+       if (sum(1-config)==0) then
+         l = l+1
+         states(l) = i
+         inverse(i+1) = l
+         !print "(2(I4,4X),*(I0))", i, l, config(:)
+       endif
+     enddo
+     !print *, ""
+ 
+   end subroutine
+
+  subroutine basis_Sz(nspin, dim_Sz, Sz, states)
+
+    !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
+    integer (c_int), intent(in) :: nspin, dim_Sz
+    integer (c_int), intent(out) :: states(dim_Sz)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, j, k, dim
+
+    dim = dimSpin1**nspin
+    k = 0
+    states = 0
+    do i = 0, dim-1
+
+      call decode(i, nspin, config)
+
+      if (sum(1-config)==Sz) then
+        k = k+1
+        states(k) = i
+        !print "(2(I4,4X),*(I0))", i, k, config(:)
+      endif
+    enddo
+
+  end subroutine
+
+  subroutine basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)
+
+    !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
+    integer (c_int), intent(in) :: nspin, dim_Sz
+    integer (c_int), intent(out) :: states(dim_Sz), inverse(dimSpin1**nspin)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, j, l, dim
+
+    dim = dimSpin1**nspin
+    l = 0
+    states = 0
+    inverse = -1
+    do i = 0, dim-1
+
+      call decode(i, nspin, config)
+
+      if (sum(1-config)==Sz) then
+        l = l+1
+        states(l) = i
+        inverse(i+1) = l
+        !print "(2(I4,4X),*(I0))", i, l, config(:)
+      endif
+    enddo
+
+  end subroutine
 !
 !  subroutine finite_imbalance_states(nspin, dim, IMB, states)
 !    integer (c_int), intent(in) :: nspin, dim

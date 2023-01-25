@@ -107,8 +107,8 @@ contains
       do kA = 0, dim_A-1
         do iB = 0, dim_B-1
 
-          i = jA + 2**(nspin_A) * iB + 1
-          j = kA + 2**(nspin_A) * iB + 1
+          i = jA + dimSpin1**(nspin_A) * iB + 1
+          j = kA + dimSpin1**(nspin_A) * iB + 1
 
           rho_A(jA+1,kA+1) = rho_A(jA+1,kA+1) + psi(i) * dconjg( psi(j) )
 
@@ -138,8 +138,8 @@ contains
       do kB = 0, dim_B-1
         do iA = 0, dim_A-1
 
-          i = iA + 2**(nspin-nspin_B) * jB + 1
-          j = iA + 2**(nspin-nspin_B) * kB + 1
+          i = iA + dimSpin1**(nspin-nspin_B) * jB + 1
+          j = iA + dimSpin1**(nspin-nspin_B) * kB + 1
 
           rho_B(jB+1,kB+1) = rho_B(jB+1,kB+1) + psi(i) * dconjg( psi(j) )
 
@@ -171,11 +171,11 @@ contains
           do kB = 0, dim_B-1
             do iC = 0, dim_C-1
 
-              jAB = jA + 2**(nspin_A)*jB + 1
-              kAB = kA + 2**(nspin_A)*kB + 1
+              jAB = jA + dimSpin1**(nspin_A)*jB + 1
+              kAB = kA + dimSpin1**(nspin_A)*kB + 1
 
-              i = jA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * jB + 1
-              j = kA + 2**(nspin_A)*iC + 2**(nspin-nspin_B) * kB + 1 
+              i = jA + dimSpin1**(nspin_A)*iC + dimSpin1**(nspin-nspin_B) * jB + 1
+              j = kA + dimSpin1**(nspin_A)*iC + dimSpin1**(nspin-nspin_B) * kB + 1 
 
               rho_AB(jAB,kAB) = rho_AB(jAB,kAB) + psi(i) * dconjg( psi(j) )
             enddo
@@ -212,8 +212,8 @@ contains
           i = 0
           j = 0
           do k = 1, nspin/2
-            i = i + configA1(k) * 2**(2*k-2) + configB(k) * 2**(2*k-1)
-            j = j + configA2(k) * 2**(2*k-2) + configB(k) * 2**(2*k-1)
+            i = i + configA1(k) * dimSpin1**(2*k-2) + configB(k) * dimSpin1**(2*k-1)
+            j = j + configA2(k) * dimSpin1**(2*k-2) + configB(k) * dimSpin1**(2*k-1)
           enddo
 
           rho_A(jA+1,kA+1) = rho_A(jA+1,kA+1) + psi(i+1) * dconjg( psi(j+1) )
@@ -250,8 +250,8 @@ contains
           i = 0
           j = 0
           do k = 1, nspin/2
-            i = i + configA(k) * 2**(2*k-2) + configB1(k) * 2**(2*k-1)
-            j = j + configA(k) * 2**(2*k-2) + configB2(k) * 2**(2*k-1)
+            i = i + configA(k) * dimSpin1**(2*k-2) + configB1(k) * dimSpin1**(2*k-1)
+            j = j + configA(k) * dimSpin1**(2*k-2) + configB2(k) * dimSpin1**(2*k-1)
           enddo
 
           rho_B(jB+1,kB+1) = rho_B(jB+1,kB+1) + psi(i+1) * dconjg( psi(j+1) )
@@ -423,7 +423,7 @@ contains
     complex (c_double_complex), allocatable :: rho_A(:,:)
     real (c_double) :: CE!, CE2
 
-    dim_A = 2**(nspin/2)
+    dim_A = dimSpin1**(nspin/2)
     allocate(rho_A(dim_A,dim_A))
 
     call odd_reduced_DM(nspin, dim, dim_A, psi, rho_A)
@@ -452,7 +452,7 @@ contains
     allocate(psi(dim))
     call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
 
-    dim_A = 2**(nspin/2)
+    dim_A = dimSpin1**(nspin/2)
     allocate(rho_A(dim_A,dim_A))
 
     call odd_reduced_DM(nspin, dim, dim_A, psi, rho_A)
@@ -490,7 +490,7 @@ contains
     avgBE = 0
     !print *, "    nspin_A        dim_A     BEE"
     do nspin_A = 1, nspin - 1, 2
-      dim_A = 2**nspin_A
+      dim_A = dimSpin1**nspin_A
       if (nspin_A <= nspin/2) then
         allocate(rho_A(dim_A,dim_A))
         call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)

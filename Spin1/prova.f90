@@ -49,7 +49,7 @@ program prova
 
   call buildHSwap(nspin, dim, H)
   print *, "H = "
-  call printnzmat(dim, H, 'R')
+  !call printnzmat(dim, H, 'R')
   print*, ""
 
   allocate(E(dim), W_r(dim,dim), USwap(dim,dim))
@@ -149,6 +149,7 @@ program prova
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 
+  print *, "End Program"
 
 
 
