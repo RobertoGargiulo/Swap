@@ -745,7 +745,7 @@ contains
     real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
-    integer :: config(nspin), states(dim_Sz0), config2(nspin), inverse(dimSpin1**n     spin)
+    integer :: config(nspin), states(dim_Sz0), config2(nspin), inverse(dimSpin1**nspin)
     integer (c_int) :: i, j, k, m, n, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2
     real (c_double) :: OPRz(dimSpin1,dimSpin1), OPRzz(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -904,7 +904,7 @@ contains
     integer (c_int), intent(in) :: nspin, dim_Sz0
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
-    integer :: config(nspin), states(dim_Sz0), config2(nspin), inverse(dimSpin1**n     spin)
+    integer :: config(nspin), states(dim_Sz0), config2(nspin), inverse(dimSpin1**nspin)
     integer (c_int) :: i, j, k, m, n, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2, idxs1, idxs2
     real (c_double) :: OPR1(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -927,6 +927,7 @@ contains
     enddo
 
     OPR2 = 0
+    OPR = 0
     do idx1 = 1, dimSpin1
       do idx2 = 1, dimSpin1
         do idxp1 = 1, dimSpin1
@@ -938,8 +939,8 @@ contains
                   & OPR1(idxp1, idxp2, idxs1, idxs2) * OPR1(idxs1, idxs2, idx1, idx2)
               enddo
             enddo
-            OPR(idxp1, idxp2, idx1, idx2) = OPR2(idxp1, idxp2, idx1, idx2) + OPR1(idxp1, idxp2, idx1, idx2) - &
-             & KDelta(idxp1,idx1) * KDelta(idxp2,idx2)
+            OPR(idxp1, idxp2, idx1, idx2) = OPR2(idxp1, idxp2, idx1, idx2) + OPR1(idxp1, idxp2, idx1, idx2) !- &
+             !& KDelta(idxp1,idx1) * KDelta(idxp2,idx2)
 
 
           enddo
@@ -957,15 +958,15 @@ contains
 
       do k = 1, nspin/2
 
-        s1 = 1 - config(k)
-        s2 = 1 - config(k+1)
+        s1 = 1 - config(2*k-1)
+        s2 = 1 - config(2*k)
         do idxp1 = 0, dimSpin1-1
           do idxp2 = 0, dimSpin1-1
 
-            idx1 = config(k)
-            idx2 = config(k+1)
+            idx1 = config(2*k-1)
+            idx2 = config(2*k)
             if( (idxp1 + idxp2 == idx1 + idx2) ) then
-              j = i + (idxp1 - idx1) * dimSpin1**(k-1) + (idxp2 - idx2) * dimSpin1**k
+              j = i + (idxp1 - idx1) * dimSpin1**(2*k-2) + (idxp2 - idx2) * dimSpin1**(2*k-1)
               r = inverse(j+1) 
               H(r,l) = H(r,l) + OPR(idxp1+1, idxp2+1, idx1+1, idx2+1)
               call decode(j,nspin, config2)
@@ -1146,7 +1147,7 @@ contains
 !  end subroutine buildNeelState_Sz0
 !
 !  subroutine buildLI1ProdState_Sz0(nspin, dim_Sz0, alpha, beta, state)
-/
+!
 !    integer (c_int), intent(in) :: nspin, dim_Sz0
 !    complex (c_double_complex), intent(in) :: alpha, beta
 !    complex (c_double_complex), intent(out) :: state(dim_Sz0)
@@ -1374,7 +1375,7 @@ contains
   function dimSpin1_Sz(nspin, Sz)
 
     integer (c_int), intent(in) :: nspin, Sz
-    integer (c_int) :: dimSpin1_Sz0
+    integer (c_int) :: dimSpin1_Sz
     integer (c_int) :: n_up, ntot
     integer (c_int), allocatable :: k_vec(:)
 
@@ -1453,7 +1454,7 @@ contains
   subroutine basis_Sz(nspin, dim_Sz, Sz, states)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
     integer (c_int), intent(out) :: states(dim_Sz)
 
     integer :: config(nspin)
@@ -1478,7 +1479,7 @@ contains
   subroutine basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
     integer (c_int), intent(out) :: states(dim_Sz), inverse(dimSpin1**nspin)
 
     integer :: config(nspin)
@@ -1984,24 +1985,26 @@ contains
 !
 !  end function
 !
-!  subroutine local_zmag_Sz0(nspin, dim_Sz0, psi_Sz0, sigmaz)
-!    integer (c_int), intent(in) :: nspin, dim_Sz0
-!    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
-!    real (c_double), intent(out) :: sigmaz(nspin)
-!
-!    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
-!
-!    call zero_mag_states(nspin, dim_Sz0, states)
-!    sigmaz = 0
-!    do i = 1, dim_Sz0
-!      l = states(i)
-!      call decode(l, nspin, config)
-!      do k = 1, nspin
-!        sigmaz(k) = sigmaz(k) + abs(psi_Sz0(i))**2 * (1-2*config(k))
-!      enddo
-!    enddo
-!
-!  end subroutine
+  function local_zmag_Sz0(nspin, dim_Sz0, psi_Sz0)
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: local_zmag_Sz0(nspin)
+
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
+    real (c_double) :: sigmaz(nspin)
+
+    call zero_mag_states(nspin, dim_Sz0, states)
+    sigmaz = 0
+    do l = 1, dim_Sz0
+      i = states(l)
+      call decode(i, nspin, config)
+      do k = 1, nspin
+        sigmaz(k) = sigmaz(k) + abs(psi_Sz0(l))**2 * (1-2*config(k))
+      enddo
+    enddo
+    local_zmag_Sz0 = sigmaz
+
+  end function
 !
 !
 !

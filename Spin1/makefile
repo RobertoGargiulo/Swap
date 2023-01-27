@@ -3,7 +3,7 @@ FFLAGS = -O3 -Wall -Wextra -g -fbacktrace -fcheck=all -pedantic #-pg
 #-ffpe-trap= invalid, zero, overflow
 #-Werror -ffree-line-length-500 #-fpp -D IFORT -qopenmp 
 #-pg -> per debugging   $ gprof <program-name> <gmon.out>
-SRC = mod_print.f90 mod_genmat.f90 mod_exp.f90 #mod_MBL.f90 #mataid.f90 expokit.f90 exp_sparse.f90  #sorts.f90 #mod_sorting.f90
+SRC = mod_functions.f90 mod_print.f90 mod_obs.f90 mod_mat.f90 mod_states.f90 mod_exp.f90 mod_genmat.f90 #mod_MBL.f90 #mataid.f90 expokit.f90 exp_sparse.f90  #sorts.f90 #mod_sorting.f90
 LIBS = -llapack -lblas
 PFLAGS = -fopenmp #-qopenmp
 MOD = ${SRC:.f90=.o} #substitute .f90 with .o
@@ -42,6 +42,9 @@ imbalance_states: $(MOD) imbalance_states.o
 prova: $(MOD) prova.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+prova2: $(MOD) prova2.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 dense_Sz0: $(MOD) dense_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
@@ -51,6 +54,8 @@ sparse_Sz0: $(MOD) sparse_Sz0.o
 spectrum_Sz0: $(MOD) spectrum_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+test_Swap_Sz0: $(MOD) test_Swap_Sz0.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 
 all: prova swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
