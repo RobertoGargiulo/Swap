@@ -26,12 +26,12 @@ module observables
 
 contains
 
-  function local_zmag_Sz0(nspin, dim_Sz0, psi_Sz0)
+  function sigmaz_Sz0(nspin, dim_Sz0, psi_Sz0)
     integer (c_int), intent(in) :: nspin, dim_Sz0
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
-    real (c_double) :: local_zmag_Sz0(nspin)
+    real (c_double) :: sigmaz_Sz0(nspin)
 
-    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0), s
     real (c_double) :: sigmaz(nspin)
 
     call zero_mag_states(nspin, dim_Sz0, states)
@@ -40,10 +40,11 @@ contains
       i = states(l)
       call decode(i, nspin, config)
       do k = 1, nspin
-        sigmaz(k) = sigmaz(k) + abs(psi_Sz0(l))**2 * (1-2*config(k))
+        s = 1 - config(k)
+        sigmaz(k) = sigmaz(k) + abs(psi_Sz0(l))**2 * s
       enddo
     enddo
-    local_zmag_Sz0 = sigmaz
+    sigmaz_Sz0 = sigmaz
 
   end function
 
@@ -53,7 +54,7 @@ contains
     complex(c_double_complex), intent(in) :: state(dim_Sz0)
     real (c_double) :: imbalance_Sz0
     real(c_double) :: imb, imbaux
-    integer (c_int) :: i, k, l, indx(dim_Sz0), config(nspin)
+    integer (c_int) :: i, k, l, indx(dim_Sz0), config(nspin), s
 
     imb = 0
     call zero_mag_states(nspin, dim_Sz0, indx)
@@ -64,7 +65,8 @@ contains
       call decode(i,nspin,config)
       imbaux = 0
       do k = 1, nspin
-        imbaux = imbaux + (-1)**k * (1 - 2 * config(k))
+        s = 1 - config(k)
+        imbaux = imbaux + (-1)**k * s
       enddo
       imbaux = imbaux * abs(state(l))**2
       imb = imb + imbaux
@@ -79,7 +81,7 @@ contains
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
     real (c_double) :: local_imbalance_Sz0
 
-    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0), s1, s2
     real (c_double) :: LI, LI_part
 
     call zero_mag_states(nspin, dim_Sz0, states)
@@ -89,7 +91,9 @@ contains
       call decode(i, nspin, config)
       LI_part = 0
       do k = 1, nspin/2
-        LI_part = LI_part + (config(2*k) - config(2*k-1))**2
+        s1 = 1 - config(2*k-1)
+        s2 = 1 - config(2*k)
+        LI_part = LI_part + (s2 - s1)**2
       enddo
       LI = LI + abs(psi_Sz0(l))**2 * LI_part / (nspin/2)
     enddo
@@ -103,7 +107,7 @@ contains
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
     real (c_double) :: sigmaz_corr_c_Sz0
 
-    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0), sp, sq
     real (c_double) :: corr, avgq, avgp
 
     avgq = 0
@@ -115,9 +119,11 @@ contains
       i = states(l)
       call decode(i,nspin,config)
 
-      corr = corr + abs(psi_Sz0(l))**2 * (1 - 2 * config(q)) * (1 - 2 * config(p))
-      avgq = avgq + abs(psi_Sz0(l))**2 * (1 - 2 * config(q))
-      avgp = avgp + abs(psi_Sz0(l))**2 * (1 - 2 * config(p))
+      sq = 1 - config(q)
+      sp = 1 - config(p)
+      corr = corr + abs(psi_Sz0(l))**2 * sq * sp
+      avgq = avgq + abs(psi_Sz0(l))**2 * sq
+      avgp = avgp + abs(psi_Sz0(l))**2 * sp
         
     enddo
 

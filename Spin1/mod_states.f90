@@ -174,7 +174,6 @@ contains
       config(2*k) = 2
       i = i + config(2*k-1) * dimSpin1**(2*k-2) + config(2*k) * dimSpin1**(2*k-1)
     enddo
-    print "(*(I0))", config(:)
     
     psi = 0
     psi(inverse(i+1)) = 1
