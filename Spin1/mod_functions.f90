@@ -25,6 +25,7 @@ module functions
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   integer (c_int), private, parameter :: dimSpin1 = 3
+  real (c_double), private, parameter :: tol = 1.0e-6
   !integer (c_int) :: i, j, s
   !real (c_double), parameter, private :: SigmaZ(3,3) = reshape((/ (( (2-i)*merge(1,0,i==j), j=1,3),i=1,3) /), shape(SigmaZ)) 
 
@@ -238,8 +239,9 @@ contains
     allocate(k_vec(dimSpin1))
 
     !In S_z = 0 configurations, N_up = N_down with the constraint N_up + N_down + N_zero = nspin
+    if( Sz < -nspin .OR. Sz > nspin ) stop "Error: The value of Sz is invalid."
     ntot = 0
-    do n_up = 0, nspin/2
+    do n_up = max(0,Sz), (nspin+Sz)/2
       k_vec(1) = n_up
       k_vec(2) = n_up - Sz
       k_vec(3) = nspin + Sz - 2*n_up
@@ -319,6 +321,7 @@ contains
     dim = dimSpin1**nspin
     k = 0
     states = 0
+    print "(2(A4,4X),A4)", "k", "i", "conf"
     do i = 0, dim-1
 
       call decode(i, nspin, config)
@@ -326,7 +329,7 @@ contains
       if (sum(1-config)==Sz) then
         k = k+1
         states(k) = i
-        !print "(2(I4,4X),*(I0))", i, k, config(:)
+        print "(2(I4,4X),*(I0))", k, i, config(:)
       endif
     enddo
 
@@ -381,11 +384,11 @@ contains
 !      enddo
 !      loc_imb = real(sum_odd - sum_even, c_double) / real(nspin - sum_odd - sum_even, c_double)
 !      !print *, loc_imb
-!      if(abs(IMB) < 1.0e-10 .AND. sum_odd == sum_even) then
+!      if(abs(IMB) < tol .AND. sum_odd == sum_even) then
 !        l = l+1
 !        states(l) = i
 !        print "(2(8X,I0),4X,*(I0))", i, l, config(:)
-!      else if(abs(IMB) > 1.0e-10 .AND. abs(loc_imb - IMB) < 1.0e-10) then
+!      else if(abs(IMB) > tol .AND. abs(loc_imb - IMB) < tol) then
 !        l = l+1
 !        states(l) = i
 !        print "(2(8X,I0),4X,*(I0))", i, l, config(:)
@@ -454,11 +457,11 @@ contains
 !      enddo
 !      loc_imb = real(sum_odd - sum_even, c_double) / real(nspin - sum_odd - sum_even, c_double)
 !      !print *, loc_imb
-!      if(abs(IMB) < 1.0e-10 .AND. sum_odd == sum_even) then
+!      if(abs(IMB) < tol .AND. sum_odd == sum_even) then
 !        m = m+1
 !        states(m) = l
 !        print "(2(8X,I0),4X,*(I0))", l, m, config(:)
-!      else if(abs(IMB) > 1.0e-10 .AND. abs(loc_imb - IMB) < 1.0e-10) then
+!      else if(abs(IMB) > tol .AND. abs(loc_imb - IMB) < tol) then
 !        m = m+1
 !        states(m) = l
 !        print "(2(8X,I0),4X,*(I0))", l, m, config(:)
@@ -471,31 +474,94 @@ contains
 !
 !
 !
-!  subroutine buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
-!    !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
-!    !simply by constructing a vector which has zero components outside the Sz=0 subspace
-!
-!    integer (c_int), intent(in) :: nspin, dim, dim_Sz0
-!    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
-!    complex (c_double_complex), intent(out) :: psi(dim)
-!
-!    integer :: i, l, states(dim_Sz0)
-!
-!    call zero_mag_states(nspin, dim_Sz0, states)
-!
-!    psi = 0
-!    !print *, "psi initialized"
-!    do i = 1, dim_Sz0
-!      l = states(i) + 1
-!      psi(l) = psi_Sz0(i)
-!      !print *,l, psi(l)
-!      !print *, l, dim, i, dim_Sz0
-!    enddo
-!
-!  end subroutine buildState_Sz0_to_FullHS
-!
-!
-!
+  subroutine buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
+    !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
+    !simply by constructing a vector which has zero components outside the Sz=0 subspace
+
+    integer (c_int), intent(in) :: nspin, dim, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    complex (c_double_complex), intent(out) :: psi(dim)
+
+    integer :: i, l, states(dim_Sz0)
+
+    call zero_mag_states(nspin, dim_Sz0, states)
+
+    psi = 0
+    !print *, "psi initialized"
+    do i = 1, dim_Sz0
+      l = states(i) + 1
+      psi(l) = psi_Sz0(i)
+      !print *,l, psi(l)
+      !print *, l, dim, i, dim_Sz0
+    enddo
+
+  end subroutine buildState_Sz0_to_FullHS
+
+  subroutine buildState_Sz_to_FullHS(nspin, dim, dim_Sz, Sz, psi_Sz, psi)
+    !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
+    !simply by constructing a vector which has zero components outside the Sz=0 subspace
+
+    integer (c_int), intent(in) :: nspin, dim, dim_Sz, Sz
+    complex (c_double_complex), intent(in) :: psi_Sz(dim_Sz)
+    complex (c_double_complex), intent(out) :: psi(dim)
+
+    integer :: i, l, states(dim_Sz)
+
+    call basis_Sz(nspin, dim_Sz, Sz, states)
+
+    psi = 0
+    !print *, "psi initialized"
+    do l = 1, dim_Sz
+      i = states(l) + 1
+      psi(i) = psi_Sz(l)
+      !print *,l, psi(l)
+      !print *, l, dim, i, dim_Sz0
+    enddo
+
+  end subroutine buildState_Sz_to_FullHS
+
+  subroutine projectState_FullHS_to_Sz(nspin, dim, psi, Sz, psi_Sz)
+    !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
+    !simply by constructing a vector which has zero components outside the Sz=0 subspace
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: psi(dim)
+    complex (c_double_complex), allocatable, intent(out) :: psi_Sz(:)
+    integer (c_int), intent(out) :: Sz
+
+    integer :: i, l, dim_Sz, mag_psi, sigmaz(nspin), config(nspin)
+    integer, allocatable :: states(:)
+
+
+    mag_psi = 0
+    do i = 1, dim
+      call decode(i-1, nspin, config)
+      sigmaz = 1 - config
+      mag_psi = mag_psi + abs(psi(i))**2 * sum(sigmaz)
+    enddo
+    print *, "Magnetization of State:", mag_psi
+
+    Sz = int(mag_psi)
+    dim_Sz = dimSpin1_Sz(nspin, Sz)
+
+    allocate(psi_Sz(dim_Sz), states(dim_Sz))
+
+    psi_Sz = 0
+    call basis_Sz(nspin, dim_Sz, Sz, states)
+    !print *, "psi initialized"
+    do l = 1, dim_Sz
+      i = states(l) + 1
+      psi_Sz(l) = psi_Sz(i)
+      !print *,l, psi(l)
+      !print *, l, dim, i, dim_Sz0
+    enddo
+
+    if(abs( dot_product(psi_Sz,psi_Sz) - dot_product(psi,psi) ) > tol) & 
+      & stop "Error: The state does not have a definite value of Sz"
+
+  end subroutine
+
+
   integer (c_int) function binsearch(val, array)
   
   

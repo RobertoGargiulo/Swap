@@ -16,6 +16,7 @@ module states
   implicit none
 
   integer (c_int), private, parameter :: dimSpin1 = 3
+  real (c_double), private, parameter :: tol = 1.0e-6
 
 contains
 
@@ -329,7 +330,7 @@ contains
 
     integer :: i, config(nspin)
     do i = 1, dim
-      if (abs(state(i))**2 > 1.0e-6) then
+      if (abs(state(i))**2 > tol) then
         call decode(i, nspin, config)
         print "( 4X,F8.4, 4X,I6, 4X,*(I0) )", abs(state(i))**2, i, config(:)
       endif
@@ -349,7 +350,7 @@ contains
     print *, state_name
     call zero_mag_states(nspin, dim_Sz0, idxSz0)
     do l = 1, dim_Sz0
-      if (abs(state(l))**2 > 1.0e-6) then
+      if (abs(state(l))**2 > tol) then
         i = idxSz0(l)
         call decode(i, nspin, config)
         print "( 4X,F8.4, 2(4X,I6), 4X,*(I0) )", abs(state(l))**2, l, i, config(:)

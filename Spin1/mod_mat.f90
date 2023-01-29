@@ -17,6 +17,7 @@ module matrices
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   integer (c_int), private, parameter :: dimSpin1 = 3
+  real (c_double), private, parameter :: tol = 1.0e-6
   !integer (c_int) :: i, j, s
   !real (c_double), parameter, private :: SigmaZ(3,3) = reshape((/ (( (2-i)*merge(1,0,i==j), j=1,3),i=1,3) /), shape(SigmaZ)) 
 
@@ -879,7 +880,7 @@ contains
       i = idxSz0(l)
       call decode(i,nspin,config)
 
-      if(abs(H(l,l)) > 1.0e-6) then
+      if(abs(H(l,l)) > tol) then
         print "(4X,1(F6.2,X),2(I3,3X),*(I0))", H(l,l), l, i, config(:)
       endif
 
@@ -887,7 +888,7 @@ contains
 
         if(r==l) then 
           cycle
-        else if (abs(H(r,l)) > 1.0e-6) then
+        else if (abs(H(r,l)) > tol) then
           j = idxSz0(r)
           call decode(j,nspin, config2)
           print "(4X,1(F6.2,X),2(I3,3X),*(I0))", H(r,l), l, i, config(:)
@@ -918,7 +919,7 @@ contains
       i = idxSz0(l)
       call decode(i,nspin,config)
 
-      if(abs(U(l,l)) > 1.0e-6) then
+      if(abs(U(l,l)) > tol) then
         print "(4X,1((f8.2f8.2x'i'),X),2(I3,3X),*(I0))", U(l,l), l, i, config(:)
       endif
 
@@ -926,7 +927,7 @@ contains
 
         if(r==l) then 
           cycle
-        else if (abs(U(r,l)) > 1.0e-6) then
+        else if (abs(U(r,l)) > tol) then
           j = idxSz0(r)
           call decode(j,nspin, config2)
           print "(4X,1(f8.2f8.2x'i',X),2(I3,3X),*(I0))", U(r,l), l, i, config(:)

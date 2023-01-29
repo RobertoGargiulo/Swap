@@ -45,17 +45,15 @@ prova: $(MOD) prova.o
 prova2: $(MOD) prova2.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
-dense_Sz0: $(MOD) dense_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-sparse_Sz0: $(MOD) sparse_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-spectrum_Sz0: $(MOD) spectrum_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
 test_Swap_Sz0: $(MOD) test_Swap_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+dynamics_MBL: $(MOD) dynamics_MBL.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+test_Sz: $(MOD) test_Sz.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 
 
 all: prova swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
