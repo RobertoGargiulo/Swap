@@ -147,7 +147,7 @@ contains
 
   integer function multinom(n,k_vec)
     integer (c_int), intent(in) :: n
-    integer (c_int), intent(in), allocatable :: k_vec(:)
+    integer (c_int), allocatable, intent(in) :: k_vec(:)
     
 
     integer, parameter :: i8 = selected_int_kind(18)
@@ -156,9 +156,9 @@ contains
 
     !print *, "k_vec = ", k_vec(:), "n = ", n
     !print *, "sum = ", sum(k_vec)
-    if(sum(k_vec) /= n .OR. any(k_vec<0)) stop "Error in multinom(n,k_vec): sum(k_vec) != n"
+    if(sum(k_vec) /= n .OR. any(k_vec<0) ) stop "Error in multinom(n,k_vec): sum(k_vec) != n"
 
-    multinom = nint(exp( log_gamma(n+1.0_dp)-sum(log_gamma(k_vec(:)+1.0_dp)) ),kind=i8)
+    multinom = nint(exp( log_gamma(n+1.0_dp)-sum(log_gamma(k_vec+1.0_dp)) ),kind=i8)
 
   end function
 
@@ -529,20 +529,37 @@ contains
     complex (c_double_complex), allocatable, intent(out) :: psi_Sz(:)
     integer (c_int), intent(out) :: Sz
 
-    integer :: i, l, dim_Sz, mag_psi, sigmaz(nspin), config(nspin)
+    integer :: i, l, dim_Sz, sigmaz(nspin), config(nspin)
+    real :: mag_psi, mag_s
     integer, allocatable :: states(:)
+    logical :: flag
 
 
+    !--------- Check Sz ----------!
     mag_psi = 0
     do i = 1, dim
       call decode(i-1, nspin, config)
-      sigmaz = 1 - config
-      mag_psi = mag_psi + abs(psi(i))**2 * sum(sigmaz)
+      mag_s = sum(1-config)
+      mag_psi = mag_psi + abs(psi(i))**2 * mag_s
     enddo
     print *, "Magnetization of State:", mag_psi
 
+
+    flag = .True.
+    do i = 1, dim
+      call decode(i-1, nspin, config)
+      mag_s = sum(1-config)
+      if ( abs( (mag_s - mag_psi) * psi(i) ) > tol ) flag = .False.
+    enddo
+
+
     Sz = int(mag_psi)
     dim_Sz = dimSpin1_Sz(nspin, Sz)
+    if (flag) then
+      print *, "The State has a definite magnetization Sz = ", Sz
+    else
+      stop "The State is not an eigenstate of Sz"
+    endif
 
     allocate(psi_Sz(dim_Sz), states(dim_Sz))
 
@@ -557,7 +574,7 @@ contains
     enddo
 
     if(abs( dot_product(psi_Sz,psi_Sz) - dot_product(psi,psi) ) > tol) & 
-      & stop "Error: The state does not have a definite value of Sz"
+      & stop "Error with projection of state to Sz subspace"
 
   end subroutine
 

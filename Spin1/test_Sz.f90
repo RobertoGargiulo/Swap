@@ -8,6 +8,8 @@ program test_Sz
   integer (ip) :: nspin, dim_Sz, Sz, dim
   integer (ip), allocatable :: states(:)
 
+  complex (cp), allocatable :: psi(:), psi_Sz(:)
+
   write (*,*) "nspin = "
   read (*,*) nspin
   print *, ""
@@ -23,6 +25,12 @@ program test_Sz
     print *, ""
   enddo
   print *, "dim = ", dim, ", dimSpin1**nspin = ", dimSpin1**nspin
+
+  allocate(psi(dim))
+
+
+
+
 
 
 end program
