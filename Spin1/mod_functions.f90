@@ -321,7 +321,7 @@ contains
     dim = dimSpin1**nspin
     k = 0
     states = 0
-    print "(2(A4,4X),A4)", "k", "i", "conf"
+    !print "(2(A4,4X),A4)", "k", "i", "conf"
     do i = 0, dim-1
 
       call decode(i, nspin, config)
@@ -329,7 +329,7 @@ contains
       if (sum(1-config)==Sz) then
         k = k+1
         states(k) = i
-        print "(2(I4,4X),*(I0))", k, i, config(:)
+        !print "(2(I4,4X),*(I0))", k, i, config(:)
       endif
     enddo
 

@@ -180,6 +180,31 @@ contains
     psi(inverse(i+1)) = 1
 
   end subroutine buildNeelState_Sz0
+
+
+  subroutine buildNeelState(nspin, dim, psi)
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(out) :: psi(dim)
+    
+    integer :: config(nspin), i, k
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+
+    !Neel state is given by up, down, up, down, ...
+    ! which (config = 1 - s) corresponds to 0, 2, 0, 2, ...
+    i = 0
+    do k = 1, nspin/2
+      config(2*k-1) = 0
+      config(2*k) = 2
+      i = i + config(2*k-1) * dimSpin1**(2*k-2) + config(2*k) * dimSpin1**(2*k-1)
+    enddo
+    
+    psi = 0
+    psi(i+1) = 1
+
+  end subroutine buildNeelState
+
 !
 !  subroutine buildLI1ProdState_Sz0(nspin, dim_Sz0, alpha, beta, state)
 !
@@ -323,12 +348,15 @@ contains
 !
 !
 
-  subroutine printstate(nspin, dim, state)
+  subroutine printstate(nspin, dim, state, state_name)
 
     integer (c_int), intent(in) :: nspin, dim
     complex (c_double_complex), intent(in) :: state(dim)
+    character(len=*), intent(in) :: state_name
 
     integer :: i, config(nspin)
+
+    print *, state_name
     do i = 1, dim
       if (abs(state(i))**2 > tol) then
         call decode(i, nspin, config)
@@ -343,7 +371,7 @@ contains
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
     complex (c_double_complex), intent(in) :: state(dim_Sz0)
-    character(len=*) :: state_name
+    character(len=*), intent(in) :: state_name
 
     integer :: i, l, config(nspin), idxSz0(dim_Sz0)
 
@@ -359,5 +387,27 @@ contains
     print *, ""
 
   end subroutine
+
+  subroutine printstate_Sz(nspin, dim_Sz, Sz, state, state_name)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    complex (c_double_complex), intent(in) :: state(dim_Sz)
+    character(len=*), intent(in) :: state_name
+
+    integer :: i, l, config(nspin), idxSz(dim_Sz)
+
+    print *, state_name
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+    do l = 1, dim_Sz
+      if (abs(state(l))**2 > tol) then
+        i = idxSz(l)
+        call decode(i, nspin, config)
+        print "( 4X,F8.4, 2(4X,I6), 4X,*(I0) )", abs(state(l))**2, l, i, config(:)
+      endif
+    enddo
+    print *, ""
+
+  end subroutine
+
 
 end module states

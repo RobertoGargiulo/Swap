@@ -33,6 +33,7 @@ program prova
   integer(c_int) :: count_beginning, count_end, count_rate
 
   character(len=200) :: filestring_Neel, filestring_imb, filestring_sigmaz
+  character(len=:), allocatable :: columns
   integer (c_int) :: unit_sigmaz
 
   logical :: SELECT
@@ -81,22 +82,17 @@ program prova
 
   !------------------- File names ------------------------!
 
-  write(filestring_Neel,93) "data/dynamics/sigmaz_MBL_Neel_nspin", &
+  write(filestring_Neel,93) "data/dynamics/sigmaz_Swap_vs_MBL_Neel_nspin", &
     & nspin, "_steps", steps, "_period", T0, "_n_disorder", n_disorder, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
-    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), ".txt"
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), &
+    & "_kick", kick, ".txt"
 
-  93  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A)
+  93  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
 
-  !open(newunit=unit_sigmaz,file=filestring_Neel)
+  open(newunit=unit_sigmaz,file=filestring_Neel)
 
-  !write (unit_sigmaz,*) "Some info: "
-  !write (unit_sigmaz,*) "Dynamics of average of magnetization at integer multiples of the period."
-  !write (unit_sigmaz,*) "Spin-1 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
-  !write (unit_sigmaz,*) "Periodic perturbed swap, U_swap = exp(-i(pi/2 + kick) * sum (sigma*sigma)^2 - (sigma*sigma)."
-  !write (unit_sigmaz,*) "V is taken in [-3V/2, V/2];  hz is taken in [-hz, hz];  J is uniform."
-  !write (unit_sigmaz,*) "Exact diagonalization of the dense matrix has been used to compute U(t)."
-
+  call write_info(unit_sigmaz, "Neel")
 
 
   !-------- Swap Operator --------------------!
@@ -140,7 +136,7 @@ program prova
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
   !$OMP do reduction(+: sigmaz_avg, sigmaz_sq) private(i, hz, Vz, norm, j, &
-  !$OMP & state, H, E, W_r, U )
+  !$OMP & psi_mbl, psi_swap, H, E, W_r, U, UMBL )
   do i = 1, n_disorder
 
     if (n_disorder < 10) then
@@ -177,7 +173,7 @@ program prova
     sigmaz_sq(j,:,1) = sigmaz_sq(j,:,1) + sigmaz_Sz0(nspin, dim_Sz0, psi_mbl) ** 2
     sigmaz_avg(j,:,2) = sigmaz_avg(j,:,2) + sigmaz_Sz0(nspin, dim_Sz0, psi_swap)
     sigmaz_sq(j,:,2) = sigmaz_sq(j,:,2) + sigmaz_Sz0(nspin, dim_Sz0, psi_swap) ** 2
-    !print *, sigmaz_Sz0(nspin, dim_Sz0, state), j, i
+    !print *, i, j, sigmaz_avg(j,:,:)
     do j = 2, steps
 
       if(mod(j,10)==0) then
@@ -192,7 +188,7 @@ program prova
       sigmaz_sq(j,:,1) = sigmaz_sq(j,:,1) + sigmaz_Sz0(nspin, dim_Sz0, psi_mbl) ** 2
       sigmaz_avg(j,:,2) = sigmaz_avg(j,:,2) + sigmaz_Sz0(nspin, dim_Sz0, psi_swap)
       sigmaz_sq(j,:,2) = sigmaz_sq(j,:,2) + sigmaz_Sz0(nspin, dim_Sz0, psi_swap) ** 2
-      !print *, sigmaz_avg(j,:,:), j, i
+      !print *, i, j, sigmaz_avg(j,:,:)
 
     enddo
 
@@ -202,13 +198,18 @@ program prova
 
   sigmaz_avg = sigmaz_avg / n_disorder
   sigmaz_sq = sqrt( (sigmaz_sq/n_disorder - sigmaz_avg**2) / n_disorder )
+  !write (unit_sigmaz,"(*(A))") 
+  !write(string,"(A26)") "sigma_k^z"
+  !write(unit_ent, "(A12,A,*(A24,2X))") "Iteration" , repeat(trim(string),nspin), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
+  !columns = column_titles(nspin)
+  !print *, columns
   do j = 1, steps
-    write (*,*) j*T0, sigmaz_avg(j,:,:), sigmaz_sq(j,:,:)
-    !write (unit_sigmaz,*) j*T0, sigmaz_avg(j,:,:), sigmaz_sq(j,:,:)
+    !write (*,*) j*T0, sigmaz_avg(j,:,1), sigmaz_sq(j,:,1)
+    write (unit_sigmaz,*) j*T0, sigmaz_avg(j,:,:), sigmaz_sq(j,:,:)
   enddo
 
 
-  !close(unit_sigmaz)
+  close(unit_sigmaz)
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 
@@ -224,3 +225,46 @@ logical function SELECT(z)
   RETURN
 
 end
+
+function column_titles(nspin) result(columns)
+
+  use iso_c_binding
+  implicit none
+
+  integer (c_int), intent(in) :: nspin
+  character (26*(4*nspin+3)):: columns
+  character (nspin) :: s_index
+  integer (c_int) :: i, j1, j2, j3, j4
+
+
+  columns = ""
+  do i = 1, nspin
+    write(s_index, "(I0)") i
+    j1 = 26*(i-1)+2
+    j2 = 26*i+2
+    j3 = 26*(i+nspin-1)+3
+    j4 = 26*(i+nspin)+3
+    print *, j1, j2, j3, j4
+    columns(j1:j2) = trim("sigma_z^")//trim(s_index)
+    columns(j3:j4) = trim("Var(sigma_z^")//trim(s_index)//trim(")")
+    !print *, string
+  enddo
+  write(columns,"(3X,A4,20X,A)") "j*T0", trim(columns)
+
+end function
+
+
+subroutine write_info(unit_file, state_name)
+
+  integer, intent(in) :: unit_file
+  character(len=*) :: state_name
+
+  write (unit_file,*) "Some info: "
+  write (unit_file,*) "Dynamics of average of magnetization at integer multiples of the period."
+  write (unit_file,*) "Spin-1 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
+  write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/2 + kick) * sum (sigma*sigma)^2 - (sigma*sigma)."
+  write (unit_file,*) "V is taken in [-3V/2, V/2];  hz is taken in [-hz, hz];  J is uniform."
+  write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U(t)."
+  write (unit_file,*) "Initial state is "//trim(state_name)//trim(".")
+
+end subroutine
