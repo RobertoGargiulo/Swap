@@ -17,11 +17,11 @@ do
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
   for kick in 0.00
   do
-    for J in $(seq 0.20 0.20 1.00; seq 1.20 0.40 2.00)
+    for J in 0.50 #0.00 0.10 0.20 1.00
     do
-      for V in $(seq 0.00 0.30 3.00) 
+      for V in 3.00 
       do
-        for hz in $(seq 0.00 2.00 10.00)
+        for hz in 0.00 1.00 2.00 10.00 #5.00
         do
           for steps in 10000
           do
@@ -36,7 +36,7 @@ $V
 $hz
 $kick
 *
-            file_out="out_MBL_grid_J_V_hz.txt"
+            file_out="out_MBL_4.txt"
   	        ./$filestring < input.txt | tee $file_out
             echo "nspin = $nspin"
             echo "J = $J  V = $V  hz = $hz  epsilon = $kick"

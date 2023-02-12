@@ -239,7 +239,10 @@ contains
     allocate(k_vec(dimSpin1))
 
     !In S_z = 0 configurations, N_up = N_down with the constraint N_up + N_down + N_zero = nspin
-    if( Sz < -nspin .OR. Sz > nspin ) stop "Error: The value of Sz is invalid."
+    if( Sz < -nspin .OR. Sz > nspin ) then
+      print *, "Error: The value of Sz is invalid. Sz = ", Sz
+      stop
+    endif
     ntot = 0
     do n_up = max(0,Sz), (nspin+Sz)/2
       k_vec(1) = n_up
@@ -568,7 +571,7 @@ contains
     !print *, "psi initialized"
     do l = 1, dim_Sz
       i = states(l) + 1
-      psi_Sz(l) = psi_Sz(i)
+      psi_Sz(l) = psi(i)
       !print *,l, psi(l)
       !print *, l, dim, i, dim_Sz0
     enddo

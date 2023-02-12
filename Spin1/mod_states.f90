@@ -189,7 +189,8 @@ contains
     
     integer :: config(nspin), i, k
 
-    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even."
+    if (dim /= dimSpin1 ** nspin ) stop "Error: Wrong dimension."
 
     !Neel state is given by up, down, up, down, ...
     ! which (config = 1 - s) corresponds to 0, 2, 0, 2, ...
@@ -204,6 +205,30 @@ contains
     psi(i+1) = 1
 
   end subroutine buildNeelState
+
+  subroutine buildUpZeroState(nspin, dim, psi)
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(out) :: psi(dim)
+    
+    integer :: config(nspin), i, k
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even."
+    if (dim /= dimSpin1 ** nspin ) stop "Error: Wrong dimension."
+
+    !Neel state is given by up, zero up, zero, ...
+    ! which (config = 1 - s) corresponds to 0, 1, 0, 1, ...
+    i = 0
+    do k = 1, nspin/2
+      config(2*k-1) = 0
+      config(2*k) = 1
+      i = i + config(2*k-1) * dimSpin1**(2*k-2) + config(2*k) * dimSpin1**(2*k-1)
+    enddo
+    
+    psi = 0
+    psi(i+1) = 1
+
+  end subroutine
 
 !
 !  subroutine buildLI1ProdState_Sz0(nspin, dim_Sz0, alpha, beta, state)
@@ -357,10 +382,10 @@ contains
     integer :: i, config(nspin)
 
     print *, state_name
-    do i = 1, dim
-      if (abs(state(i))**2 > tol) then
+    do i = 0, dim-1
+      if (abs(state(i+1))**2 > tol) then
         call decode(i, nspin, config)
-        print "( 4X,F8.4, 4X,I6, 4X,*(I0) )", abs(state(i))**2, i, config(:)
+        print "( 4X,F8.4, 4X,I6, 4X,*(I0) )", abs(state(i+1))**2, i, config(:)
       endif
     enddo
     print *, ""
