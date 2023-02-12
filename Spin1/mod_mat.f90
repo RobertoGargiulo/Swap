@@ -2,6 +2,7 @@
 !Spefically, it contains the procedures for spin hamiltonains used in time evolution:
 ! in the Full Hilbert space, Sz=0 subspace, generic Sz subspace
 ! both dense and sparse versions
+! Also some printing subroutines of hamiltonian and unitary matrices
 
 
 module matrices
@@ -864,6 +865,94 @@ contains
 
   end subroutine buildSz0_HSwap
 
+  subroutine buildSz_HSwap(nspin, dim_Sz, Sz, H)
+
+    !dim_Sz0 is the dimensione of the Sz=0 subsapce
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(out) :: H(dim_Sz,dim_Sz)
+
+    integer :: config(nspin), idxSz(dim_Sz), config2(nspin), inverse(dimSpin1**nspin)
+    integer (c_int) :: i, j, k, m, n, l, r
+    integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2, idxs1, idxs2
+    real (c_double) :: OPR1(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+    real (c_double) :: OPR2(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+    real (c_double) :: OPR(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+
+    OPR1 = 0
+    do idx1 = 1, dimSpin1
+      do idx2 = 1, dimSpin1
+        do idxp1 = 1, dimSpin1
+          do idxp2 = 1, dimSpin1
+            s1 = 2 - idx1
+            s2 = 2 - idx2
+            OPR1(idxp1, idxp2, idx1, idx2) = s1 * KDelta(idxp1, idx1) * s2 * KDelta(idxp2,idx2) + &
+              & ( KDelta(idxp1, idx1+1) * KDelta(idxp2,idx2-1) + &
+              &  KDelta(idxp1, idx1-1) * KDelta(idxp2, idx2+1) )
+          enddo
+        enddo
+      enddo
+    enddo
+
+    OPR2 = 0
+    do idx1 = 1, dimSpin1
+      do idx2 = 1, dimSpin1
+        do idxp1 = 1, dimSpin1
+          do idxp2 = 1, dimSpin1
+
+            do idxs1 = 1, dimSpin1
+              do idxs2 = 1, dimSpin1
+                OPR2(idxp1, idxp2, idx1, idx2) = OPR2(idxp1, idxp2, idx1, idx2) + &
+                  & OPR1(idxp1, idxp2, idxs1, idxs2) * OPR1(idxs1, idxs2, idx1, idx2)
+              enddo
+            enddo
+            OPR(idxp1, idxp2, idx1, idx2) = OPR2(idxp1, idxp2, idx1, idx2) + OPR1(idxp1, idxp2, idx1, idx2) !- &
+             !& KDelta(idxp1,idx1) * KDelta(idxp2,idx2)
+
+
+          enddo
+        enddo
+      enddo
+    enddo
+    
+    H = 0
+    call basis_Sz_inv(nspin, dim_Sz, Sz, idxSz, inverse)
+    !print "(4X,1(A6,X),3(A3,3X),A4)", "H(r,l)", "k", "i", "r/l", "conf"
+    do l = 1, dim_Sz
+
+      i = idxSz(l)
+      call decode(i,nspin,config)
+
+      do k = 1, nspin/2
+
+        s1 = 1 - config(2*k-1)
+        s2 = 1 - config(2*k)
+        do idxp1 = 0, dimSpin1-1
+          do idxp2 = 0, dimSpin1-1
+
+            idx1 = config(2*k-1)
+            idx2 = config(2*k)
+            if( (idxp1 + idxp2 == idx1 + idx2) ) then !Conserves magnetization
+              j = i + (idxp1 - idx1) * dimSpin1**(2*k-2) + (idxp2 - idx2) * dimSpin1**(2*k-1)
+              r = inverse(j+1) 
+              H(r,l) = H(r,l) + OPR(idxp1+1, idxp2+1, idx1+1, idx2+1)
+              call decode(j,nspin, config2)
+              !print "(4X,1(F6.2,X),3(I3,3X),*(I0))", H(r,l), k, i, l, config(:)
+              !print "(4X,1(A6,X),3(I3,3X),*(I0))", "", k, j, r, config2(:)
+            endif
+
+          enddo
+        enddo
+      enddo
+    enddo
+
+  end subroutine
+
+
+
+
+
+  !------------ Some printing subroutines -------------!
 
   subroutine print_hamiltonian_Sz0(nspin, dim_Sz0, H)
 
@@ -941,5 +1030,84 @@ contains
 
 
   end subroutine
+
+  subroutine print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double_complex), intent(in) :: H(dim_Sz, dim_Sz)
+
+    integer :: i, j, r, l, config(nspin), config2(nspin)
+    integer :: idxSz(dim_Sz)
+
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+
+    print "(4X,1(A6,X),2(A3,3X),A4)", "H(r,l)", "i", "r/l", "conf"
+    do l = 1, dim_Sz
+      i = idxSz(l)
+      call decode(i,nspin,config)
+
+      if(abs(H(l,l)) > tol) then
+        print "(4X,1(F6.2,X),2(I3,3X),*(I0))", H(l,l), l, i, config(:)
+      endif
+
+      do r = 1, dim_Sz
+
+        if(r==l) then 
+          cycle
+        else if (abs(H(r,l)) > tol) then
+          j = idxSz(r)
+          call decode(j,nspin, config2)
+          print "(4X,1(F6.2,X),2(I3,3X),*(I0))", H(r,l), l, i, config(:)
+          print "(4X,1(A6,X),2(I3,3X),*(I0))", "", r, j, config2(:)
+        endif
+
+      enddo
+
+    enddo
+    print *, ""
+
+
+  end subroutine
+
+  subroutine print_unitary_Sz(nspin, dim_Sz, Sz, U)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    complex (c_double_complex), intent(in) :: U(dim_Sz, dim_Sz)
+
+    integer :: i, j, r, l, config(nspin), config2(nspin)
+    integer :: idxSz(dim_Sz)
+
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+
+    print "(4X,1(A18,X),2(A3,3X),A4)", "U(r,l)", "i", "r/l", "conf"
+    do l = 1, dim_Sz
+      i = idxSz(l)
+      call decode(i,nspin,config)
+
+      if(abs(U(l,l)) > tol) then
+        print "(4X,1((f8.2f8.2x'i'),X),2(I3,3X),*(I0))", U(l,l), l, i, config(:)
+      endif
+
+      do r = 1, dim_Sz
+
+        if(r==l) then 
+          cycle
+        else if (abs(U(r,l)) > tol) then
+          j = idxSz(r)
+          call decode(j,nspin, config2)
+          print "(4X,1(f8.2f8.2x'i',X),2(I3,3X),*(I0))", U(r,l), l, i, config(:)
+          print "(4X,1(A18,X),2(I3,3X),*(I0))", "", r, j, config2(:)
+        endif
+
+      enddo
+
+    enddo
+    print *, ""
+
+
+  end subroutine
+
+
+
 
 end module matrices
