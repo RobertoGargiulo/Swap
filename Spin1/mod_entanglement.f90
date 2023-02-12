@@ -1,4 +1,11 @@
-module MBL_subrtns
+!Module for computing entanglement properties, including:
+! reduced density matrices for some bipartion of the spin chain
+! von Neumann entanglement entropy
+! mutual information between two edges (both of length nspin_A)
+! avg block entanglement entropy (over the 'odd' blocks)
+! comb entropy (between 'even' and 'odd' spins)
+
+module entanglement
 
   use iso_c_binding
   use genmat
@@ -9,83 +16,6 @@ module MBL_subrtns
   real (c_double), parameter, private :: pi = 4.d0 * datan(1.d0)
 
 contains
-
-  subroutine gap_ratio_R(dim, energies, r_avg, r_sq)
-
-    integer, intent(in) :: dim
-    real (c_double), intent(in) :: energies(dim)
-
-    integer :: n
-    real (c_double) :: r_avg, r_sq, gap1, gap2
-
-    r_avg = 0
-    r_sq = 0
-    do n = 1, dim - 2
-
-      gap1 = energies(n+1) - energies(n)
-      gap2 = energies(n+2) - energies(n+1)
-
-      r_avg = r_avg + min(gap1,gap2)/max(gap1,gap2)
-      r_sq = r_sq + (min(gap1,gap2)/max(gap1,gap2))**2
-
-    enddo
-
-    r_avg = r_avg / (dim-2)
-    r_sq = r_sq / (dim-2)
-
-  end subroutine gap_ratio_R
-
-  !real function avg_gap_ratio_C(nspin, quasi_energies)
-
-    !
-
-  !end function avg_gap_ratio_C
-
-  subroutine log_gap_difference(dim, energies, log_pair_avg, log_near_avg, log_avg, log_sq)
-
-    !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
-    !and paired eigenvalues (separated by half the spectrum)
-    ! log_near_avg = < log( E_{n+1} - E_n ) >
-    ! log_pair_avg = < log( E_{n+dim/2} - E_n ) >
-    ! log_avg = log_pair_avg - log_near_avg
-    ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
-
-
-    integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: energies(dim)
-    real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
-    real (c_double) :: pair(dim), near(dim)
-
-    integer (c_int) :: i, j
-
-    do i = 1, dim 
-      
-      if (i<=dim-1) then
-        j = i + 1
-        near(i) = energies(j) - energies(i)
-      else if (i>dim-1) then
-        j = i + 1 -dim
-        near(i) = energies(j) + 2*pi - energies(i)
-      endif
-  
-      if (i<=dim/2) then
-        j = i + dim/2
-        pair(i) = abs( energies(j) - energies(i) - pi )
-      else if (i>dim/2) then
-        j = i - dim/2
-        pair(i) = abs( energies(j) + 2*pi - energies(i) - pi  )
-      endif
-
-    enddo
-
-    log_pair_avg = sum(log(pair)) / dim
-    log_near_avg = sum(log(near)) / dim
-    log_avg = log_pair_avg - log_near_avg
-    log_sq = sum((log(pair) - log(near))**2) / dim
-
-  end subroutine log_gap_difference
-
-
 
   subroutine left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
 
@@ -265,15 +195,15 @@ contains
 
 
 
-  function entanglement(dim, rho)
+  function vN_entropy(dim, rho)
 
-    !Computes the Entanglement (von Neumann) Entropy for a given density matrix rho of dimension dim, using Exact Diagonalization
-    ! EE = S(rho) = -Tr(rho * ln(rho))
-    ! For a reduced density matrix S_A = -Tr_A(rho_A ln(rho_A))
+    !Computes the von Neumann Entropy for a given density matrix rho of dimension dim, 
+    !     using Exact Diagonalization of a hermitian matrix
+    ! EE = S(rho) = -Tr(rho * ln(rho)) = -sum_i p_i ln(p_i)
 
     integer, intent(in) :: dim
     complex (c_double_complex), intent(in) :: rho(dim,dim)
-    real (c_double) :: entanglement
+    real (c_double) :: vN_entropy
 
     real (c_double) :: EE, prob(dim)
     complex (c_double_complex), allocatable :: W(:,:)
@@ -291,9 +221,9 @@ contains
       endif
     enddo
   
-    entanglement = EE
+    vN_entropy = EE
 
-  end function entanglement
+  end function vN_entropy
 
 
   function mutual_information(nspin, nspin_A, dim, dim_A, psi)
@@ -315,8 +245,8 @@ contains
     call right_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_B)
     call edges_reduced_DM(nspin, nspin_A, nspin_A, dim, dim_A, dim_A, psi, rho_AB)
 
-    MI = entanglement(dim_A,rho_A) + entanglement(dim_A,rho_B) - entanglement(dim_A*dim_A,rho_AB)
-    !print *, nspin_A, entanglement(dim_A,rho_A), entanglement(dim_A,rho_B), entanglement(dim_A*dim_A,rho_AB), MI
+    MI = vN_entropy(dim_A,rho_A) + vN_entropy(dim_A,rho_B) - vN_entropy(dim_A*dim_A,rho_AB)
+    !print *, nspin_A, vN_entropy(dim_A,rho_A), vN_entropy(dim_A,rho_B), vN_entropy(dim_A*dim_A,rho_AB), MI
     
     mutual_information = MI
 
@@ -354,10 +284,10 @@ contains
     !print *, "rho_AB = "
     !call printmat(dim_A*dim_A, rho_AB, 'C')
 
-    MI = entanglement(dim_A,rho_A) + entanglement(dim_A,rho_B) - entanglement(dim_A*dim_A,rho_AB)
+    MI = vN_entropy(dim_A,rho_A) + vN_entropy(dim_A,rho_B) - vN_entropy(dim_A*dim_A,rho_AB)
 
     !print *, "S_A         S_B          S_{AB}"
-    !print *, nspin_A, entanglement(dim_A,rho_A), entanglement(dim_A,rho_B), entanglement(dim_A*dim_A,rho_AB), MI
+    !print *, nspin_A, vN_entropy(dim_A,rho_A), vN_entropy(dim_A,rho_B), vN_entropy(dim_A*dim_A,rho_AB), MI
     !print *, MI, imbalance_sq_Sz0(nspin, dim_Sz0, psi_Sz0), IPR(psi)
     
     mutual_information_Sz0 = MI
@@ -392,11 +322,11 @@ contains
       if (nspin_A <= nspin/2) then
         allocate(rho_A(dim_A,dim_A))
         call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
-        BEEvar = entanglement(dim_A,rho_A)
+        BEEvar = vN_entropy(dim_A,rho_A)
       else 
         allocate(rho_A(dim/dim_A,dim/dim_A))
         call right_reduced_DM(nspin, nspin-nspin_A, dim, dim/dim_A, psi, rho_A)
-        BEEvar = entanglement(dim/dim_A,rho_A)
+        BEEvar = vN_entropy(dim/dim_A,rho_A)
       endif
       BEE(nspin_A) = BEEvar
       if (BEEvar > pMBEE) MBEE = BEEvar
@@ -414,6 +344,8 @@ contains
   end function max_bipartite_entropy_Sz0
 
   function comb_entropy(nspin, dim, psi)
+    
+    !Computes the entanglement entropy over the 'odd' spins (equivalent to 'even' spins)
 
     integer (c_int), intent(in) :: nspin, dim
     complex (c_double_complex), intent(in) :: psi(dim)
@@ -427,10 +359,10 @@ contains
     allocate(rho_A(dim_A,dim_A))
 
     call odd_reduced_DM(nspin, dim, dim_A, psi, rho_A)
-    CE = entanglement(dim_A, rho_A)
+    CE = vN_entropy(dim_A, rho_A)
 
     !call even_reduced_DM(nspin, dim, dim_A, psi, rho_A)
-    !CE2 = entanglement(dim_A, rho_A)
+    !CE2 = vN_entropy(dim_A, rho_A)
 
     deallocate(rho_A)
 
@@ -456,10 +388,10 @@ contains
     allocate(rho_A(dim_A,dim_A))
 
     call odd_reduced_DM(nspin, dim, dim_A, psi, rho_A)
-    CE = entanglement(dim_A, rho_A)
+    CE = vN_entropy(dim_A, rho_A)
 
     !call even_reduced_DM(nspin, dim, dim_A, psi, rho_A)
-    !CE2 = entanglement(dim_A, rho_A)
+    !CE2 = vN_entropy(dim_A, rho_A)
 
     deallocate(rho_A)
 
@@ -471,10 +403,10 @@ contains
 
   function avg_block_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
 
-    !Computes the average block entropy over the possible bipartitions A,B
+    !Computes the average entanglement entropy over the possible 'odd' block bipartitions A,B
     !A has left edge coinciding the left edge of the chain, and its right edge can vary over odd sites
     !rho_A -> left_reduced_DM
-    !L_A = 1, 3, 5, ..., L-1
+    !L_A = 1, 3, 5, ..., L-1 (L even)
 
     integer, intent(in) :: nspin, dim, dim_Sz0
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
@@ -494,11 +426,11 @@ contains
       if (nspin_A <= nspin/2) then
         allocate(rho_A(dim_A,dim_A))
         call left_reduced_DM(nspin, nspin_A, dim, dim_A, psi, rho_A)
-        avgBE = avgBE + entanglement(dim_A,rho_A)
+        avgBE = avgBE + vN_entropy(dim_A,rho_A)
       else 
         allocate(rho_A(dim/dim_A,dim/dim_A))
         call right_reduced_DM(nspin, nspin-nspin_A, dim, dim/dim_A, psi, rho_A)
-        avgBE = avgBE + entanglement(dim/dim_A,rho_A)
+        avgBE = avgBE + vN_entropy(dim/dim_A,rho_A)
       endif
       deallocate(rho_A)
     enddo
@@ -508,72 +440,4 @@ contains
 
   end function
 
-
-  function IPR(psi)
-    complex (c_double_complex), intent(in) :: psi(:)
-    real (c_double) :: IPR
-    integer (c_int) :: dim, i
-
-    dim = size(psi)
-    !print *, dim
-    IPR = 0
-    do i = 1, dim
-      IPR = IPR + abs(psi(i))**4
-      !print*, IPR, abs(psi(i))
-    enddo
-
-  end function IPR
-
-  integer function int_2dto1d(int_2d)
-
-    implicit none
-    integer, intent(in) :: int_2d(2)
-    integer :: int_1d
-    
-
-    if (int_2d(1) < int_2d(2)) then
-      int_1d = int_2d(2)**2 + int_2d(1)
-    else if (int_2d(1) >= int_2d(2)) then
-      int_1d = int_2d(1)**2 + int_2d(1) + int_2d(2)
-    endif
-
-    int_2dto1d = int_1d
-
-  end function int_2dto1d
-
-
-  function int_1dto2d(int_1d)
-
-    implicit none
-    integer, intent(in) :: int_1d
-    integer :: int_2d(2)
-    integer :: int_1dto2d(2)
-
-    if (int_1d - floor(sqrt(real(int_1d)))**2 < floor(sqrt(real(int_1d))) ) then
-      int_2d(1) = int_1d - floor(sqrt(real(int_1d)))**2
-      int_2d(2) = floor(sqrt(real(int_1d)))
-    else
-      int_2d(1) = floor(sqrt(real(int_1d)))
-      int_2d(2) = int_1d - floor(sqrt(real(int_1d)))**2 - floor(sqrt(real(int_1d)))
-    endif
-
-    int_1dto2d = int_2d
-
-  end function int_1dto2d
-
-  
-end module MBL_subrtns
-
-
-module MBL
-
-  use MBL_subrtns
-
-  interface gap_ratio
-    module procedure gap_ratio_R!, level_statistic_C
-  end interface
-
-end module MBL
-
-
-
+end module

@@ -3,15 +3,14 @@
 !Specifically it includes all decoding/encoding procedures to go 
 !   from an integer to a basis (full Hilbert space, Sz=0 subspace, generic Sz subspace)
 
-!It also includes a simple binary search algorithm
-
 !Binomial and Multinomial function, which are used to compute Hilbert space dimensions
 
 !Some procedures which compute the imbalance, local imbalance of the spin basis
 
-!A procedure which generates the full Hilbert space vector corresponding to
+!A procedure which generates the full Hilbert-space state corresponding to
 !   the Sz=0 subspace and generic Sz subspace 
 
+!Other utilities: binary search algorithm, conversion from 1D grid to 2D grid
 
 module functions
   
@@ -615,6 +614,42 @@ contains
   
   end function binsearch
 
+  integer function int_2dto1d(int_2d)
+
+    implicit none
+    integer, intent(in) :: int_2d(2)
+    integer :: int_1d
+    
+
+    if (int_2d(1) < int_2d(2)) then
+      int_1d = int_2d(2)**2 + int_2d(1)
+    else if (int_2d(1) >= int_2d(2)) then
+      int_1d = int_2d(1)**2 + int_2d(1) + int_2d(2)
+    endif
+
+    int_2dto1d = int_1d
+
+  end function int_2dto1d
+
+
+  function int_1dto2d(int_1d)
+
+    implicit none
+    integer, intent(in) :: int_1d
+    integer :: int_2d(2)
+    integer :: int_1dto2d(2)
+
+    if (int_1d - floor(sqrt(real(int_1d)))**2 < floor(sqrt(real(int_1d))) ) then
+      int_2d(1) = int_1d - floor(sqrt(real(int_1d)))**2
+      int_2d(2) = floor(sqrt(real(int_1d)))
+    else
+      int_2d(1) = floor(sqrt(real(int_1d)))
+      int_2d(2) = int_1d - floor(sqrt(real(int_1d)))**2 - floor(sqrt(real(int_1d)))
+    endif
+
+    int_1dto2d = int_2d
+
+  end function int_1dto2d
 
 
 

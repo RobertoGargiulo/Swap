@@ -636,4 +636,98 @@ contains
   end subroutine time_avg
 
 
+  !------- Spectral Properties -------!
+
+  subroutine gap_ratio(dim, energies, r_avg, r_sq)
+
+    integer, intent(in) :: dim
+    real (c_double), intent(in) :: energies(dim)
+
+    integer :: n
+    real (c_double) :: r_avg, r_sq, gap1, gap2
+
+    r_avg = 0
+    r_sq = 0
+    do n = 1, dim - 2
+
+      gap1 = energies(n+1) - energies(n)
+      gap2 = energies(n+2) - energies(n+1)
+
+      r_avg = r_avg + min(gap1,gap2)/max(gap1,gap2)
+      r_sq = r_sq + (min(gap1,gap2)/max(gap1,gap2))**2
+
+    enddo
+
+    r_avg = r_avg / (dim-2)
+    r_sq = r_sq / (dim-2)
+
+  end subroutine gap_ratio
+
+  !real function avg_gap_ratio_C(nspin, quasi_energies)
+
+    !
+
+  !end function avg_gap_ratio_C
+
+  subroutine log_gap_difference(dim, energies, log_pair_avg, log_near_avg, log_avg, log_sq)
+
+    !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
+    !and paired eigenvalues (separated by half the spectrum)
+    ! log_near_avg = < log( E_{n+1} - E_n ) >
+    ! log_pair_avg = < log( E_{n+dim/2} - E_n ) >
+    ! log_avg = log_pair_avg - log_near_avg
+    ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
+
+
+    integer (c_int), intent(in) :: dim
+    real (c_double), intent(in) :: energies(dim)
+    real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
+    real (c_double) :: pair(dim), near(dim)
+
+    integer (c_int) :: i, j
+
+    do i = 1, dim 
+      
+      if (i<=dim-1) then
+        j = i + 1
+        near(i) = energies(j) - energies(i)
+      else if (i>dim-1) then
+        j = i + 1 -dim
+        near(i) = energies(j) + 2*pi - energies(i)
+      endif
+  
+      if (i<=dim/2) then
+        j = i + dim/2
+        pair(i) = abs( energies(j) - energies(i) - pi )
+      else if (i>dim/2) then
+        j = i - dim/2
+        pair(i) = abs( energies(j) + 2*pi - energies(i) - pi  )
+      endif
+
+    enddo
+
+    log_pair_avg = sum(log(pair)) / dim
+    log_near_avg = sum(log(near)) / dim
+    log_avg = log_pair_avg - log_near_avg
+    log_sq = sum((log(pair) - log(near))**2) / dim
+
+  end subroutine log_gap_difference
+
+
+  function IPR(psi)
+    complex (c_double_complex), intent(in) :: psi(:)
+    real (c_double) :: IPR
+    integer (c_int) :: dim, i
+
+    dim = size(psi)
+    !print *, dim
+    IPR = 0
+    do i = 1, dim
+      IPR = IPR + abs(psi(i))**4
+      !print*, IPR, abs(psi(i))
+    enddo
+
+  end function IPR
+
+
 end module

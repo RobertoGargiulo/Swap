@@ -60,6 +60,11 @@ dynamics_Swap_vs_MBL: $(MOD) dynamics_Swap_vs_MBL.o
 dynamics_Swap: $(MOD) dynamics_Swap.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+spectrum_Swap: $(MOD) spectrum_Swap.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+
+
 all: prova swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
 
 

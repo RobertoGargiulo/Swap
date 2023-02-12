@@ -1,9 +1,9 @@
 program prova
 
-  use functions, only : dimSpin1_Sz0, init_random_seed
-  use matrices, only: buildSz0_HSwap, buildSz0_HMBL &
+  use functions, only: dimSpin1_Sz0, init_random_seed
+  use matrices, only: buildSz0_HSwap, buildSz0_HMBL, &
     & print_hamiltonian_Sz0, print_unitary_Sz0
-  use observables, only: 
+  use observables, only: gap_ratio
   use printing
   use exponentiate, only: diagSYM, expSYM, diagUN
   implicit none
@@ -33,6 +33,13 @@ program prova
   logical :: SELECT
   EXTERNAL SELECT
 
+  !--------------- (Explicit) Interfaces ------------!
+  interface
+    function column_titles(nspin) result(columns)
+      integer, intent(in) :: nspin
+      character(26*(4*nspin+3)) :: columns
+    end function
+  end interface
 
   !------------ Input ----------------!
 
@@ -84,9 +91,8 @@ program prova
 
   93  format(A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
 
-  open(newunit=unit_qe,file=filestring_qe)
-
-  call write_info(unit_qe)
+  !open(newunit=unit_qe,file=filestring_qe)
+  !call write_info(unit_qe)
 
 
   !-------- Swap Operator --------------------!
@@ -106,6 +112,7 @@ program prova
   allocate(hz(nspin), Jxy(nspin-1), Vz(nspin-1))
   allocate(U(dim_Sz0,dim_Sz0), H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
   allocate(PH(dim_Sz0),W(dim_Sz0,dim_Sz0))
+  allocate(E_MBL(n_disorder,dim_Sz0), QE(n_disorder,dim_Sz0))
 
 
   !Time evolution over various realizations of disorder
@@ -113,7 +120,7 @@ program prova
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+: ) private(i, hz, Vz, norm, j, &
+  !$OMP do private(i, hz, Vz, &
   !$OMP & H, E, W_r, U, W, PH )
   do i = 1, n_disorder
 
@@ -140,15 +147,15 @@ program prova
     call expSYM( dim_Sz0, -C_UNIT*pi/2.d0, E, W_r, U )
     U = matmul(U,USwap)
 
-    E_MBL(iteration,:) = E
-    call gap_ratio(dim_Sz0, E, r_avg2(iteration), r_sq2(iteration))
+    E_MBL(i,:) = E
+    call gap_ratio(dim_Sz0, E, r_avg2(i), r_sq2(i))
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     E = real(C_UNIT*log(PH))
     call dpquicksort(E)
-    call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sq(iteration))
-    QE(iteration,:) = E
+    call gap_ratio(dim_Sz0, E, r_avg(i), r_sq(i))
+    QE(i,:) = E
 
     call diagUN( SELECT, dim_Sz0, U, PH, W)
 
@@ -160,12 +167,12 @@ program prova
   !write (unit_qe,"(*(A))") 
   !write(string,"(A26)") "sigma_k^z"
   !write(unit_ent, "(A12,A,*(A24,2X))") "Iteration" , repeat(trim(string),nspin), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
-  columns = column_titles(nspin)
-  print *, columns
 
-  do iteration = 1, n_iterations
-    do i = 1, dim_Sz0
-      write (unit_qe,*) iteration, QE(iteration,i), E_MBL(iteration,i)
+  print "(*(A26))", "Disorder Realization", "Quasienergy", "Energy MBL"
+  do i = 1, n_disorder
+    do l = 1, dim_Sz0
+      write (*,*) iteration, QE(i,l), E_MBL(i,l)
+      !write (unit_qe,*) iteration, QE(iteration,i), E_MBL(iteration,i)
     enddo
   enddo
 
@@ -177,7 +184,7 @@ program prova
   print *, "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
-  close(unit_qe)
+  !close(unit_qe)
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 
