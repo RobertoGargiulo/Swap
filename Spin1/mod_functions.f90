@@ -522,16 +522,16 @@ contains
 
   end subroutine buildState_Sz_to_FullHS
 
-  subroutine projectState_FullHS_to_Sz(nspin, dim, psi, Sz, psi_Sz)
+  subroutine projectState_FullHS_to_Sz(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
     !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
     !simply by constructing a vector which has zero components outside the Sz=0 subspace
 
     integer (c_int), intent(in) :: nspin, dim
     complex (c_double_complex), intent(in) :: psi(dim)
     complex (c_double_complex), allocatable, intent(out) :: psi_Sz(:)
-    integer (c_int), intent(out) :: Sz
+    integer (c_int), intent(out) :: dim_Sz, Sz
 
-    integer :: i, l, dim_Sz, sigmaz(nspin), config(nspin)
+    integer :: i, l, sigmaz(nspin), config(nspin)
     real :: mag_psi, mag_s
     integer, allocatable :: states(:)
     logical :: flag

@@ -1,4 +1,4 @@
-program prova
+program spectrum_Swap
 
   use functions, only: dimSpin1_Sz0, init_random_seed
   use matrices, only: buildSz0_HSwap, buildSz0_HMBL, &
@@ -6,6 +6,7 @@ program prova
   use observables, only: gap_ratio
   use printing
   use exponentiate, only: diagSYM, expSYM, diagUN
+  use sorts, only: dpquicksort
   implicit none
 
   complex (c_double_complex), parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
@@ -14,15 +15,18 @@ program prova
 
   integer (c_int) :: nspin, dim, dim_Sz0, Sz
   integer (c_int), allocatable :: config(:), idxSz0(:)
-  integer (c_int) :: i, j, k, n 
+  integer (c_int) :: i, j, k, n, l
 
   complex (c_double_complex) :: alpha(dimSpin1)
 
   integer (c_int) :: n_disorder
   real (c_double) :: hz_coupling, J_coupling, V_coupling, T0, T1, kick
   real (c_double), allocatable :: H(:,:), hz(:), Jxy(:), Vz(:)
-  real (c_double), allocatable :: E(:), W_r(:,:)
+  real (c_double), allocatable :: E(:), W_r(:,:), E_MBL(:,:), QE(:,:)
   complex (c_double_complex), allocatable :: USwap(:,:), PH(:), W(:,:), U(:,:)
+
+  real (c_double), dimension(:), allocatable :: r_avg, r_sq, r_avg2, r_sq2
+  real(c_double) :: r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
   integer(c_int) :: count_beginning, count_end, count_rate
 
@@ -49,10 +53,6 @@ program prova
 
   write (*,*) "Number of Disorder Realizations"
   read (*,*) n_disorder
-  print*,""
-
-  write (*,*) "Number of Steps"
-  read (*,*) steps
   print*,""
 
   write (*,*) "Period T0"
@@ -111,9 +111,17 @@ program prova
 
   allocate(hz(nspin), Jxy(nspin-1), Vz(nspin-1))
   allocate(U(dim_Sz0,dim_Sz0), H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
+
   allocate(PH(dim_Sz0),W(dim_Sz0,dim_Sz0))
   allocate(E_MBL(n_disorder,dim_Sz0), QE(n_disorder,dim_Sz0))
 
+  allocate( r_avg(n_disorder), r_sq(n_disorder))
+  allocate( r_avg2(n_disorder), r_sq2(n_disorder))
+
+  r_avg = 0
+  r_sq = 0
+  r_avg2 = 0
+  r_sq2 = 0
 
   !Time evolution over various realizations of disorder
   !$OMP PARALLEL
@@ -165,23 +173,23 @@ program prova
   !$OMP END PARALLEL 
 
   !write (unit_qe,"(*(A))") 
-  !write(string,"(A26)") "sigma_k^z"
-  !write(unit_ent, "(A12,A,*(A24,2X))") "Iteration" , repeat(trim(string),nspin), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
+  !write(unit_ent, "(A12,A,*(A26))") ""Disorder Realization" , repeat(trim(string),nspin), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
 
-  print "(*(A26))", "Disorder Realization", "Quasienergy", "Energy MBL"
+  print "(A12,*(A26))", "Sample_Dis", "Quasienergy", "Energy MBL"
   do i = 1, n_disorder
     do l = 1, dim_Sz0
-      write (*,*) iteration, QE(i,l), E_MBL(i,l)
-      !write (unit_qe,*) iteration, QE(iteration,i), E_MBL(iteration,i)
+      write (*,*) i, QE(i,l), E_MBL(i,l)
+      !write (unit_qe,*) i, QE(i,l), E_MBL(i,l)
     enddo
   enddo
 
-  r_dis_avg = sum(r_avg) / n_iterations
-  r_dis_sigma = sqrt( ( sum(r_sq)/n_iterations - r_dis_avg**2 ) / n_iterations )
-  r_dis_avg2 = sum(r_avg2) / n_iterations
-  r_dis_sigma2 = sqrt( ( sum(r_sq2)/n_iterations - r_dis_avg2**2 ) / n_iterations )
+  r_dis_avg = sum(r_avg) / n_disorder
+  r_dis_sigma = sqrt( ( sum(r_sq)/n_disorder - r_dis_avg**2 ) / n_disorder )
+  r_dis_avg2 = sum(r_avg2) / n_disorder
+  r_dis_sigma2 = sqrt( ( sum(r_sq2)/n_disorder - r_dis_avg2**2 ) / n_disorder )
 
   print *, "Average and Variance of Gap Ratio (over the spectrum and then disorder)"
+  print "(*(A26))", "<r>_Swap", "sigma(r)_Swap", "<r>_MBL", "sigma(r)_MBL"
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
   !close(unit_qe)

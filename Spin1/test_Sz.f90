@@ -2,8 +2,11 @@ program test_Sz
 
   use functions, only: basis_Sz, dimSpin1_Sz, project => projectState_FullHS_to_Sz
   use states, only: buildNeelState, printstate_Sz, printstate, buildUpZeroState
-  use matrices, only: buildSz_HSwap, print_hamiltonian_Sz, print_unitary_Sz
+  use matrices, only: buildSz_HSwap, buildSz_HMBL, &
+    & print_hamiltonian_Sz, print_unitary_Sz
   use exponentiate, only: diagSYM, expSYM
+  use observables, only: exact_energies_Sz
+  use sorts, only: sort => dpquicksort
   use iso_c_binding, only: ip => c_int, dp => c_double, cp => c_double_complex
   implicit none
 
@@ -15,7 +18,10 @@ program test_Sz
 
   complex (cp), allocatable :: psi(:), psi_Sz(:), USwap(:,:)
   real (dp), allocatable :: H(:,:), E(:), W_r(:,:)
+  real (dp), allocatable :: E_MBL(:), QE(:)
+  real (dp), allocatable :: Jxy(:), Vz(:), hz(:)
   real (dp) :: T1
+  integer :: i
 
   write (*,*) "nspin = "
   read (*,*) nspin
@@ -37,26 +43,25 @@ program test_Sz
   !print *, "dim = ", dim, ", dimSpin1**nspin = ", dimSpin1**nspin
   !print *, ""
 
+  !------------ Initial State --------------!
+
   allocate(psi(dim))
-  call buildNeelState(nspin, dim, psi)
-  call printstate(nspin, dim, psi, "Neel state:")
-
-  call project(nspin, dim, psi, Sz, psi_Sz)
-  dim_Sz = dimSpin1_Sz(nspin, Sz)
-
-  call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, "Projected Neel state:")
+!  call buildNeelState(nspin, dim, psi)
+!  call printstate(nspin, dim, psi, "Neel state:")
+!
+!  call project(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
+!
+!  call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, "Projected Neel state:")
 
   call buildUpZeroState(nspin, dim, psi)
   call printstate(nspin, dim, psi, "UpZero state:")
 
-  call project(nspin, dim, psi, Sz, psi_Sz)
-  dim_Sz = dimSpin1_Sz(nspin, Sz)
+  call project(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
 
   call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, "Projected UpZero state:")
 
 
-  !-------- Hamiltonian --------!
-
+  !-------- Swap --------!
 
   allocate(H(dim_Sz, dim_Sz))
   call buildSz_HSwap(nspin, dim_Sz, Sz, H)
@@ -70,6 +75,34 @@ program test_Sz
   call expSYM( dim_Sz, -C_UNIT*T1, E, W_r, USwap )
   deallocate(E, W_r)
   call print_unitary_Sz(nspin, dim_Sz, Sz, USwap)
+  deallocate(USwap)
+  
+  !-------- Hamiltonian ----------!
+  allocate(Jxy(nspin-1), Vz(nspin-1), hz(nspin))
+  Jxy = 0
+  call random_number(Vz)
+  call random_number(hz)
+  hz = 2 * (hz - 0.5)
+
+  allocate(H(dim_Sz, dim_Sz))
+  call buildSz_HMBL(nspin, dim_Sz, Sz, Jxy, Vz, hz, H)
+  call print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
+
+  allocate(E(dim_Sz), W_r(dim_Sz,dim_Sz), E_MBL(dim_Sz))
+  call diagSYM( 'V', dim_Sz, H, E, W_r)
+  E_MBL = exact_energies_Sz(nspin, dim_Sz, Sz, Vz, hz)
+  call sort(E_MBL)
+  do i = 1, dim_Sz
+    print *, E_MBL(i), E(i)
+  enddo
+
+
+  !deallocate(H)
+
+  !T0 = 1
+  !call expSYM( dim_Sz, -C_UNIT*T1, E, W_r, USwap )
+  !deallocate(E, W_r)
+  !call print_unitary_Sz(nspin, dim_Sz, Sz, USwap)
 
 
 end program

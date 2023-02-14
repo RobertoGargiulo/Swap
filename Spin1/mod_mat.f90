@@ -696,6 +696,84 @@ contains
     enddo
 
   end subroutine buildSz0_HMBL
+
+  subroutine buildSz_HMBL(nspin, dim_Sz, Sz, Jint, Vint, hz, H)
+
+    !dim_Sz0 is the dimensione of the Sz=0 subsapce
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(out) :: H(dim_Sz,dim_Sz)
+
+    integer :: config(nspin), idxSz(dim_Sz), config2(nspin)
+    integer :: inverse(dimSpin1**nspin)
+    integer (c_int) :: i, j, k, m, n, l, r
+    integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2
+    real (c_double) :: OPRz(dimSpin1,dimSpin1), OPRzz(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+    real (c_double) :: OPRxy(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
+
+    do idx1 = 1, dimSpin1
+      do idx2 = 1, dimSpin1
+
+        OPRz(idx2, idx1) = (2-idx1)*KDelta(idx2, idx1)
+        do idxp1 = 1, dimSpin1
+          do idxp2 = 1, dimSpin1
+            s1 = 2 - idx1
+            s2 = 2 - idx2
+            OPRzz(idxp1, idxp2, idx1, idx2) = s1 * KDelta(idxp1, idx1) * s2 * KDelta(idxp2,idx2)
+            OPRxy(idxp1, idxp2, idx1, idx2) = ( KDelta(idxp1, idx1+1) * KDelta(idxp2,idx2-1) + &
+              &  KDelta(idxp1, idx1-1) * KDelta(idxp2, idx2+1) )
+          enddo
+        enddo
+
+      enddo
+    enddo
+    
+    H = 0
+    call basis_Sz_inv(nspin, dim_Sz, Sz, idxSz, inverse)
+    !print "(4X,1(A6,X),3(A3,3X),A4)", "H(r,l)", "k", "i", "r/l", "conf"
+    do l = 1, dim_Sz
+
+      i = idxSz(l)
+      call decode(i,nspin,config)
+
+      do k = 1, nspin-1
+
+        s1 = 1 - config(k)
+        s2 = 1 - config(k+1)
+        H(l,l) = H(l,l) + Vint(k) * s1*s2 + hz(k) * s1
+        !print "(4X,1(F6.2,X),3(I3,3X),*(I0))", H(l,l), k, i, l, config(:)
+
+        do idxp1 = 0, dimSpin1-1
+          do idxp2 = 0, dimSpin1-1
+
+            idx1 = config(k)
+            idx2 = config(k+1)
+            if( (idxp1 + idxp2 == idx1 + idx2) .AND. (idxp1 /= idx1) .AND. (idxp2 /= idx2) ) then
+              j = i + (idxp1 - idx1) * dimSpin1**(k-1) + (idxp2 - idx2) * dimSpin1**k
+              r = inverse(j+1) 
+              H(r,l) = H(r,l) + Jint(k) * OPRxy(idxp1+1, idxp2+1, idx1+1, idx2+1)
+              call decode(j,nspin, config2)
+              !print "(4X,1(F6.2,X),3(I3,3X),*(I0))", H(r,l), k, i, l, config(:)
+              !print "(4X,1(A6,X),3(I3,3X),*(I0))", "", k, j, r, config2(:)
+            endif
+
+          enddo
+          !idx1 = config(k)
+          !j = i + (idxp1 - idx1) * dimSpin1**(k-1)
+          !H(j+1,i+1) = H(j+1,i+1) + hz(k) * OPRz(idxp1+1, idx1+1)
+
+        enddo
+      enddo
+      k = nspin
+      s1 = 1 - config(k)
+      H(l,l) = H(l,l) + hz(k) * s1
+      !print "(4X,1(F5.1,X),3(I3,3X),*(I0))", H(l,l), k, i, l, config(:)
+    enddo
+
+  end subroutine buildSz_HMBL
+
+
   !
 !  subroutine buildSz0_HMBL_NNN(nspin, dim_Sz0, Jint, Vint, Vint2, hz, H)
 !

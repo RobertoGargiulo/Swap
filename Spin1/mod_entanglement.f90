@@ -13,7 +13,6 @@ module entanglement
   use printing
   implicit none
 
-  real (c_double), parameter, private :: pi = 4.d0 * datan(1.d0)
 
 contains
 

@@ -23,6 +23,7 @@ module observables
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   integer (c_int), private, parameter :: dimSpin1 = 3
+  real (c_double), parameter, private :: pi = 4.d0 * datan(1.d0)
 
 contains
 
@@ -458,65 +459,82 @@ contains
 !
 !
 !
-!  function exact_energy(nspin, V_int, h_z, i)
-!
-!    integer (c_int), intent(in) :: nspin, i
-!    real (c_double), intent(in) :: V_int(nspin), h_z(nspin)
-!    real (c_double) :: exact_energy
-!
-!    integer (c_int) :: k, config(nspin)
-!    real (c_double) :: E
-!
-!    call decode(i, nspin, config)
-!    config = 1 - 2*config
-!    E = 0
-!    do k = 1, nspin - 1
-!      E = E + V_int(k) * config(k) * config(k+1) + h_z(k) * config(k)
-!    enddo
-!    k = nspin
-!    E = E + h_z(k) * config(k)
-!
-!    exact_energy = E
-!
-!  end function
-!
-!  subroutine exact_energies_Sz0(nspin, dim_Sz0, V_int, h_z, E)
-!
-!    integer (c_int), intent(in) :: nspin, dim_Sz0
-!    real (c_double), intent(in) :: V_int(nspin), h_z(nspin)
-!    real (c_double), intent(out) :: E(dim_Sz0)
-!
-!    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
-!
-!    call zero_mag_states(nspin, dim_Sz0, states)
-!    do i = 1, dim_Sz0
-!
-!      l = states(i)
-!      call decode(l, nspin, config)
-!      E(i) = exact_energy(nspin, V_int, h_z, l)
-!
-!    enddo
-!
-!  end subroutine
-!
-!  function exact_quasi_energy(nspin, V_int, h_z, i)
-!
-!    integer (c_int), intent(in) :: nspin, i
-!    real (c_double), intent(in) :: V_int(nspin-1), h_z(nspin)
-!    real (c_double) :: exact_quasi_energy
-!
-!    integer (c_int) :: k, m, config(nspin)
-!    real (c_double) :: QE
-!
-!    call decode(i, nspin, config)
-!    m = 0
-!    do k = 1, nspin/2
-!      m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
-!    enddo
-!    QE = (exact_energy(nspin, V_int, h_z, i) + exact_energy(nspin, V_int, h_z, m)) / 2
-!    exact_quasi_energy = QE
-!
-!  end function
+  function exact_energy(nspin, Vz, hz, sigmaz) result(E)
+
+    integer (c_int), intent(in) :: nspin
+    real (c_double), intent(in) :: Vz(nspin-1), hz(nspin)
+    integer (c_int), intent(in) :: sigmaz(nspin)
+    real (c_double) :: E
+
+    integer (c_int) :: k
+
+    E = 0
+    do k = 1, nspin - 1
+      E = E + Vz(k) * sigmaz(k) * sigmaz(k+1) + hz(k) * sigmaz(k)
+    enddo
+    k = nspin
+    E = E + hz(k) * sigmaz(k)
+
+  end function
+
+
+  function exact_energies_Sz(nspin, dim_Sz, Sz, Vz, hz) result(E)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(in) :: Vz(nspin-1), hz(nspin)
+    real (c_double) :: E(dim_Sz)
+
+    integer (c_int) :: i, k, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
+
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+    do l = 1, dim_Sz
+
+      i = idxSz(l)
+      call decode(i, nspin, config)
+      sigmaz = 1 - config
+      E(l) = exact_energy(nspin, Vz, hz, sigmaz)
+
+    enddo
+
+  end function 
+
+  function exact_quasi_energy(nspin, Vz, hz, sigmaz) result(QE)
+
+    integer (c_int), intent(in) :: nspin
+    real (c_double), intent(in) :: Vz(nspin-1), hz(nspin)
+    integer (c_int), intent(in) :: sigmaz(nspin)
+    real (c_double) :: QE
+
+    integer (c_int) :: k, sigmaz_swap(nspin)
+
+    do k = 1, nspin/2
+      sigmaz_swap(2*k-1) = sigmaz(2*k)
+      sigmaz_swap(2*k) = sigmaz(2*k-1)
+    enddo
+    QE = ( exact_energy(nspin, Vz, hz, sigmaz) + exact_energy(nspin, Vz, hz, sigmaz_swap) ) / 2
+    QE = real( C_UNIT * log( exp(-C_UNIT*QE ) ) )
+
+  end function
+
+  function exact_quasi_energies_Sz(nspin, dim_Sz, Sz, Vz, hz) result(QE)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(in) :: Vz(nspin-1), hz(nspin)
+    real (c_double) :: QE(dim_Sz)
+
+    integer (c_int) :: i, k, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
+
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+    do l = 1, dim_Sz
+
+      i = idxSz(l)
+      call decode(i, nspin, config)
+      sigmaz = 1 - config
+      QE(l) = exact_quasi_energy(nspin, Vz, hz, sigmaz)
+
+    enddo
+
+  end function 
 !
 !
 !  subroutine exact_quasi_energies_Sz0(nspin, dim_Sz0, V_int, h_z, QE) !E, Es, QE, QE_alt)

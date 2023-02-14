@@ -112,7 +112,7 @@ program prova
 
 
   !------------------ Swap Operator --------------------!
-  allocate(H(dim_Sz,dim_Sz))
+  allocate(H(dim_Sz0,dim_Sz0))
 
   call buildSz0_HSwap(nspin, dim_Sz0, H)
   !call print_hamiltonian_Sz0(nspin, dim_Sz0, H)
