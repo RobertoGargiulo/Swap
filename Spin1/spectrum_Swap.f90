@@ -152,20 +152,18 @@ program spectrum_Swap
     !------------ Floquet Operator(s) --------------!
     call buildSz0_HMBL(nspin, dim_Sz0, Jxy, Vz, hz, H)
     call diagSYM( 'V', dim_Sz0, H, E, W_r)
-    call expSYM( dim_Sz0, -C_UNIT*pi/2.d0, E, W_r, U )
-    U = matmul(U,USwap)
 
     E_MBL(i,:) = E
     call gap_ratio(dim_Sz0, E, r_avg2(i), r_sq2(i))
+
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
+
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     E = real(C_UNIT*log(PH))
     call dpquicksort(E)
     call gap_ratio(dim_Sz0, E, r_avg(i), r_sq(i))
     QE(i,:) = E
-
-    call diagUN( SELECT, dim_Sz0, U, PH, W)
 
 
   enddo

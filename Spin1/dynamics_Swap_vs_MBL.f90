@@ -159,8 +159,8 @@ program prova
     !------------ Floquet Operator(s) --------------!
     call buildSz0_HMBL(nspin, dim_Sz0, Jxy, Vz, hz, H)
     call diagSYM( 'V', dim_Sz0, H, E, W_r)
-    call expSYM( dim_Sz0, -C_UNIT*pi/2.d0, E, W_r, UMBL )
-    U = matmul(UMBL,USwap)
+    call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, UMBL )
+    U = matmul(USwap,UMBL)
 
 
     !allocate(PH(dim_Sz0),W(dim_Sz0,dim_Sz0))

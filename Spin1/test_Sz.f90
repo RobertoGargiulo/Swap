@@ -16,11 +16,11 @@ program test_Sz
   integer (ip) :: nspin, dim_Sz, Sz, dim
   integer (ip), allocatable :: idxSz(:)
 
-  complex (cp), allocatable :: psi(:), psi_Sz(:), USwap(:,:)
+  complex (cp), allocatable :: psi(:), psi_Sz(:), USwap(:,:), U(:,:)
   real (dp), allocatable :: H(:,:), E(:), W_r(:,:)
   real (dp), allocatable :: E_MBL(:), QE(:)
   real (dp), allocatable :: Jxy(:), Vz(:), hz(:)
-  real (dp) :: T1
+  real (dp) :: T1, T0
   integer :: i
 
   write (*,*) "nspin = "
@@ -75,7 +75,6 @@ program test_Sz
   call expSYM( dim_Sz, -C_UNIT*T1, E, W_r, USwap )
   deallocate(E, W_r)
   call print_unitary_Sz(nspin, dim_Sz, Sz, USwap)
-  deallocate(USwap)
   
   !-------- Hamiltonian ----------!
   allocate(Jxy(nspin-1), Vz(nspin-1), hz(nspin))
@@ -83,6 +82,7 @@ program test_Sz
   call random_number(Vz)
   call random_number(hz)
   hz = 2 * (hz - 0.5)
+  T0 = 1
 
   allocate(H(dim_Sz, dim_Sz))
   call buildSz_HMBL(nspin, dim_Sz, Sz, Jxy, Vz, hz, H)
@@ -92,16 +92,13 @@ program test_Sz
   call diagSYM( 'V', dim_Sz, H, E, W_r)
   E_MBL = exact_energies_Sz(nspin, dim_Sz, Sz, Vz, hz)
   call sort(E_MBL)
-  do i = 1, dim_Sz
-    print *, E_MBL(i), E(i)
-  enddo
+  !do i = 1, dim_Sz
+  !  print *, E_MBL(i), E(i)
+  !enddo
 
-
-  !deallocate(H)
-
-  !T0 = 1
-  !call expSYM( dim_Sz, -C_UNIT*T1, E, W_r, USwap )
-  !deallocate(E, W_r)
+  allocate(U(dim_Sz,dim_Sz))
+  call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
+  deallocate(E, W_r)
   !call print_unitary_Sz(nspin, dim_Sz, Sz, USwap)
 
 
