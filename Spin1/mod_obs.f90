@@ -512,7 +512,7 @@ contains
       sigmaz_swap(2*k) = sigmaz(2*k-1)
     enddo
     QE = ( exact_energy(nspin, Vz, hz, sigmaz) + exact_energy(nspin, Vz, hz, sigmaz_swap) ) / 2
-    QE = real( C_UNIT * log( exp(-C_UNIT*QE ) ) )
+    QE = real( C_UNIT * log( exp(-C_UNIT*QE ) ), c_double )
 
   end function
 
