@@ -1,11 +1,12 @@
 program prova
 
-  use functions, only : dimSpin1_Sz0, init_random_seed, dimSpin1_Sz
-  use matrices, only: buildSz0_HSwap, buildSz0_HMBL, &
-    & print_hamiltonian_Sz0, print_unitary_Sz0
-  use states, only: buildstate => buildNeelState, &
-    & printstate_Sz, project => projectState_FullHS_to_Sz
-  use observables, only: sigmaz_Sz0!, sigma_Sz
+  use functions, only : dimSpin1_Sz0, init_random_seed, dimSpin1_Sz, &
+    & project => projectState_FullHS_to_Sz
+  use matrices, only: buildSz_HSwap, buildSz_HMBL, &
+    & print_hamiltonian_Sz, print_unitary_Sz
+  use states, only: buildstate => buildUpZeroState, &
+    & printstate_Sz
+  use observables, only: sigmaz_Sz!, sigma_Sz
   use printing
   use exponentiate, only: diagSYM, expSYM
   implicit none
@@ -105,32 +106,32 @@ program prova
   !------------- Initial State ------------------!
   allocate(psi(dim))
   call buildstate(nspin, dim, psi)
-  call project(nspin, dim, psi, Sz, psi_Sz)
-  dim_Sz = dimSpin1_Sz(nspin, Sz)
-  if(dim_Sz == dim_Sz0) print *, "Program working correctly"
-  call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, "Neel state:")
+  call project(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
+  !if(dim_Sz == dim_Sz0) print *, "Sz = 0."
+  !call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, "Neel state:")
+  call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, "UpZero state:")
 
 
   !------------------ Swap Operator --------------------!
   allocate(H(dim_Sz,dim_Sz))
 
-  call buildSz0_HSwap(nspin, dim_Sz0, H)
-  !call print_hamiltonian_Sz0(nspin, dim_Sz0, H)
+  call buildSz_HSwap(nspin, dim_Sz, Sz, H)
+  !call print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
 
-  allocate(E(dim_Sz0), W_r(dim_Sz0,dim_Sz0), USwap(dim_Sz0,dim_Sz0))
-  call diagSYM( 'V', dim_Sz0, H, E, W_r)
+  allocate(E(dim_Sz), W_r(dim_Sz,dim_Sz), USwap(dim_Sz,dim_Sz))
+  call diagSYM( 'V', dim_Sz, H, E, W_r)
   deallocate(H)
 
-  call expSYM( dim_Sz0, -C_UNIT*T1, E, W_r, USwap )
+  call expSYM( dim_Sz, -C_UNIT*T1, E, W_r, USwap )
   deallocate(E, W_r)
-  !call print_unitary_Sz0(nspin, dim_Sz0, USwap)
+  !call print_unitary_Sz(nspin, dim_Sz, Sz, USwap)
 
 
   !------ Allocate state, evolution operators, observables -----!
-  allocate(psi_swap(dim_Sz0))
+  allocate(psi_swap(dim_Sz))
 
   allocate(hz(nspin), Jxy(nspin-1), Vz(nspin-1))
-  allocate(U(dim_Sz0,dim_Sz0), H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
+  allocate(U(dim_Sz,dim_Sz), H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
 
   allocate(sigmaz_avg(steps,nspin), sigmaz_sq(steps,nspin))
   
@@ -165,15 +166,15 @@ program prova
     Vz = -V_coupling + V_coupling * (Vz - 0.5) !Vz in [-3/2V, -V/2] <=> -V \pm V/2
 
     !------------ Floquet Operator(s) --------------!
-    call buildSz0_HMBL(nspin, dim_Sz0, Jxy, Vz, hz, H)
-    call diagSYM( 'V', dim_Sz0, H, E, W_r)
-    call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
+    call buildSz_HMBL(nspin, dim_Sz, Sz, Jxy, Vz, hz, H)
+    call diagSYM( 'V', dim_Sz, H, E, W_r)
+    call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
 
     psi_swap = psi_Sz
     j = 1
-    sigmaz_avg(j,:) = sigmaz_avg(j,:) + sigmaz_Sz0(nspin, dim_Sz0, psi_swap)
-    sigmaz_sq(j,:) = sigmaz_sq(j,:) + sigmaz_Sz0(nspin, dim_Sz0, psi_swap) ** 2
+    sigmaz_avg(j,:) = sigmaz_avg(j,:) + sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
+    sigmaz_sq(j,:) = sigmaz_sq(j,:) + sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap) ** 2
     !print *, i, j, sigmaz_avg(j,:,:)
     do j = 2, steps
 
@@ -182,8 +183,8 @@ program prova
         psi_swap = psi_swap/sqrt(norm)
       endif
       psi_swap = matmul(U, psi_swap)
-      sigmaz_avg(j,:) = sigmaz_avg(j,:) + sigmaz_Sz0(nspin, dim_Sz0, psi_swap)
-      sigmaz_sq(j,:) = sigmaz_sq(j,:) + sigmaz_Sz0(nspin, dim_Sz0, psi_swap) ** 2
+      sigmaz_avg(j,:) = sigmaz_avg(j,:) + sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
+      sigmaz_sq(j,:) = sigmaz_sq(j,:) + sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap) ** 2
       !print *, i, j, sigmaz_avg(j,:,:)
 
     enddo
@@ -198,8 +199,8 @@ program prova
   columns = column_titles(nspin)
   write (*,*) columns
   !write (unit_sigmaz,*) columns
-  do j = 1, steps
-    write (*,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
+  do j = 1, steps, steps/100
+    write (*,*) j*T0, sigmaz_avg(j,:)!, sigmaz_sq(j,:)
     !write (unit_sigmaz,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
   enddo
 
@@ -233,18 +234,21 @@ function column_titles(nspin) result(columns)
 
 
   columns = ""
+  columns(2:26+2) = "j*T0"
   do i = 1, nspin
     write(s_index, "(I0)") i
-    j1 = 26*(i-1)+2
-    j2 = 26*i+2
-    j3 = 26*(i+nspin-1)+3
-    j4 = 26*(i+nspin)+3
+    j1 = 26*i+2
+    j2 = 26*(i+1)+2
+    j3 = 26*(i+nspin)+3
+    j4 = 26*(i+nspin+1)+3
     !print *, j1, j2, j3, j4
     columns(j1:j2) = trim("sigma_z^")//trim(s_index)
-    columns(j3:j4) = trim("Var(sigma_z^")//trim(s_index)//trim(")")
+    !columns(j3:j4) = trim("Var(sigma_z^")//trim(s_index)//trim(")")
     !print *, columns
   enddo
-  write(columns,"(3X,A4,20X,A)") "j*T0", trim(columns)
+  !print *, columns
+  !write(columns,"(3X,A4,20X,A)") "j*T0", trim(columns)
+  !print *, columns
 
 end function
 

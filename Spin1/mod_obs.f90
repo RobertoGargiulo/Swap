@@ -27,6 +27,27 @@ module observables
 
 contains
 
+  function sigmaz_Sz(nspin, dim_Sz, Sz, psi_Sz) result(sigmaz)
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    complex (c_double_complex), intent(in) :: psi_Sz(dim_Sz)
+    real (c_double) :: sigmaz(nspin)
+
+    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz), s
+
+    call basis_Sz(nspin, dim_Sz, Sz, states)
+    sigmaz = 0
+    do l = 1, dim_Sz
+      i = states(l)
+      call decode(i, nspin, config)
+      do k = 1, nspin
+        s = 1 - config(k)
+        sigmaz(k) = sigmaz(k) + abs(psi_Sz(l))**2 * s
+      enddo
+    enddo
+
+  end function
+
+
   function sigmaz_Sz0(nspin, dim_Sz0, psi_Sz0)
     integer (c_int), intent(in) :: nspin, dim_Sz0
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)

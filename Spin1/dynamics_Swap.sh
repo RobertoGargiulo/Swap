@@ -1,27 +1,27 @@
 ##!/bin/bash
-filestring="dynamics_Swap_vs_MBL"
+filestring="dynamics_Swap"
 
 make $filestring
 
-n_threads=10
+n_threads=20
 #total_time=1000000
 export OMP_NUM_THREADS=$n_threads 
 
 
-iterations_2=2560 #5120
+iterations_2=640 #2560 #5120
 #echo "nspin = " ; read nspin
 period=1.00
-for nspin in 8 #{2..8..2}
+for nspin in {2..8..2}
 do
-  #iterations=$iterations_2
+  #iterations=10
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
-  for kick in 0.05 #0.00 0.05 0.10 #0.20
+  for kick in 0.05 #0.05 0.10 #0.20
   do
-    for J in 0.00 0.05 0.10 0.20 #0.00 0.25 0.50
+    for J in 0.05 #0.05 0.10 0.20 #0.00 0.25 0.50
     do
-      for V in 10.00 #$(seq 0.50 0.50 5.00)
+      for V in 3.00 #$(seq 0.50 0.50 5.00)
       do
-        for hz in 20.00
+        for hz in 5.00
         do
           for steps in 10000
           do
@@ -36,7 +36,7 @@ $V
 $hz
 $kick
 *
-            file_out="out_Swap_6.txt"
+            file_out="out_Swap.txt"
   	        ./$filestring < input.txt | tee $file_out
             echo "nspin = $nspin"
             echo "J = $J  V = $V  hz = $hz  epsilon = $kick"
