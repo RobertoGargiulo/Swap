@@ -421,7 +421,7 @@ contains
 
     integer :: i, l, config(nspin), idxSz(dim_Sz)
 
-    print *, state_name
+    print *, state_name // " initial state:"
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
     do l = 1, dim_Sz
       if (abs(state(l))**2 > tol) then

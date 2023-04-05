@@ -32,7 +32,7 @@ program swap
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
   complex (c_double_complex) :: alpha, beta
 
-  real (c_double), allocatable :: CORR_Z(:,:,:)
+  real (c_double), allocatable :: CORR_Z(:,:,:), tot_CORR(:,:)
   integer (c_int) :: nspin_A, dim_A, n_lim, n_min, n_max
   real (c_double), allocatable, dimension(:,:) :: LI, QE, avgBE, CEE, IPR_arr, MBE, IMBsq
   real (c_double) :: IMB_min, LI_min
@@ -99,7 +99,7 @@ program swap
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
 
-  open(newunit=unit_ent,file=filestring_CORR)
+  !open(newunit=unit_ent,file=filestring_CORR)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -136,12 +136,13 @@ program swap
   !allocate(CEE(n_iterations,dim_Sz0))
   !allocate(avgBE(n_iterations,dim_Sz0))
   !allocate( IMBsq(n_iterations,dim_Sz0), MBE(n_iterations,dim_Sz0) )
-  allocate(CORR_Z(nspin,n_iterations,dim_Sz0))
+  allocate(CORR_Z(nspin,n_iterations,dim_Sz0), tot_CORR(n_iterations,dim_Sz0))
 
   IPR_arr = 0
   !CEE = 0
   !avgBE = 0
   CORR_Z = 0
+  tot_CORR = 0
   !IMBsq = 0
   !MBE = 0
 
@@ -209,16 +210,7 @@ program swap
       IPR_arr(iteration,i) = IPR(psi_Sz0)
       !CEE(iteration,i) = comb_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
       !avgBE(iteration,i) = avg_block_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
-
-      !do k = 1, nspin
-        !do j = k, nspin
-          !print *, k, j, sigmaz_corr_c_Sz0(nspin, dim_Sz0, k, j, psi_Sz0)
-       ! enddo
-      !enddo
-      do k = 1, nspin
-        CORR_Z(k,iteration,i) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, 1, k, psi_Sz0)
-      enddo
-
+      tot_CORR(iteration,i) = sigmaz_tot_corr_Sz0(nspin, dim_Sz0, psi_Sz0) / nspin**2
 
       !!---- Print to output -------!!!!
       !print *, "     abs(c_i)^2     l    config"
@@ -249,30 +241,33 @@ program swap
   !$OMP END DO
   !$OMP END PARALLEL 
 
-  write(string,"(A26)") "CORR_Z"
-  write(unit_ent, "(A12,A,*(A24,2X))") "Iteration" , repeat(trim(string),nspin), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
-  do iteration = 1, n_iterations
-    do i = 1, dim_Sz0
-      write(unit_ent, *) iteration, CORR_Z(:,iteration,i), &
-        &  LI(iteration,i), IPR_arr(iteration,i)
-    enddo
-  enddo
-  !CEE(iteration,i),
-
-  !write(unit_ent, "(A12,*(A24,2X))") "Iteration" , "<BE>", "LI", "IPR"
+  write (string,"(A26)") "CORR_Z"
+  !write (unit_ent, "(A12,A,*(A24,2X))") "Iteration" , repeat(trim(string),nspin), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
+  !write (*, "(A12,*(A24,2X))") "Iteration" , "CORR_Z", "Normalized CORR", "LI", "IPR", "config"!, "MBE", "I^2", "CORR_Z", "E"
   !do iteration = 1, n_iterations
   !  do i = 1, dim_Sz0
-  !    write(unit_ent, *) iteration, avgBE(iteration,i), &
+  !    write (unit_ent, *) iteration, tot_CORR(iteration,i), tot_CORR(iteration,i) / LI(iteration,i), &
   !      &  LI(iteration,i), IPR_arr(iteration,i)
+  !    !l = states(i)
+  !    !call decode(l, nspin, config)
+  !    !write (*,"(I12, *(2X,F24.16))",advance='no') iteration, tot_CORR(iteration,i), tot_CORR(iteration,i) / LI(iteration,i), &
+  !    !  &  LI(iteration,i), IPR_arr(iteration,i)
+  !    !write (*,"(4X, *(I0))") config(:)
   !  enddo
   !enddo
+
+  print *, "Total average correlations:"
+  print *,  sum(tot_CORR) / size(tot_CORR)
+  print *, "Total average normalized correlations:\n"
+  print *,  sum(tot_CORR/LI**2) / size(tot_CORR)
+
 
   deallocate(Jint, Vint, h_z)
   deallocate(H,E,W_r)
   deallocate(USwap)
   deallocate(U, PH, W)
 
-  close(unit_ent)
+  !close(unit_ent)
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 

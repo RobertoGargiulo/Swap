@@ -296,9 +296,10 @@ program swap
   !!print *, "Mutual Information (MI, nspin_A, iteration)"
   !do nspin_A = 1, n_lim
   !  do iteration = 1, n_iterations
-  !    do i = 1, dim_Sz0
-  !      MI_avg(nspin_A,iteration) = MI_avg(nspin_A,iteration) + MI(nspin_A,iteration,i)
-  !    enddo
+  !    MI_avg(nspin_A,iteration) = sum(MI(nspin_A,iteration,:))/dim_Sz0
+  !!    do i = 1, dim_Sz0
+  !!      MI_avg(nspin_A,iteration) = MI_avg(nspin_A,iteration) + MI(nspin_A,iteration,i)
+  !!    enddo
   !    MI_avg = MI_avg/dim_Sz0
   !    !print *, MI_avg(nspin_A,iteration), nspin_A, iteration
   !    MI_dis_avg(nspin_A) = MI_dis_avg(nspin_A) + MI_avg(nspin_A,iteration)

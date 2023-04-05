@@ -173,13 +173,13 @@ program spectrum_Swap
   !write (unit_qe,"(*(A))") 
   !write(unit_ent, "(A12,A,*(A26))") ""Disorder Realization" , repeat(trim(string),nspin), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
 
-  print "(A12,*(A26))", "Sample_Dis", "Quasienergy", "Energy MBL"
-  do i = 1, n_disorder
-    do l = 1, dim_Sz0
-      write (*,*) i, QE(i,l), E_MBL(i,l)
-      !write (unit_qe,*) i, QE(i,l), E_MBL(i,l)
-    enddo
-  enddo
+  !print "(A12,*(A26))", "Sample_Dis", "Quasienergy", "Energy MBL"
+  !do i = 1, n_disorder
+  !  do l = 1, dim_Sz0
+  !    write (*,*) i, QE(i,l), E_MBL(i,l)
+  !    !write (unit_qe,*) i, QE(i,l), E_MBL(i,l)
+  !  enddo
+  !enddo
 
   r_dis_avg = sum(r_avg) / n_disorder
   r_dis_sigma = sqrt( ( sum(r_sq)/n_disorder - r_dis_avg**2 ) / n_disorder )

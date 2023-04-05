@@ -3,12 +3,12 @@ filestring="dynamics_Swap"
 
 make $filestring
 
-n_threads=20
+n_threads=1 #20
 #total_time=1000000
 export OMP_NUM_THREADS=$n_threads 
 
 
-iterations_2=640 #2560 #5120
+iterations_2=64 #640 #2560 #5120
 #echo "nspin = " ; read nspin
 period=1.00
 for nspin in {2..8..2}

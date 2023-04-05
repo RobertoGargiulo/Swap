@@ -14,6 +14,7 @@ program prova
   complex (c_double_complex), parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
   real (c_double), parameter :: pi = 4.d0 * datan(1.d0)
   integer (c_int), parameter :: dimSpin1 = 3
+  character(len=*), parameter :: name_initial_state = "UpZero"
 
   integer (c_int) :: nspin, dim, dim_Sz0, dim_Sz, Sz
   integer (c_int), allocatable :: config(:), idxSz0(:), idxSz(:)
@@ -91,11 +92,12 @@ program prova
 
   !------------------- File Manager ------------------------!
 
-  write(filestring_Neel,93) "data/dynamics/sigmaz_Swap_Neel_nspin", &
+  write(filestring_Neel,93) "data/dynamics/sigmaz_Swap_" // trim(name_initial_state) // "_nspin", &
     & nspin, "_steps", steps, "_period", T0, "_n_disorder", n_disorder, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), &
     & "_kick", kick, ".txt"
+  print *, filestring_Neel
 
   93  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
 
@@ -109,7 +111,7 @@ program prova
   call project(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
   !if(dim_Sz == dim_Sz0) print *, "Sz = 0."
   !call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, "Neel state:")
-  call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, "UpZero state:")
+  call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, trim(name_initial_state))
 
 
   !------------------ Swap Operator --------------------!
@@ -149,7 +151,7 @@ program prova
   do i = 1, n_disorder
 
     if (n_disorder < 10) then
-     print *, "Current disorder realization = ", i
+      print *, "Current disorder realization = ", i
     else
       if (mod(i, n_disorder/10)==0) then 
         print *, "Current disorder realization = ", i

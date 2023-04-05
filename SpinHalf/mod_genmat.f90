@@ -1477,8 +1477,44 @@ contains
 
     sigmaz_corr_c_Sz0 = corr - avgq * avgp
 
+  end function
+
+  function sigmaz_corr_matrix_Sz0(nspin, dim_Sz0, psi_Sz0) result(CORR)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: CORR(nspin, nspin)
+
+    integer :: q, p
+
+    do q = 1, nspin
+      do p = 1, nspin
+        CORR(q,p) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, q, p, psi_Sz0)
+      enddo
+    enddo
+    
+  end function
+
+  function sigmaz_tot_corr_Sz0(nspin, dim_Sz0, psi_Sz0) result(tot_corr)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz0
+    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
+    real (c_double) :: tot_corr
+
+    real (c_double) :: CORR(nspin, nspin)
+    integer :: q, p
+
+    CORR = sigmaz_corr_matrix_Sz0(nspin, dim_Sz0, psi_Sz0)
+    
+    tot_corr = 0
+    do q = 1, nspin
+      do p = 1, nspin
+        tot_corr = tot_corr + abs(CORR(q,p))
+      enddo
+    enddo
 
   end function
+
 
   subroutine local_zmag_Sz0(nspin, dim_Sz0, psi_Sz0, sigmaz)
     integer (c_int), intent(in) :: nspin, dim_Sz0
@@ -1586,8 +1622,10 @@ contains
         m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
       enddo
       QE(i) = (exact_energy(nspin, V_int, h_z, l) + exact_energy(nspin, V_int, h_z, m)) / 2
+      QE(i) = real(C_UNIT*log(exp(-C_UNIT*QE(i))), kind(1.0_c_double))
 
-      !print "(*(I0))", config(:)
+      write (*,"(*(I0))",advance='no'), config(:)
+      write (*,*) QE(i)
       !config = 1 - 2*config
       !do k = 1, nspin/2 - 1
       !  print *, "k = ", k

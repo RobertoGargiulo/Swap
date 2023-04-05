@@ -51,6 +51,8 @@ sparse_Sz0: $(MOD) sparse_Sz0.o
 spectrum_Sz0: $(MOD) spectrum_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+swap_degeneracies_Sz0: $(MOD) swap_degeneracies_Sz0.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 
 all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
