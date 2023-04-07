@@ -3,27 +3,26 @@ filestring="dynamics_Swap"
 
 make $filestring
 
-n_threads=1 #20
+n_threads=1 #0 #20
 #total_time=1000000
-export OMP_NUM_THREADS=$n_threads 
 
 
-iterations_2=64 #640 #2560 #5120
+iterations_2=10240 #640 #2560 #5120 ####### <-----
 #echo "nspin = " ; read nspin
 period=1.00
-for nspin in {2..8..2}
+for nspin in {2..8..2} ######## <--------
 do
   #iterations=10
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
-  for kick in 0.05 #0.05 0.10 #0.20
+  for kick in 0.10 #0.05 0.10 #0.20
   do
-    for J in 0.05 #0.05 0.10 0.20 #0.00 0.25 0.50
+    for J in 0.50 #0.05 0.10 0.20 #0.00 0.25 0.50
     do
       for V in 3.00 #$(seq 0.50 0.50 5.00)
       do
-        for hz in 5.00
+        for hz in 5.00 #$(seq 10.00 -2.00 4.00; seq 2.00 -0.50 0.00) 0.00
         do
-          for steps in 10000
+          for steps in 50000
           do
 
             cat > input.txt << *
@@ -36,7 +35,8 @@ $V
 $hz
 $kick
 *
-            file_out="out_Swap.txt"
+            file_out="out_Swap_dynamics_UpZero.txt"
+            export OMP_NUM_THREADS=$n_threads 
   	        ./$filestring < input.txt | tee $file_out
             echo "nspin = $nspin"
             echo "J = $J  V = $V  hz = $hz  epsilon = $kick"

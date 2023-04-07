@@ -83,7 +83,7 @@ program spectrum_Swap
 
   !------------------- File names ------------------------!
 
-  write(filestring_qe,93) "data/dynamics/quasienergies_Swap_nspin", &
+  write(filestring_qe,93) "data/spectrum/quasienergies_Swap_nspin", &
     & nspin, "_period", T0, "_n_disorder", n_disorder, &
     & "_J", J_coupling, "_V", int(V_coupling), V_coupling-int(V_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), &
@@ -91,8 +91,8 @@ program spectrum_Swap
 
   93  format(A,I0, A,F4.2, A,I0, A,F4.2, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
 
-  !open(newunit=unit_qe,file=filestring_qe)
-  !call write_info(unit_qe)
+  open(newunit=unit_qe,file=filestring_qe)
+  call write_info(unit_qe)
 
 
   !-------- Swap Operator --------------------!
@@ -170,16 +170,14 @@ program spectrum_Swap
   !$OMP END DO
   !$OMP END PARALLEL 
 
-  !write (unit_qe,"(*(A))") 
-  !write(unit_ent, "(A12,A,*(A26))") ""Disorder Realization" , repeat(trim(string),nspin), "LI", "IPR"!, "MBE", "I^2", "CORR_Z", "E"
-
   !print "(A12,*(A26))", "Sample_Dis", "Quasienergy", "Energy MBL"
-  !do i = 1, n_disorder
-  !  do l = 1, dim_Sz0
-  !    write (*,*) i, QE(i,l), E_MBL(i,l)
-  !    !write (unit_qe,*) i, QE(i,l), E_MBL(i,l)
-  !  enddo
-  !enddo
+  write (unit_qe,"(A12,*(A26))") "Sample_Dis", "Quasienergy", "Energy MBL"
+  do i = 1, n_disorder
+    do l = 1, dim_Sz0
+      !write (*,*) i, QE(i,l), E_MBL(i,l)
+      write (unit_qe,*) i, QE(i,l), E_MBL(i,l)
+    enddo
+  enddo
 
   r_dis_avg = sum(r_avg) / n_disorder
   r_dis_sigma = sqrt( ( sum(r_sq)/n_disorder - r_dis_avg**2 ) / n_disorder )
@@ -190,7 +188,7 @@ program spectrum_Swap
   print "(*(A26))", "<r>_Swap", "sigma(r)_Swap", "<r>_MBL", "sigma(r)_MBL"
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
-  !close(unit_qe)
+  close(unit_qe)
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 
@@ -242,8 +240,8 @@ subroutine write_info(unit_file)
   write (unit_file,*) "Some info: "
   write (unit_file,*) "Quasi-Energies of Floquet Operator U_F = e^(-i H) U_swap."
   write (unit_file,*) "Spin-1 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
-  write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/2 + kick) * sum (sigma*sigma)^2 - (sigma*sigma)."
-  write (unit_file,*) "V is taken in [-3V/2, V/2];  hz is taken in [-hz, hz];  J is uniform."
+  write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/2 + kick) * sum (sigma*sigma)^2 - (sigma*sigma))."
+  write (unit_file,*) "V is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  J is uniform."
   write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
 
 end subroutine

@@ -423,6 +423,7 @@ contains
 
     print *, state_name // " initial state:"
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+    print "( 2X,A10, 2(4X,A6), 4X,A )", "|psi(l)|^2", "l", "i", "config"
     do l = 1, dim_Sz
       if (abs(state(l))**2 > tol) then
         i = idxSz(l)
