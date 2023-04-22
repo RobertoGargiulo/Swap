@@ -1,6 +1,6 @@
 program prova
 
-  use functions, only : dimSpin1_Sz0, init_random_seed
+  use functions, only: dimSpin1_Sz0, init_random_seed
   use matrices, only: buildSz0_HSwap, buildSz0_HMBL, &
     & print_hamiltonian_Sz0, print_unitary_Sz0
   use states, only: buildstate => buildNeelState_Sz0, printstate_Sz0

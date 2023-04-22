@@ -1,16 +1,12 @@
 program swap
 
-  use exp_sparse
-  use exponentiate
-  use genmat
-  use printing
-  use MBL
+  use functions, only: binom, init_random_seed, zero_mag_states, take_time
+  use exponentiate, only: diagSYM, expSYM, diagUN
+  use observables, only: local_imbalance => local_imbalance_Sz0, sigmaz_corr => sigmaz_tot_corr_Sz0, IPR
+  use matrices, only: buildHSwap => buildSz0_HSwap, buildHMBL => buildSz0_HMBL
+  use printing, only: take_time, printmat
   use omp_lib
-  use sorts
-  !use sorting
-  !use stdlib_sorting_sort_index
   use iso_c_binding
-  !use general
   implicit none
 
   complex (c_double_complex), parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
@@ -109,7 +105,7 @@ program swap
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0), USwap(dim_Sz0,dim_Sz0))
-  call buildSz0_HSwap(nspin, dim_Sz0, H)
+  call buildHSwap(nspin, dim_Sz0, H)
   call diagSYM( 'V', dim_Sz0, H, E, W_r)
 !  print *, "HSwap = "
 !  call printmat(dim, H, 'R')
@@ -187,7 +183,7 @@ program swap
   
     !---------------------------------------------------
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildSz0_HMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
+    call buildHMBL( nspin, dim_Sz0, Jint, Vint, h_z, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
@@ -206,11 +202,11 @@ program swap
 
       psi_Sz0 = W(1:dim_Sz0,i)
 
-      LI(iteration,i) = local_imbalance_Sz0(nspin, dim_Sz0, psi_Sz0)
+      LI(iteration,i) = local_imbalance(nspin, dim_Sz0, psi_Sz0)
       IPR_arr(iteration,i) = IPR(psi_Sz0)
       !CEE(iteration,i) = comb_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
       !avgBE(iteration,i) = avg_block_entropy_Sz0(nspin, dim, dim_Sz0, psi_Sz0)
-      tot_CORR(iteration,i) = sigmaz_tot_corr_Sz0(nspin, dim_Sz0, psi_Sz0) / nspin**2
+      tot_CORR(iteration,i) = sigmaz_corr(nspin, dim_Sz0, psi_Sz0) / nspin**2
 
       !!---- Print to output -------!!!!
       !print *, "     abs(c_i)^2     l    config"

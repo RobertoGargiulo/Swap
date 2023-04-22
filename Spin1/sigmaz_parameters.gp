@@ -1,4 +1,6 @@
-reset session #Swap/MBL varying kick strength
+reset session 
+
+#Swap/MBL varying kick strength
 
 set size ratio 0.5
 set margins -1,2,0,0

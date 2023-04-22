@@ -150,7 +150,7 @@ hz = "8.00"
 kick = "0.10"
 
 figure = "figures/sigmaz_Swap_vs_MBL_Neel_compare_nspin_steps".steps."_period".T0."_J".J."_V".V."_hz".hz."_kick".kick.".png"
-f_title = "steps = ".steps.", T0 = ".T0.", n_{dis} = 2560*2^{1-L/2},\n J = ".J.", V = ".V.", hz = ".hz
+f_title = "steps = ".steps.", T0 = ".T0.", n_{dis} = 2560*2^{1-L/2},\n J = ".J.", V = ".V.", hz = ".hz.", eps = ".kick
 
 set title f_title
 
@@ -163,13 +163,13 @@ set ylabel "I(t)"
 list_L = "2 4 6 8"
 list_dis = "2560 1280 640 320"
 
-#set terminal png
-#set output figure
-#plot for [i=1:4] "data/dynamics/sigmaz_Swap_vs_MBL_Neel_nspin".word(list_L,i)."_steps".steps."_period".T0."_n_disorder".word(list_dis,i)."_J".J."_V".V."_hz".hz."_kick".kick.".txt" \
-#       u 1:(                -(sum[k=1:int(word(list_L,i))] (-1)**k * column(k+1))                    /word(list_L,i) ) w lp lw 1.6 title "MBL, L = ".word(list_L,i) ,\
-#    "" u 1:( (-1)**(column(1)/T0) * (sum[k=1:int(word(list_L,i))] (-1)**k * column(int(k+word(list_L,i)+1))) / word(list_L,i) ) w lp lw 1.6 title "Swap, L = ".word(list_L,i) ,\
+set terminal png
+set output figure
+plot for [i=1:4] "data/dynamics/sigmaz_Swap_vs_MBL_Neel_nspin".word(list_L,i)."_steps".steps."_period".T0."_n_disorder".word(list_dis,i)."_J".J."_V".V."_hz".hz."_kick".kick.".txt" \
+       u 1:(                        -(sum[k=1:int(word(list_L,i))] (-1)**k * column(k+1)) / word(list_L,i) ) w lp lw 1.6 title "MBL, L = ".word(list_L,i) ,\
+    for [i=1:4] "" u 1:(  (-1)**($1/T0) * (sum[k=1:int(word(list_L,i))] (-1)**k * column(k+word(list_L,i)+1)) / word(list_L,i) ) w lp lw 1.6 title "Swap, L = ".word(list_L,i)  
 
-
+#
 
 
 

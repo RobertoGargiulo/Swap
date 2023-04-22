@@ -4,7 +4,7 @@ filestring="swap_corr_z_Sz0"
 make $filestring
 
 #iterations=100 #1280
-n_threads=8
+n_threads=1
 export OMP_NUM_THREADS=$n_threads 
 #j=0
 output="Swap_correlations.txt"
