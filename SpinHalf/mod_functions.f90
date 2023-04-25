@@ -40,13 +40,26 @@ contains
 
     integer (c_int), intent(in) :: decimal, nbits
     integer (c_int), intent(out) :: bitstring(nbits)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i
 
     bitstring = 0
     do i = 1, nbits
       if (btest(decimal, i - 1)) bitstring(i) = 1
     enddo
   end subroutine decode
+
+  subroutine encode(bitstring, nbits, intgr)
+
+    integer (c_int), intent(in) :: nbits
+    integer (c_int), intent(in) :: bitstring(nbits)
+    integer (c_int), intent(out) :: intgr
+    integer (c_int) :: i
+
+    intgr = 0
+    do i = 1, nbits
+      intgr = intgr !+ bistring(i) * 2**(i-1)
+    enddo
+  end subroutine encode
 
   subroutine init_random_seed()
    use iso_fortran_env, only: int64
@@ -227,9 +240,10 @@ contains
         l = l+1
         states(l) = i
         inverse(i+1) = l
-        !print "(2(I4,4X),*(I0))", i, l, config(:)
+        print "(2(I4,4X),*(I0))", i, l, config(:)
       endif
     enddo
+    print *, "dim_Sz0 = ", dim_Sz0
 
   end subroutine
 
@@ -269,6 +283,44 @@ contains
     end if
   
   end function binsearch
+
+  function binsearch_rightmost(val, array) result(indx)
+
+
+    implicit none
+    real (c_double), intent(in) :: val, array(:)
+    integer (c_int) :: indx, mid, left, right, range
+
+    indx = -1
+    left = 1
+    right = size(array) + 1
+
+    range = right - left
+
+    print "(*(A20))", "left", "right", "mid", "array(mid)", "val"
+
+    do while (range > 0)
+
+      mid = (right + left) / 2
+
+      if (val < array(mid)) then
+        right = mid
+      else
+        left = mid + 1
+      end if
+      range = right - left
+      
+      print *, left, right, mid, array(mid), val
+
+    end do
+
+    indx = right - 1 
+
+    !if (array(mid) == val) then
+    !  binsearch = mid
+    !end if
+ 
+  end function
 
   integer function int_2dto1d(int_2d)
 

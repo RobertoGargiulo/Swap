@@ -1,6 +1,6 @@
 program swap
 
-  use functions, only: binom, init_random_seed, zero_mag_states, take_time
+  use functions, only: binom, init_random_seed, zero_mag_states
   use exponentiate, only: diagSYM, expSYM, diagUN
   use observables, only: local_imbalance => local_imbalance_Sz0, sigmaz_corr => sigmaz_tot_corr_Sz0, IPR
   use matrices, only: buildHSwap => buildSz0_HSwap, buildHMBL => buildSz0_HMBL

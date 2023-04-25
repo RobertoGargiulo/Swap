@@ -515,9 +515,8 @@ contains
 
     integer :: config(nspin), states(dim_Sz0), spin(nspin), inverse(dimSpinHalf**nspin)
     integer (c_int) :: i, j, l, r, k, q 
-    
+
     H = 0
-    call zero_mag_states(nspin, dim_Sz0, states)
     call basis_Sz0_inv(nspin, dim_Sz0, states, inverse)
     do l = 1, dim_Sz0
 
@@ -534,8 +533,14 @@ contains
         enddo
 
         if (spin(k)/=spin(k+1)) then
-          j = i + spin(k)*2**(k-1) + spin(k+1)*2**(k)
-          r = inverse(j) 
+          j = i + (1 - 2*config(k))*2**(k-1) + (1 - 2*config(k+1))*2**(k)
+          r = inverse(j+1) 
+          !if (r==-1) then
+            print "(*(I0))", config(:)
+          !endif
+          print *, "r_inv = ", r
+          r = binsearch(j,states)
+          print *, "r_bin = ", r
 
           H(r,l) = H(r,l) + Jint(k) * (spin(k) - spin(k+1))**2/2
         endif

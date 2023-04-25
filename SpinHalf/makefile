@@ -33,27 +33,14 @@ swap_corr_z_Sz0: $(MOD) swap_corr_z_Sz0.o
 swap_overlap: $(MOD) swap_overlap.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
-entanglement: $(MOD) entanglement.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-imbalance_states: $(MOD) imbalance_states.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-prova: $(MOD) prova.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-dense_Sz0: $(MOD) dense_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-sparse_Sz0: $(MOD) sparse_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-spectrum_Sz0: $(MOD) spectrum_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
 swap_degeneracies_Sz0: $(MOD) swap_degeneracies_Sz0.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+test_swap_LRZZ: $(MOD) test_swap_LRZZ.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+test_search: $(MOD) test_search.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
 

@@ -1,5 +1,5 @@
 ##!/bin/bash
-filestring="swap_degeneracies_Sz0"
+filestring="test_swap_LRZZ"
 
 make $filestring
 
@@ -7,12 +7,12 @@ n_threads=1
 export OMP_NUM_THREADS=$n_threads 
 #output="Swap_spectrum_ergodic_kick_density0.05.txt"
 #output="Swap_spectrum_check_GOE_for_entanglement.txt"
-output="Swap_degeneracies_solvable_point_check.txt"
+output="Swap_LR_degeneracies_solvable_point_check.txt"
 echo "" >> $output
 #mv $output ../Trash
 
 iterations_2=5120 #20480
-for nspin in {6..14..2}
+for nspin in 4 #{6..14..2}
 do
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
   iterations=1
@@ -28,8 +28,9 @@ do
           for hz in 4.00
           do
             #hz=`echo $(printf "%.2f" $(echo "0.04 * 2^($idx)" | bc) )`
-            
-            cat > input.txt << *
+            for alpha in 1.00
+            do
+              cat > input.txt << *
 $nspin
 $iterations
 $period
@@ -37,17 +38,19 @@ $J
 $V
 $hz
 $kick
+$alpha
 *
-            file_out="out.txt"
-  	        ./$filestring < input.txt | tee $file_out
-            echo "nspin = $nspin "
-            echo "J = $J  V = $V  hz = $hz  epsilon = $kick  period = $period"
-            echo "iterations = $iterations   n_threads = $n_threads "
-            gap_ratio=`grep -a -A1 "Ratio" $file_out | tail -1`
-            log_gap=`grep -a -A1 "Logarithm" $file_out | tail -1`
-            echo $nspin $J $V $hz $kick $period $gap_ratio $log_gap $iterations >> $output
+              file_out="out.txt"
+  	          ./$filestring < input.txt | tee $file_out
+              echo "nspin = $nspin "
+              echo "J = $J  V = $V  hz = $hz  epsilon = $kick  period = $period"
+              echo "iterations = $iterations   n_threads = $n_threads "
+              gap_ratio=`grep -a -A1 "Ratio" $file_out | tail -1`
+              log_gap=`grep -a -A1 "Logarithm" $file_out | tail -1`
+              echo $nspin $J $V $hz $kick $period $gap_ratio $log_gap $iterations >> $output
+            done
+            echo ""
           done
-          echo ""
           #echo "" >> $output
         done
       done
