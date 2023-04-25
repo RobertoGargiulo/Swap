@@ -12,10 +12,10 @@ echo "" >> $output
 #mv $output ../Trash
 
 iterations_2=5120 #20480
-for nspin in 4 #{6..14..2}
+for nspin in 6 8 #{6..14..2}
 do
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
-  iterations=1
+  iterations=10
   for kick in 0.00 #-0.85 -0.79 $(seq -0.75 0.05 0.75) 0.79 0.85
   do
     for period in 1.00
@@ -28,7 +28,7 @@ do
           for hz in 4.00
           do
             #hz=`echo $(printf "%.2f" $(echo "0.04 * 2^($idx)" | bc) )`
-            for alpha in 1.00
+            for alpha in 1.00 20.00
             do
               cat > input.txt << *
 $nspin
@@ -43,11 +43,11 @@ $alpha
               file_out="out.txt"
   	          ./$filestring < input.txt | tee $file_out
               echo "nspin = $nspin "
-              echo "J = $J  V = $V  hz = $hz  epsilon = $kick  period = $period"
+              echo "J = $J  V = $V  hz = $hz  epsilon = $kick  period = $period  alpha = $alpha"
               echo "iterations = $iterations   n_threads = $n_threads "
-              gap_ratio=`grep -a -A1 "Ratio" $file_out | tail -1`
-              log_gap=`grep -a -A1 "Logarithm" $file_out | tail -1`
-              echo $nspin $J $V $hz $kick $period $gap_ratio $log_gap $iterations >> $output
+              gap_ratio=`grep -a -A2 "Ratio" $file_out | tail -1`
+              log_gap=`grep -a -A2 "Logarithm" $file_out | tail -1`
+              echo $nspin $J $V $hz $kick $alpha $period $gap_ratio $log_gap $iterations >> $output
             done
             echo ""
           done

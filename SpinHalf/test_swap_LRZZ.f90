@@ -2,10 +2,11 @@ program test_LR
 
   use functions, only: binom, init_random_seed, zero_mag_states
   use exponentiate, only: diagSYM, expSYM, diagUN
-  use observables, only: gap_ratio, spectral_pairing => log_gap_difference, exact_QE => exact_quasi_energies_Sz0_LR
+  use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
+    & exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
   use matrices, only: buildHSwap => buildSz0_HSwap, buildHMBL => buildSz0_HMBL_LR
   use printing, only: take_time, printmat
-  use sorts, only: dpquicksort
+  use sorts, only: sort => dpquicksort
   use omp_lib
   use iso_c_binding
   implicit none
@@ -27,8 +28,8 @@ program test_LR
   
   real (c_double), dimension(:), allocatable :: r_avg, r_sq, r_avg2, r_sq2
 
-  integer (c_int), allocatable :: deg(:)
-  real (c_double), dimension(:), allocatable :: E, uE, QE_exact
+  integer (c_int), allocatable :: deg(:), idxuE(:)
+  real (c_double), dimension(:), allocatable :: E, QE_exact, E_exact
   real (c_double), dimension(:,:), allocatable :: H, W_r, QE, E_MBL
   complex(c_double_complex), dimension(:), allocatable :: PH
   complex(c_double_complex), dimension(:,:), allocatable :: U, W, USwap
@@ -141,7 +142,7 @@ program test_LR
 
   allocate(config(nspin), states(dim_Sz0))
 
-  allocate(uE(dim_Sz0), deg(dim_Sz0), QE_exact(dim_Sz0))
+  allocate(idxuE(dim_Sz0), deg(dim_Sz0), QE_exact(dim_Sz0), E_exact(dim_Sz0))
 
   call zero_mag_states(nspin, dim_Sz0, states)
 
@@ -176,10 +177,14 @@ program test_LR
     Vzz = -Vzz_coupling
     call random_number(Vzz)
     Vzz = -Vzz_coupling + Vzz_coupling*(Vzz - 0.5) !Vzz in [-V,V]
+    !Vzz = 1
     do k = 1, nspin-1
+      Vzz(k,1:k) = 0
       do q = k+1, nspin
         Vzz(k,q) = Vzz(k,q) / abs(k-q)**alpha
       enddo
+
+      !write (*,*) Vzz(k,:)
     enddo
  
     call random_number(hz)
@@ -203,13 +208,30 @@ program test_LR
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     E = real(C_UNIT*log(PH))
-    call dpquicksort(E)
+    call sort(E)
     QE(iteration,:) = E
 
-    QE_exact = exact_QE(nspin, dim_Sz0, Vzz, hz)
-
-    call find_degeneracies( size(E), E, uE, deg) 
+    print *, "Degeneracies of QE:"
+    call find_degeneracies( size(E), E, idxuE, deg) 
     print *, sum(deg), dim_Sz0
+
+    !QE_exact = exact_QE(nspin, dim_Sz0, Vzz, hz)
+    !call sort(QE_exact)
+    !print *, "Degeneracies of QE_exact:"
+    !call find_degeneracies( size(QE_exact), QE_exact, idxuE, deg) 
+    !print *, sum(deg), dim_Sz0
+
+    !E_exact = exact_E(nspin, dim_Sz0, Vzz, hz)
+    !call sort(E_exact)
+
+
+
+    !print *, "Quasienergies:"
+    !print "(*(A26))", "iteration", "l", "QE", "QE_exact", "E_MBL"
+    !do l = 1, dim_Sz0
+    !  write (*,*) iteration, l, QE(iteration,l), QE_exact(l), E_MBL(iteration,l), E_exact(l)
+    !enddo
+
 
     call gap_ratio(dim_Sz0, E, r_avg(iteration), r_sq(iteration))
     call spectral_pairing(dim_Sz0, E, log_pair_avg(iteration), log_near_avg(iteration), log_avg(iteration), log_sq(iteration))
@@ -223,7 +245,7 @@ program test_LR
   print "(*(A26))", "iteration", "l", "QE", "E_MBL"
   do iteration = 1, n_iterations
     do l = 1, dim_Sz0
-      write (*,*) iteration, l, QE(iteration,l), E_MBL(iteration,l)
+      !write (*,*) iteration, l, QE(iteration,l), E_MBL(iteration,l)
       !write (unit_ph,*) iteration, QE(iteration,l), E_MBL(iteration,l)
     enddo
   enddo
@@ -243,7 +265,7 @@ program test_LR
   print "(*(A26))", "<r>_Swap", "sigma(r)_Swap", "<r>_MBL", "sigma(r)_MBL"
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
-  print *, "Average of Log- (pi-)Gap"
+  print *, "Average of Logarithmic (pi-)Gap"
   print "(*(A26))", "<log(Delta_pi)>_Swap", "sigma(log(Delta_pi))_Swap", "<log(Delta_0)>_Swap", "sigma(log(Delta_0))_Swap"
   print *, log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg
 
@@ -285,7 +307,7 @@ end subroutine
 
 subroutine find_degeneracies( n, energies, unq, deg )
   !Finds all degeneracies of a real ordered 1D array of length n (up to a fixed tolerance)
-  !uE contains the unique values of E
+  !idxuE contains the indices of the unique values of E
   !deg contains the corresponding degeneracy
 
   use iso_c_binding
@@ -293,41 +315,40 @@ subroutine find_degeneracies( n, energies, unq, deg )
 
   integer (c_int), intent(in) :: n
   real (c_double), intent(in) :: energies(n) !'energies' has to be sorted already
-  real (c_double), intent(out)  :: unq(n)
-  integer (c_int), intent(out)  :: deg(n)
+  !real (c_double), intent(out)  :: unq(n)
+  integer (c_int), intent(out)  :: deg(n), unq(n)
 
   integer :: i, j, tot_deg
-  real (c_double) :: tol = 1.0e-6
+  real (c_double) :: tol = 1.0e-10
 
 
   unq = 0
   deg = 1
 
   j = 1
-  unq(j) = energies(j)
+  unq(j) = 1 !energies(j)
   do i = 2, n
     if ( abs(energies(i) - energies(i-1)) > tol ) then
       j = j + 1
-      unq(j) = energies(i)
-      !deg(j-1) = 1
+      !unq(j) = energies(i)
+      unq(j) = i
     else
       deg(j) = deg(j) + 1
     endif
   enddo
   deg(j+1:n) = 0
 
-  !do i = 1, n
-  !  print *, i, unq(i), deg(i)
-  !enddo
-
   tot_deg = 0
+  !print *, "Degenerate quasienergies: "
+  !print "(*(A15))", "i", "idxunique(i)", "unique(idx)", "deg(i)"
   do i = 1, n
-    if (deg(i)>1) then
-      print *, i, unq(i), deg(i)
-      tot_deg = tot_deg + deg(i)
+    if (deg(i)>0) then
+      !print *, i, unq(i), energies(unq(i)), deg(i)
+      tot_deg = tot_deg + merge(deg(i), 0, deg(i) > 1)
     endif
   enddo
   print *, "Total fraction of states with degeneracies: ", real(tot_deg)/real(n)
   print *, "Maximum degeneracy of a given energy: ", maxval(deg)
-  
+  print *, ""
+
 end subroutine

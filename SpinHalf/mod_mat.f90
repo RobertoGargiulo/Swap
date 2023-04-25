@@ -233,10 +233,10 @@ contains
   end subroutine buildHSwap
 
 
-  subroutine buildHMBL(nspin, dim, Jint, Vint, hz, H)
+  subroutine buildHMBL(nspin, dim, Jxy, Vzz, hz, H)
 
     integer (c_int), intent(in) :: nspin, dim
-    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H(dim,dim)
 
     integer :: config(nspin)
@@ -251,9 +251,9 @@ contains
 
         j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
 
-        H(i+1,i+1) = H(i+1,i+1) + Vint(k) * (1 - 2 * config(k)) * &
+        H(i+1,i+1) = H(i+1,i+1) + Vzz(k) * (1 - 2 * config(k)) * &
           & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
-        H(j+1,i+1) = H(j+1,i+1) + Jint(k) * 2 * (config(k) - config(k+1))**2
+        H(j+1,i+1) = H(j+1,i+1) + Jxy(k) * 2 * (config(k) - config(k+1))**2
       enddo
       k = nspin
       H(i+1,i+1) = H(i+1,i+1) + hz(k) * (1 - 2 * config(k))
@@ -263,10 +263,10 @@ contains
 
 
 
-  subroutine buildSPARSE_HMBL(nspin, dim, nz_dim, Jint, Vint, hz, H, ROWS, COLS)
+  subroutine buildSPARSE_HMBL(nspin, dim, nz_dim, Jxy, Vzz, hz, H, ROWS, COLS)
 
     integer (c_int), intent(in) :: nspin, dim, nz_dim
-    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H(nz_dim)
     integer (c_int), intent(out) :: ROWS(nz_dim), COLS(nz_dim)
 
@@ -283,7 +283,7 @@ contains
 
       m = m+1
       do k = 1, nspin-1
-        H(m) = H(m) + Vint(k) * (1 - 2 * config(k)) * &
+        H(m) = H(m) + Vzz(k) * (1 - 2 * config(k)) * &
           & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
       enddo
       k = nspin
@@ -297,7 +297,7 @@ contains
         if (config(k)/=config(k+1)) then
           m = m+1
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
-          H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
+          H(m) = H(m) + Jxy(k) * 2 * (config(k) - config(k+1))**2
           COLS(m) = i
           ROWS(m) = j
         endif
@@ -313,10 +313,10 @@ contains
   end subroutine buildSPARSE_HMBL
 
 
-  subroutine buildHESPARSE_HMBL(nspin, dim, Jint, Vint, hz, H, ROWS, COLS)
+  subroutine buildHESPARSE_HMBL(nspin, dim, Jxy, Vzz, hz, H, ROWS, COLS)
 
     integer (c_int), intent(in) :: nspin, dim
-    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H((nspin+3)*dim/4)
     integer (c_int), intent(out) :: ROWS((nspin+3)*dim/4), COLS((nspin+3)*dim/4)
 
@@ -333,7 +333,7 @@ contains
 
       m = m+1
       do k = 1, nspin-1
-        H(m) = H(m) + Vint(k) * (1 - 2 * config(k)) * &
+        H(m) = H(m) + Vzz(k) * (1 - 2 * config(k)) * &
           & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
       enddo
       k = nspin
@@ -348,7 +348,7 @@ contains
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
           if(j>i) then
             m = m+1
-            H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
+            H(m) = H(m) + Jxy(k) * 2 * (config(k) - config(k+1))**2
             COLS(m) = i
             ROWS(m) = j
           endif
@@ -366,12 +366,12 @@ contains
   end subroutine buildHESPARSE_HMBL
 
 
-  subroutine buildSz0_SPARSE_HMBL(nspin, dim_Sz0, nz_dim, Jint, Vint, hz, H, ROWS, COLS)
+  subroutine buildSz0_SPARSE_HMBL(nspin, dim_Sz0, nz_dim, Jxy, Vzz, hz, H, ROWS, COLS)
 
     !
 
     integer (c_int), intent(in) :: nspin, dim_Sz0, nz_dim
-    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H(nz_dim)
     integer (c_int), intent(out) :: ROWS(nz_dim), COLS(nz_dim)
     
@@ -393,7 +393,7 @@ contains
 
       m = m+1
       do k = 1, nspin-1
-        H(m) = H(m) + Vint(k) * (1 - 2 * config(k)) * &
+        H(m) = H(m) + Vzz(k) * (1 - 2 * config(k)) * &
           & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
       enddo
       k = nspin
@@ -407,7 +407,7 @@ contains
         if (config(k)/=config(k+1)) then
           m = m+1
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
-          H(m) = H(m) + Jint(k) * 2 * (config(k) - config(k+1))**2
+          H(m) = H(m) + Jxy(k) * 2 * (config(k) - config(k+1))**2
           n = binsearch(j,states)
           COLS(m) = l
           ROWS(m) = n
@@ -420,12 +420,12 @@ contains
   end subroutine buildSz0_SPARSE_HMBL
 
 
-  subroutine buildSz0_HMBL(nspin, dim_Sz0, Jint, Vint, hz, H)
+  subroutine buildSz0_HMBL(nspin, dim_Sz0, Jxy, Vzz, hz, H)
 
     !dim_Sz0 is the dimensione of the Sz=0 subsapce
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
-    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), hz(nspin)
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1), hz(nspin)
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
     integer :: config(nspin), states(dim_Sz0)
@@ -440,14 +440,14 @@ contains
 
       do k = 1, nspin-1
 
-        H(l,l) = H(l,l) + Vint(k) * (1 - 2 * config(k)) * &
+        H(l,l) = H(l,l) + Vzz(k) * (1 - 2 * config(k)) * &
           & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
 
         if (config(k)/=config(k+1)) then
           j = i + (1-2*config(k))*2**(k-1) + (1-2*config(k+1))*2**(k)
           r = binsearch(j,states)
 
-          H(r,l) = H(r,l) + Jint(k) * 2 * (config(k) - config(k+1))**2
+          H(r,l) = H(r,l) + Jxy(k) * 2 * (config(k) - config(k+1))**2
         endif
       enddo
       k = nspin
@@ -456,12 +456,12 @@ contains
 
   end subroutine buildSz0_HMBL
 
-  subroutine buildSz0_HMBL_NNN(nspin, dim_Sz0, Jint, Vint, Vint2, hz, H)
+  subroutine buildSz0_HMBL_NNN(nspin, dim_Sz0, Jxy, Vzz, Vzz2, hz, H)
 
     !dim_Sz0 is the dimensione of the Sz=0 subsapce
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
-    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1), Vint2(nspin-2), hz(nspin)
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1), Vzz2(nspin-2), hz(nspin)
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
     integer :: config(nspin), states(dim_Sz0)
@@ -477,26 +477,26 @@ contains
 
       do k = 1, nspin-2
 
-        H(l,l) = H(l,l) + Vint(k) * config(k) * &
-          & config(k+1) + Vint2(k) * config(k) * config(k+2) + hz(k) * config(k)
+        H(l,l) = H(l,l) + Vzz(k) * config(k) * &
+          & config(k+1) + Vzz2(k) * config(k) * config(k+2) + hz(k) * config(k)
 
         if (config(k)/=config(k+1)) then
           j = i + config(k)*2**(k-1) + config(k+1)*2**(k)
           r = binsearch(j,states)
 
-          H(r,l) = H(r,l) + Jint(k) * (config(k) - config(k+1))**2/2
+          H(r,l) = H(r,l) + Jxy(k) * (config(k) - config(k+1))**2/2
         endif
       enddo
 
       k = nspin - 1
-      H(l,l) = H(l,l) + Vint(k) * config(k) * &
+      H(l,l) = H(l,l) + Vzz(k) * config(k) * &
         & config(k+1) + hz(k) * config(k)
 
       if (config(k)/=config(k+1)) then
         j = i + config(k)*2**(k-1) + config(k+1)*2**(k)
         r = binsearch(j,states)
 
-        H(r,l) = H(r,l) + Jint(k) * (config(k) - config(k+1))**2/2
+        H(r,l) = H(r,l) + Jxy(k) * (config(k) - config(k+1))**2/2
       endif
 
       k = nspin
@@ -505,12 +505,12 @@ contains
 
   end subroutine buildSz0_HMBL_NNN
 
-  subroutine buildSz0_HMBL_LR(nspin, dim_Sz0, Jint, Vint, hz, H)
+  subroutine buildSz0_HMBL_LR(nspin, dim_Sz0, Jxy, Vzz, hz, H)
 
     !dim_Sz0 is the dimensione of the Sz=0 subsapce
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
-    real (c_double), intent(in) :: Jint(nspin-1), Vint(nspin-1,nspin), hz(nspin)
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1,nspin), hz(nspin)
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
     integer :: config(nspin), states(dim_Sz0), spin(nspin), inverse(dimSpinHalf**nspin)
@@ -529,20 +529,14 @@ contains
         H(l,l) = H(l,l) + hz(k) * spin(k)
 
         do q = k+1, nspin
-          H(l,l) = H(l,l) + Vint(k,q) * spin(k) * spin(q)
+          H(l,l) = H(l,l) + Vzz(k,q) * spin(k) * spin(q)
         enddo
 
         if (spin(k)/=spin(k+1)) then
           j = i + (1 - 2*config(k))*2**(k-1) + (1 - 2*config(k+1))*2**(k)
           r = inverse(j+1) 
-          !if (r==-1) then
-            print "(*(I0))", config(:)
-          !endif
-          print *, "r_inv = ", r
-          r = binsearch(j,states)
-          print *, "r_bin = ", r
 
-          H(r,l) = H(r,l) + Jint(k) * (spin(k) - spin(k+1))**2/2
+          H(r,l) = H(r,l) + Jxy(k) * (spin(k) - spin(k+1))**2/2
         endif
       enddo
       k = nspin

@@ -61,6 +61,19 @@ contains
     enddo
   end subroutine encode
 
+  function swap_config(nspin, i) result(j)
+
+    integer (c_int), intent(in) :: nspin, i
+    integer (c_int) :: config(nspin), k, j
+
+    call decode(i, nspin, config)
+    j = 0
+    do k = 1, nspin/2
+      j = j + config(2*k) * 2**(2*k-2)  + config(2*k-1) * 2**(2*k-1)
+    enddo
+
+  end function 
+
   subroutine init_random_seed()
    use iso_fortran_env, only: int64
    implicit none
@@ -240,10 +253,10 @@ contains
         l = l+1
         states(l) = i
         inverse(i+1) = l
-        print "(2(I4,4X),*(I0))", i, l, config(:)
+        !print "(2(I4,4X),*(I0))", i, l, config(:)
       endif
     enddo
-    print *, "dim_Sz0 = ", dim_Sz0
+    !print *, "dim_Sz0 = ", dim_Sz0
 
   end subroutine
 
@@ -284,8 +297,7 @@ contains
   
   end function binsearch
 
-  function binsearch_rightmost(val, array) result(indx)
-
+  function binsearch_closest_from_above(val, array) result(indx)
 
     implicit none
     real (c_double), intent(in) :: val, array(:)
@@ -297,7 +309,7 @@ contains
 
     range = right - left
 
-    print "(*(A20))", "left", "right", "mid", "array(mid)", "val"
+    !print "(3(A12),2(A26))", "left", "right", "mid", "array(mid)", "val"
 
     do while (range > 0)
 
@@ -310,11 +322,11 @@ contains
       end if
       range = right - left
       
-      print *, left, right, mid, array(mid), val
+      !print *, left, right, mid, array(mid), val
 
     end do
 
-    indx = right - 1 
+    indx = right! - 1 
 
     !if (array(mid) == val) then
     !  binsearch = mid
