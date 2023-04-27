@@ -12,7 +12,7 @@ echo "" >> $output
 #mv $output ../Trash
 
 iterations_2=5120 #20480
-for nspin in 6 8 #{6..14..2}
+for nspin in 12 #{6..14..2}
 do
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
   iterations=10
@@ -28,7 +28,7 @@ do
           for hz in 4.00
           do
             #hz=`echo $(printf "%.2f" $(echo "0.04 * 2^($idx)" | bc) )`
-            for alpha in 1.00 20.00
+            for alpha in 0.50 1.00 3.00 5.00 10.00
             do
               cat > input.txt << *
 $nspin

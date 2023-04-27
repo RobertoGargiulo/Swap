@@ -15,7 +15,7 @@
 module functions
   
   !use ifport
-  use iso_c_binding
+  use iso_c_binding, only: dp => c_double, ip => c_int, cp => c_double_complex
   use printing
   implicit none
 
@@ -370,5 +370,22 @@ contains
     int_1dto2d = int_2d
 
   end function int_1dto2d
+
+  real (dp) function norm(alpha, nspin)
+
+    real (dp) :: alpha
+    integer (ip) :: nspin
+
+    if (alpha > 1) then
+      norm = 1
+    else if (alpha == 1) then
+      norm = log(real(nspin, kind(dp)))
+    else
+      norm = nspin**(1-alpha)
+    endif
+
+  end function
+
+
 
 end module functions

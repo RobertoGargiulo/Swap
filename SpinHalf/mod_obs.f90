@@ -15,7 +15,7 @@ module observables
   
   use iso_c_binding, dp => c_double, ip => c_int, cp => c_double_complex
   use printing
-  use functions
+  use functions, search => binsearch_closest_from_above
   implicit none
 
   complex (c_double_complex), private, parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
@@ -418,16 +418,40 @@ contains
 
   end subroutine gap_ratio
 
-  function pi_paired(dim, energies, alpha) result(beta)
+  function pi_pair(dim, QE) result(beta)
 
-    integer (c_int), intent(in) :: dim, alpha
-    real (c_double), intent(in) :: energies(dim)
-    integer (c_int) :: beta
+    integer (c_int), intent(in) :: dim
+    real (c_double), intent(in) :: QE(dim)
+    integer (c_int) :: alpha, beta(dim)
+    real (c_double) :: val
 
-    beta = mod(alpha + dim/2, dim)
-    print *, dim, alpha, beta
+    do alpha = 1, dim
+      val = mod(QE(alpha) + 2*pi, 2*pi) - pi
+      if (val > QE(dim)) then 
+        val = val - 2*pi !If (QE(alpha)+pi)_1 > QE(beta) for all beta, then look from below by shifting by -2pi
+        !print *, "Problem: alpha = ", alpha, "; a(alpha) = ", QE(alpha)
+        !print *, ""
+      endif
 
-    beta = 0
+      beta(alpha) = search(val, QE)
+      !print "(2(A12),4(A22,4X))", "i", "alpha", "a(i)", "val", "(a(alpha) + pi)_1", "a(alpha)"
+      !do i = 1, size(QE)
+      !  print *, i, alpha, QE(i), val, mod(QE(alpha) + 2*pi, 2*pi) - pi, QE(alpha)
+      !enddo
+
+      !print "(2(A12),4(A22,4X))", "beta", "alpha", "a(beta)", "val", "(a(alpha) + pi)_1", "a(alpha)"
+      !print *, beta, alpha, QE(beta), val, mod(QE(alpha) + 2*pi, 2*pi) - pi, QE(alpha)
+
+      !print *, "Check: "
+      !print "(1(A12),1(A22,4X))", "i", "a(i) - val"!, "|a(i) - a(alpha)|-pi"
+      !do i = 1, size(QE)
+      !  print *, i, QE(i) - val!, abs(QE(i) - QE(alpha)) - pi
+      !enddo
+      !print *, ""
+      !print *, ""
+      !print *, ""
+
+    enddo
 
   end function
 
@@ -446,25 +470,26 @@ contains
     real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
     real (c_double) :: pair(dim), near(dim)
 
-    integer (c_int) :: i, j
+    integer (c_int) :: alpha, beta, pi_paired(dim)
 
-    do i = 1, dim 
+    pi_paired = pi_pair(dim, energies)
+
+    do alpha = 1, dim 
+
+      !beta = merge(alpha+1,alpha+1-dim,alpha<=dim-1)
+      !near(alpha) = energies(beta) - energies(alpha)
       
-      if (i<=dim-1) then
-        j = i + 1
-        near(i) = energies(j) - energies(i)
-      else if (i>dim-1) then
-        j = i + 1 -dim
-        near(i) = energies(j) + 2*pi - energies(i)
+      if (alpha<=dim-1) then
+        beta = alpha + 1
+        near(alpha) = energies(beta) - energies(alpha)
+      else if (alpha>dim-1) then
+        beta = alpha + 1 - dim
+        near(alpha) = energies(beta) + 2*pi - energies(alpha)
       endif
-  
-      if (i<=dim/2) then
-        j = i + dim/2
-        pair(i) = abs( energies(j) - energies(i) - pi )
-      else if (i>dim/2) then
-        j = i - dim/2
-        pair(i) = abs( energies(j) + 2*pi - energies(i) - pi  )
-      endif
+
+      !beta = merge(alpha+dim/2, alpha-dim/2, alpha+dim/2<=dim)
+      beta = pi_paired(alpha)
+      pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
 
     enddo
 
@@ -952,12 +977,12 @@ contains
     t_sigma = 0
     if (option == 'F') then
       do j = start, steps
-        t_avg = t_avg + avg(j)
+        t_avg = t_avg + avg(j) !Time average of avg(t)
         t_sigma = t_sigma + sigma(j)**2
       enddo
     else if (option == 'T') then
       do j = start, steps
-        t_avg = t_avg + 2*(mod(j,2)-0.5) * avg(j)
+        t_avg = t_avg + 2*(mod(j,2)-0.5) * avg(j) !Time average of (-1)^t avg(t)
         t_sigma = t_sigma + sigma(j)**2
       enddo
     endif

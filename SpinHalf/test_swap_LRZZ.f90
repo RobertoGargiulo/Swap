@@ -1,6 +1,6 @@
 program test_LR
 
-  use functions, only: binom, init_random_seed, zero_mag_states
+  use functions, only: binom, init_random_seed, zero_mag_states, norm
   use exponentiate, only: diagSYM, expSYM, diagUN
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
     & exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
@@ -174,18 +174,18 @@ program test_LR
     !Jxy = 2*Jxy_coupling*(Jxy - 0.5) !Jxy in [-J,J]
     Jxy = -Jxy_coupling
 
-    Vzz = -Vzz_coupling
+    !Vzz = -Vzz_coupling
     call random_number(Vzz)
     Vzz = -Vzz_coupling + Vzz_coupling*(Vzz - 0.5) !Vzz in [-V,V]
     !Vzz = 1
     do k = 1, nspin-1
       Vzz(k,1:k) = 0
       do q = k+1, nspin
-        Vzz(k,q) = Vzz(k,q) / abs(k-q)**alpha
+        Vzz(k,q) = Vzz(k,q) / ( abs(k-q)**alpha * norm(alpha,nspin) )
       enddo
-
       !write (*,*) Vzz(k,:)
     enddo
+    Vzz = Vzz / norm(alpha, nspin)
  
     call random_number(hz)
     hz = 2*hz_coupling*(hz-0.5) !hz in [-hz_coupling, hz_coupling]
