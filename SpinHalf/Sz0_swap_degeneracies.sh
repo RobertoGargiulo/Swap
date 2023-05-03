@@ -1,5 +1,5 @@
 ##!/bin/bash
-filestring="test_swap_LRZZ"
+filestring="spectrum_swap_LR"
 
 make $filestring
 
@@ -14,6 +14,7 @@ echo "" >> $output
 iterations_2=5120 #20480
 for nspin in 12 #{6..14..2}
 do
+  count_nspin=$((count_nspin + 1))
   iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
   iterations=10
   for kick in 0.00 #-0.85 -0.79 $(seq -0.75 0.05 0.75) 0.79 0.85
@@ -57,4 +58,12 @@ $alpha
     done
   done
   echo "" >> $output
+  nparam=3
+  cat > input_sort.txt << *
+$nparam
+4
+6
+1
+5
+*
 done

@@ -433,7 +433,9 @@ contains
         !print *, ""
       endif
 
-      beta(alpha) = search(val, QE)
+      beta(alpha) = search(val, QE) !<--------- If you want the "minimal pi-distance"
+      !beta(alpha) = merge(alpha+dim/2, alpha-dim/2, alpha+dim/2<=dim)
+
       !print "(2(A12),4(A22,4X))", "i", "alpha", "a(i)", "val", "(a(alpha) + pi)_1", "a(alpha)"
       !do i = 1, size(QE)
       !  print *, i, alpha, QE(i), val, mod(QE(alpha) + 2*pi, 2*pi) - pi, QE(alpha)
@@ -463,6 +465,8 @@ contains
     ! log_pair_avg = < log( E_{n+dim/2} - E_n ) >
     ! log_avg = log_pair_avg - log_near_avg
     ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
+    ! If there is spectral pairing: Delta^alpha / Delta_0^alpha      -> 0  as L-> +infty
+    !                               log(Delta^alpha / Delta_0^alpha) -> -infty
 
 
     integer (c_int), intent(in) :: dim
@@ -487,7 +491,6 @@ contains
         near(alpha) = energies(beta) + 2*pi - energies(alpha)
       endif
 
-      !beta = merge(alpha+dim/2, alpha-dim/2, alpha+dim/2<=dim)
       beta = pi_paired(alpha)
       pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
 
@@ -499,6 +502,47 @@ contains
     log_sq = sum((log(pair) - log(near))**2) / dim
 
   end subroutine log_gap_difference
+
+  subroutine gap_difference(dim, energies, pair_avg, near_avg)
+
+    !Computes the averages of gaps of neighbouring eigenvalues 
+    !and paired eigenvalues (separated by half the spectrum)
+    ! near_avg = < log( E_{n+1} - E_n ) >
+    ! pair_avg = < log( E_{n+dim/2} - E_n ) >
+    ! If there is spectral pairing: Delta^alpha / Delta_0^alpha      -> 0  as L-> +infty
+
+
+    integer (c_int), intent(in) :: dim
+    real (c_double), intent(in) :: energies(dim)
+    real (c_double), intent(out) :: pair_avg, near_avg 
+    real (c_double) :: pair(dim), near(dim)
+
+    integer (c_int) :: alpha, beta, pi_paired(dim)
+
+    pi_paired = pi_pair(dim, energies)
+
+    do alpha = 1, dim 
+
+      !beta = merge(alpha+1,alpha+1-dim,alpha<=dim-1)
+      !near(alpha) = energies(beta) - energies(alpha)
+      
+      if (alpha<=dim-1) then
+        beta = alpha + 1
+        near(alpha) = energies(beta) - energies(alpha)
+      else if (alpha>dim-1) then
+        beta = alpha + 1 - dim
+        near(alpha) = energies(beta) + 2*pi - energies(alpha)
+      endif
+
+      beta = pi_paired(alpha)
+      pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
+
+    enddo
+
+    pair_avg = sum(pair) / dim
+    near_avg = sum(near) / dim
+
+  end subroutine gap_difference
 
   function IPR(psi)
     complex (c_double_complex), intent(in) :: psi(:)
@@ -784,19 +828,19 @@ contains
     !E = 0
     !Es = 0
     call zero_mag_states(nspin, dim_Sz0, states)
-    do i = 1, dim_Sz0
+    do l = 1, dim_Sz0
 
-      l = states(i)
-      call decode(l, nspin, config)
-      m = 0
-      do k = 1, nspin/2
-        m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
-      enddo
-      QE(i) = (exact_energy(nspin, Vzz, hz, l) + exact_energy(nspin, Vzz, hz, m)) / 2
-      QE(i) = real(C_UNIT*log(exp(-C_UNIT*QE(i))), kind(1.0_c_double))
+      i = states(l)
+      call decode(i, nspin, config)
+      !m = 0
+      !do k = 1, nspin/2
+      !  m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
+      !enddo
+      QE(l) = exact_quasi_energy( nspin, Vzz, hz, i ) 
+      QE(l) = real(C_UNIT*log(exp(-C_UNIT*QE(l))), kind(1.0_c_double))
 
       write (*,"(*(I0))",advance='no'), config(:)
-      write (*,*) QE(i)
+      write (*,*) QE(l)
       !config = 1 - 2*config
       !do k = 1, nspin/2 - 1
       !  print *, "k = ", k
@@ -843,9 +887,9 @@ contains
       !  print *, ""
 
       !print "( F15.10,4X,*(I0)  )", E(i), (1 - config(:))/2
-      !print *, E(i), Es(i), exact_energy(nspin, Vzz, hz, l), exact_energy(nspin, Vzz, hz, m)
+      !print *, E(l), Es(l), exact_energy(nspin, Vzz, hz, i), exact_energy(nspin, Vzz, hz, m)
 
-      !QE_alt(i) = (E(i) + Es(i)) / 2
+      !QE_alt(l) = (E(l) + Es(l)) / 2
 
       !do k = 1, nspin/2 - 1
       !  QE(i) = QE(i) + ( ( Vzz(2*k-1) * 2 * config(2*k-1) * config(2*k) + &
@@ -921,7 +965,8 @@ contains
     !print "(A,2X,*(I0))", "config: ", config(:)
     !print "(A,2X,*(I0))", "config_swap: ", config_swap(:)
 
-    QE = (exact_energy_LR(nspin, Vzz, hz, i) + exact_energy_LR(nspin, Vzz, hz, j)) / 2
+    QE = (exact_energy_LR(nspin, Vzz, hz, i) + exact_energy_LR(nspin, Vzz, hz, j)) / 2 + &
+      & merge(pi,0.0_dp,j>i)
     !print "(*(A26))", "E(i)", "E(j)", "QE = (E(i)+E(j))/2"
     !print *, exact_energy_LR(nspin, Vzz, hz, i), exact_energy_LR(nspin, Vzz, hz, j), QE
 
