@@ -18,7 +18,8 @@ do
   read col
   ordering="$ordering -k${col}"
 done
-echo "ordering: " $ordering
+output="sort_col${col}_${file}"
+echo "Ordering options: " $ordering
 
 echo "Number of different values of parameter ${nparam} (aka block size): "
 read bsize
@@ -27,10 +28,11 @@ step=$((bsize + 1)) #Step size is equal to the block size plus the one blank lin
 
 
 #sort files numerically according first to column $1 and column $2
-sort -n $ordering $file -o sort_$file 
+sort -n $ordering $file -o $output 
+
 
 #Delete all blank lines in a given file
-sed -i '/^$/d' sort_$file
+sed -i '/^$/d' $output
 
 #Re-insert them at the appropriate lines
 j=0
@@ -48,8 +50,8 @@ w
 q
 *
   #Insert blank line at position $step * $j using 'ed'
-  ed sort_$file < ed_script.ed >> ed_out.txt
-  nlines=`wc -l < sort_$file`
+  ed $output < ed_script.ed >> ed_out.txt
+  nlines=`wc -l < $output`
   #echo $j, $line, $nlines
   
   #Condition for while-loop end
@@ -58,4 +60,4 @@ done
 
 #print to output to see result
 #echo "Re-ordered file: "
-#cat sort_$file
+#cat $output

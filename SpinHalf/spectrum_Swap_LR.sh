@@ -3,17 +3,17 @@ filestring="spectrum_swap_LR"
 
 make $filestring
 
-n_threads=4
+n_threads=10
 export OMP_NUM_THREADS=$n_threads 
 
-output="Swap_LR_spectrum_L12_V_hz_alpha.txt"
+output="Swap_LR_spectrum_L12_V_hz_alpha_large_N_dis.txt"
 mv $output data/eigen/
 file_out="out.txt"
 file_sort="out_sort.txt"
 mv temp $file_out $file_sort raw_$output output/
 
 block=0
-iterations_2=5120 #20480
+iterations_2=20480
 for nspin in {4..12..2}
 do
   block=$(( $block + 1 ))
@@ -70,8 +70,8 @@ $nparam
 6
 4
 *
-  ./sort_space.sh temp < input_sort.txt | tee $file_sort
-  mv sort_temp $output
+  ./sort_data.sh temp < input_sort.txt | tee $file_sort
+  mv sort_col6_temp $output
   mv temp output/
 
   cat > input_sort.txt << *
@@ -82,7 +82,7 @@ $nparam
 1
 $block
 *
-  ./sort_space.sh $output < input_sort.txt | tee $file_sort
+  ./sort_data.sh $output < input_sort.txt | tee $file_sort
 done
 
 mv temp $file_out $file_sort raw_$output output/

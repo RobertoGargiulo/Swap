@@ -62,8 +62,8 @@ $nparam
 4
 4
 *
-  ./sort_space.sh temp < input_sort.txt | tee $file_sort
-  mv sort_temp $output
+  ./sort_data.sh temp < input_sort.txt | tee $file_sort
+  mv sort_col4_temp $output
   mv temp output/
 
   cat > input_sort.txt << *
@@ -73,7 +73,7 @@ $nparam
 1
 $block
 *
-  ./sort_space.sh $output < input_sort.txt | tee $file_sort
+  ./sort_data.sh $output < input_sort.txt | tee $file_sort
 done
 
 mv temp $file_out $file_sort raw_$output output/
