@@ -150,10 +150,10 @@ contains
     enddo
   end subroutine buildSz
 
-  subroutine buildHJ(nspin, dim, Jint, HJ)
+  subroutine buildHJ(nspin, dim, Jzz, HJ)
 
     integer (c_int), intent(in) :: nspin, dim
-    real (c_double), intent(in) :: Jint(nspin-1)
+    real (c_double), intent(in) :: Jzz(nspin-1)
     real (c_double), intent(out) :: HJ(dim,dim)
 
     integer :: config(nspin)
@@ -165,7 +165,7 @@ contains
       call decode(i,nspin,config)
 
       do k = 1, nspin - 1
-        HJ(i+1,i+1) = HJ(i+1,i+1) + Jint(k) * (1 - 2 * config(k)) * &
+        HJ(i+1,i+1) = HJ(i+1,i+1) + Jzz(k) * (1 - 2 * config(k)) * &
          & (1 - 2 * config(k+1))
       enddo
     enddo
@@ -173,30 +173,31 @@ contains
   end subroutine buildHJ
 
 
-  subroutine buildHNayak( nspin, dim, Jint, hx, hz, H )
+  subroutine buildHNayak( nspin, dim, hx, Jzz, hz, H )
 
     integer (c_int), intent(in) :: nspin, dim
-    real (c_double), intent(in) :: Jint(nspin-1), hx(nspin), hz(nspin)
+    real (c_double), intent(in) :: Jzz(nspin-1), hx(nspin), hz(nspin)
     real (c_double), intent(out) :: H(dim,dim)
 
-    integer :: config(nspin)
+    integer :: config(nspin), spin(nspin)
     integer (c_int) :: i, j, k, m
 
     H = 0
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
+      spin = 1 - 2 * config
 
       do k = 1, nspin - 1 !Open Boundary Conditions
 
-        H(i+1,i+1) = H(i+1,i+1) + Jint(k) * (1 - 2 * config(k)) * &
-        & (1 - 2 * config(k+1)) + hz(k) * (1 - 2 * config(k))
+        H(i+1,i+1) = H(i+1,i+1) + Jzz(k) * spin(k) * spin(k+1) + &
+        & hz(k) * spin(k)
 
         j = i + (1-2*config(k)) * 2**(k-1)
         H(j+1,i+1) = H(j+1,i+1) + hx(k)
 
       enddo
-      H(i+1,i+1) = H(i+1,i+1) + hz(nspin) * (1 - 2 * config(nspin))
+      H(i+1,i+1) = H(i+1,i+1) + hz(nspin) * spin(nspin)
       j = i + (1-2*config(nspin)) * 2**(nspin-1)
       H(j+1,i+1) = H(j+1,i+1) + hx(nspin)
     enddo
@@ -579,5 +580,29 @@ contains
     enddo
 
   end subroutine buildSz0_HSwap
+
+  subroutine buildHFlip(nspin, dim, H)
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(out) :: H(dim,dim)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, j, k, m
+
+    H = 0
+    do i = 0, dim - 1
+
+      call decode(i,nspin,config)
+
+      do k = 1, nspin
+
+        j = i + (1-2*config(k))*2**(k-1)
+        H(j+1,i+1) = H(j+1,i+1) + 1
+
+      enddo
+    enddo
+
+  end subroutine
+
 
 end module matrices

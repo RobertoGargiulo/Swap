@@ -42,6 +42,9 @@ spectrum_swap_LR: $(MOD) spectrum_swap_LR.o
 solvable_spectrum_swap_LR: $(MOD) solvable_spectrum_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+spectrum_flip: $(MOD) spectrum_flip.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
 
 

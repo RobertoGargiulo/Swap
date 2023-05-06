@@ -1,10 +1,10 @@
-program test_LR
+program flip
 
-  use functions, only: binom, init_random_seed, zero_mag_states, norm
+  use functions, only: init_random_seed
   use exponentiate, only: diagSYM, expSYM, diagUN
-  use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
-    & exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
-  use matrices, only: buildHSwap => buildSz0_HSwap, buildHMBL => buildSz0_HMBL_LR
+  use observables, only: gap_ratio, spectral_pairing => log_gap_difference !, &
+    !& exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
+  use matrices, only: buildHFlip, buildHMBL => buildHNayak
   use printing, only: take_time, printmat
   use sorts, only: sort => dpquicksort
   use omp_lib
@@ -18,12 +18,11 @@ program test_LR
   real (dp), parameter :: pi = 4.d0 * datan(1.d0)
 
   integer (ip)     ::  nspin, dim, n_disorder
-  integer (ip)     ::  i, j, l, k, p, q, dim_Sz0
+  integer (ip)     ::  i, j, l, k, p, q
   integer (ip)     ::  unit_ph
 
-  real(dp), dimension(:), allocatable :: Jxy, hz
-  real(dp), dimension(:,:), allocatable :: Vzz
-  real(dp) :: T0, T1, Jxy_coupling, Vzz_coupling, hz_coupling, kick, alpha
+  real(dp), dimension(:), allocatable :: Vzz, hz, hx
+  real(dp) :: T0, T1, Vzz_coupling, hz_coupling, hx_coupling, kick
   real(dp) :: r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
   
   real (dp), dimension(:), allocatable :: r_avg, r_sq, r_avg2, r_sq2
@@ -32,7 +31,7 @@ program test_LR
   real (dp), dimension(:), allocatable :: E, QE_exact, E_exact
   real (dp), dimension(:,:), allocatable :: H, W_r, QE, E_MBL
   complex(dcp), dimension(:), allocatable :: PH
-  complex(dcp), dimension(:,:), allocatable :: U, W, USwap
+  complex(dcp), dimension(:,:), allocatable :: U, W, UFlip
 
   real (dp), allocatable :: log_avg(:), log_sq(:), log_pair_avg(:), log_near_avg(:)
   real (dp) :: log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg
@@ -46,7 +45,7 @@ program test_LR
   character(len=200) :: filestring
 
 
-  !Parametri Modello: J, V, hz, T0, T1/epsilon, nspin/L
+  !Parametri Modello: hx, V, hz, T0, T1/epsilon, nspin/L
   !Parametri Simulazione: Iterazioni di Disordine
 
   !Parametri Iniziali
@@ -55,7 +54,6 @@ program test_LR
   read (*,*) nspin
   print*,""
   dim = 2**nspin
-  dim_Sz0 = binom(nspin,nspin/2)
 
   write (*,*) "Number of Disorder Realizations"
   read (*,*) n_disorder
@@ -65,8 +63,8 @@ program test_LR
   read (*,*) T0
   print*,""
 
-  write (*,*) "Transverse Interaction Constant -J * (XX + YY)"
-  read (*,*) Jxy_coupling
+  write (*,*) "Transverse Field hx * X"
+  read (*,*) hx_coupling
   print*,""
 
   write (*,*) "Longitudinal Interaction Constant -V * ZZ"
@@ -77,55 +75,50 @@ program test_LR
   read (*,*) hz_coupling
   print*,""
 
-  !---Read below for distributions of J, V, hz
+  !---Read below for distributions of hx, V, hz
 
-  write (*,*) "Perturbation on Kick T1 = pi/4 + kick"
+  write (*,*) "Perturbation on Kick T1 = pi/2 + kick"
   read (*,*) kick
   print*,""
 
-  write (*,*) "Power-Law Coefficient Vzz = V_{ij} / |i-j|^alpha"
-  read (*,*) alpha
-  print*,""
- 
-  T1 = pi/4 + kick
+  T1 = pi/2 + kick
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
 
   !DATA FILES
   
-  write(filestring,93) "data/eigen/quasienergies_Swap_LR_Sz0_nspin", &
+  write(filestring,93) "data/eigen/quasienergies_Flip_nspin", &
     & nspin, "_period", T0, "_n_disorder", n_disorder, &
-    & "_Jxy", Jxy_coupling, "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
-    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, &
-    & "_alpha", int(alpha), alpha-int(alpha), ".txt"
+    & "_hx", int(hx_coupling), hx_coupling-int(hx_coupling), "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
+    & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
   open(newunit=unit_ph,file=filestring)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  93  format(A,I0, A,F4.2, A,I0, A,F5.3, A,I0,F0.2, A,I0,F0.2, A,F4.2, A,I0,F0.2, A)
+  93  format(A,I0, A,I0,F0.2, A,I0, A,F5.3, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
  
   !------------------------------------------------
 
-  !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
-  allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0), USwap(dim_Sz0,dim_Sz0))
-  call buildHSwap(nspin, dim_Sz0, H)
-  call diagSYM( 'V', dim_Sz0, H, E, W_r)
-!  print *, "HSwap = "
+  !BUILD DRIVING PROTOCOL (NO DISORDER) UFlip = exp(-i*(pi/4 + eps)*HFlip)
+  allocate(H(dim,dim), E(dim), W_r(dim,dim), UFlip(dim,dim))
+  call buildHFlip(nspin, dim, H)
+  call diagSYM( 'V', dim, H, E, W_r)
+!  print *, "HFlip = "
 !  call printmat(dim, H, 'R')
   deallocate(H)
-  call expSYM( dim_Sz0, -C_UNIT*T1, E, W_r, USwap )
+  call expSYM( dim, -C_UNIT*T1, E, W_r, UFlip )
   deallocate(E, W_r)
 
   !---------------------------------------------------
   !Allocate local interactions and fields
-  allocate( Jxy(nspin-1), Vzz(nspin-1,nspin), hz(nspin))
+  allocate( hx(nspin), Vzz(nspin-1), hz(nspin))
 
   !Allocate Floquet and MBL Operators
   !allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
-  allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
-  allocate(U(dim_Sz0,dim_Sz0))
-  !allocate(idx(dim_Sz0))
+  allocate(H(dim,dim), E(dim), W_r(dim,dim))
+  allocate(U(dim,dim))
+  !allocate(idx(dim))
 
   !Allocate observables and averages
   allocate( r_avg(n_disorder), r_sq(n_disorder))
@@ -135,15 +128,11 @@ program test_LR
   allocate( log_avg(n_disorder), log_sq(n_disorder), log_pair_avg(n_disorder), log_near_avg(n_disorder))
 
   !Allocate for Eigenvalues/Eigenvectors
-  allocate(PH(dim_Sz0))
-  allocate(W(dim_Sz0,dim_Sz0))
-  allocate(E_MBL(n_disorder,dim_Sz0),QE(n_disorder,dim_Sz0))
+  allocate(PH(dim))
+  allocate(W(dim,dim))
+  allocate(E_MBL(n_disorder,dim),QE(n_disorder,dim))
 
-  allocate(config(nspin), states(dim_Sz0))
-
-  allocate(idxuE(dim_Sz0), deg(dim_Sz0), QE_exact(dim_Sz0), E_exact(dim_Sz0))
-
-  call zero_mag_states(nspin, dim_Sz0, states)
+  allocate(idxuE(dim), deg(dim), QE_exact(dim), E_exact(dim))
 
   r_avg = 0
   r_sq = 0
@@ -169,27 +158,17 @@ program test_LR
     !-------------------------------------------------
     !PARAMETERS
  
-    !call random_number(Jxy)
-    !Jxy = 2*Jxy_coupling*(Jxy - 0.5) !Jxy in [-J,J]
-    Jxy = -Jxy_coupling
+    call random_number(hx)
+    hx = hx_coupling * hx !hx in [0,hx]
 
     !Vzz = -Vzz_coupling
     call random_number(Vzz)
     Vzz = -Vzz_coupling + Vzz_coupling*(Vzz - 0.5) !Vzz in [-V,V]
-    !Vzz = 1
-    do k = 1, nspin-1
-      Vzz(k,1:k) = 0
-      do q = k+1, nspin
-        Vzz(k,q) = Vzz(k,q) / ( abs(k-q)**alpha * norm(alpha,nspin) )
-      enddo
-      !write (*,*) Vzz(k,:)
-    enddo
-    Vzz = Vzz / norm(alpha, nspin)
  
     call random_number(hz)
     hz = 2*hz_coupling*(hz-0.5) !hz in [-hz_coupling, hz_coupling]
  
-    !write (*,*) "Jxy = ", Jxy(:)
+    !write (*,*) "hx = ", hx(:)
     !write (*,*) "Vzz = ", Vzz(:)
     !write (*,*) "hz = ", hz(:)
     !print *, ""
@@ -197,43 +176,43 @@ program test_LR
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim_Sz0, Jxy, Vzz, hz, H )
-    call diagSYM( 'V', dim_Sz0, H, E, W_r )
+    call buildHMBL( nspin, dim, hx, Vzz, hz, H )
+    call diagSYM( 'V', dim, H, E, W_r )
     E_MBL(i,:) = E
 
-    call gap_ratio(dim_Sz0, E, r_avg2(i), r_sq2(i))
+    call gap_ratio(dim, E, r_avg2(i), r_sq2(i))
 
-    call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
-    U = matmul(USwap,U)
-    call diagUN( SELECT, dim_Sz0, U, PH, W)
+    call expSYM( dim, -C_UNIT*T0, E, W_r, U )
+    U = matmul(UFlip,U)
+    call diagUN( SELECT, dim, U, PH, W)
     E = real(C_UNIT*log(PH), kind(dp))
     call sort(E)
     QE(i,:) = E
 
     !print *, "Degeneracies of QE:"
     !call find_degeneracies( size(E), E, idxuE, deg) 
-    !print *, sum(deg), dim_Sz0
+    !print *, sum(deg), dim
 
-    !QE_exact = exact_QE(nspin, dim_Sz0, Vzz, hz)
+    !QE_exact = exact_QE(nspin, dim, Vzz, hz)
     !call sort(QE_exact)
     !print *, "Degeneracies of QE_exact:"
     !call find_degeneracies( size(QE_exact), QE_exact, idxuE, deg) 
-    !print *, sum(deg), dim_Sz0
+    !print *, sum(deg), dim
 
-    !E_exact = exact_E(nspin, dim_Sz0, Vzz, hz)
+    !E_exact = exact_E(nspin, dim, Vzz, hz)
     !call sort(E_exact)
 
 
 
     !print *, "Quasienergies:"
     !print "(*(A26))", "Disorder Realization", "l", "QE", "QE_exact", "E_MBL"
-    !do l = 1, dim_Sz0
+    !do l = 1, dim
     !  write (*,*) i, l, QE(i,l), QE_exact(l), E_MBL(i,l), E_exact(l)
     !enddo
 
 
-    call gap_ratio(dim_Sz0, E, r_avg(i), r_sq(i))
-    call spectral_pairing(dim_Sz0, E, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
+    call gap_ratio(dim, E, r_avg(i), r_sq(i))
+    call spectral_pairing(dim, E, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
     !print *, i, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i)
 
   enddo
@@ -244,7 +223,7 @@ program test_LR
   !print "(*(A26))", "Disorder Realization", "l", "QE", "E_MBL"
   write (unit_ph, "(2(A12),2(A26))") "Disorder Realization", "l", "QE", "E_MBL"
   do i = 1, n_disorder
-    do l = 1, dim_Sz0
+    do l = 1, dim
       !write (*,*) i, l, QE(i,l), E_MBL(i,l)
       write (unit_ph,*) i, l, QE(i,l), E_MBL(i,l)
     enddo
@@ -262,18 +241,18 @@ program test_LR
 
 
   print *, "Average of Gap Ratio (over the spectrum and then disorder)"
-  print "(*(A26))", "<r>_Swap", "sigma(r)_Swap", "<r>_MBL", "sigma(r)_MBL"
+  print "(*(A26))", "<r>_Flip", "sigma(r)_Flip", "<r>_MBL", "sigma(r)_MBL"
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
   print *, "Average of Logarithmic (pi-)Gap"
-  print "(*(A26))", "<log(Delta_pi/Delta_0)>_Swap", "sigma(log(Delta_pi/Delta_0))_Swap", & 
-    & "<log(Delta_pi)>_Swap", "<log(Delta_0)>_Swap"
+  print "(*(A26))", "<log(Delta_pi/Delta_0)>_Flip", "sigma(log(Delta_pi/Delta_0))_Flip", & 
+    & "<log(Delta_pi)>_Flip", "<log(Delta_0)>_Flip"
   print *, log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg
 
 
-  deallocate(Jxy, Vzz, hz)
+  deallocate(hx, Vzz, hz)
   deallocate(H,E,W_r)
-  deallocate(USwap)
+  deallocate(UFlip)
   deallocate(U, PH, W)
  
   close(unit_ph)
@@ -298,10 +277,10 @@ subroutine write_info(unit_file)
   integer, intent(in) :: unit_file
 
   write (unit_file,*) "Some info: "
-  write (unit_file,*) "Quasi-Energies of Floquet Operator U_F = U_swap e^(-i H)."
-  write (unit_file,*) "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
-  write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/4 + kick) * sum (sigma*sigma) )."
-  write (unit_file,*) "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  J is uniform."
+  write (unit_file,*) "Quasi-Energies of Floquet Operator U_F = U_flip e^(-i H)."
+  write (unit_file,*) "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + hx * X."
+  write (unit_file,*) "Periodic perturbed flip, U_flip = exp(-i(pi/2 + kick) * sum X )."
+  write (unit_file,*) "V is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  hz is taken in [0, hx]."
   write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
 
 end subroutine

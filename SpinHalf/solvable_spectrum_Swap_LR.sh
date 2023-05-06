@@ -3,17 +3,17 @@ filestring="solvable_spectrum_swap_LR"
 
 make $filestring
 
-n_threads=1
+n_threads=8
 export OMP_NUM_THREADS=$n_threads 
 
-output="Solvable_Swap_LR_spectrum.txt"
+output="Solvable_Swap_LR_spectrum_high_Nd.txt"
 mv $output data/eigen/
 file_out="out2.txt"
 file_sort="out_sort2.txt"
 mv temp $file_out $file_sort raw_$output output/
 
 block=0
-iterations_2=5120 #20480
+iterations_2=20480
 for nspin in {4..18..2}
 do
   block=$(( $block + 1 ))
@@ -27,7 +27,7 @@ do
       for hz in 1.00 2.00 4.00 8.00 16.00
       do
         #hz=`echo $(printf "%.2f" $(echo "0.04 * 2^($idx)" | bc) )`
-        for alpha in 0.50 1.00 3.00 $(seq 4.00 1.00 10.00)
+        for alpha in 0.10 0.50 1.00 3.00 $(seq 4.00 1.00 10.00)
         do
           cat > input.txt << *
 $nspin
@@ -60,7 +60,7 @@ $nparam
 1
 3
 4
-4
+11
 *
   ./sort_data.sh temp < input_sort.txt | tee $file_sort
   mv sort_col4_temp $output
