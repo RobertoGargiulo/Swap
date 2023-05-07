@@ -1,12 +1,12 @@
 ##!/bin/bash
-filestring="spectrum_flip"
+filestring="spectrum_Khemani"
 
 make $filestring
 
 n_threads=20
 export OMP_NUM_THREADS=$n_threads 
 
-output="Flip_spectrum_L10_hz.txt"
+output="Khemani_spectrum_L10_lambda.txt"
 mv $output data/eigen/
 file_out="out2.txt"
 file_sort="out_sort2.txt"
@@ -15,17 +15,16 @@ mv temp $file_out $file_sort raw_$output output/
 ###Choice of parameters
 iterations_2=20480
 list_nspin=$(seq 4 2 10)
-list_hx="0.1"
-list_V="3.00"
-list_hz="1.00 2.00 4.00 8.00 16.00"
+list_lambda="0.01 0.05 0.10 0.50 1.00"
+list_V="1.00"
 list_kick="0.05"
 list_T0="1.00"
 
+
 nums=()
-nums+=(`wc -w <<< $list_nspin`)
-nums+=(`wc -w <<< $list_hx`)
+nums+=(`wc -w <<< $list_nspin`)  
+nums+=(`wc -w <<< $list_lambda`)
 nums+=(`wc -w <<< $list_V`)
-nums+=(`wc -w <<< $list_hz`)
 nums+=(`wc -w <<< $list_kick`)
 nums+=(`wc -w <<< $list_T0`)
 
@@ -66,7 +65,7 @@ $kick
             echo "iterations = $iterations   n_threads = $n_threads"
             gap_ratio=`grep -a -A2 "Ratio" $file_out | tail -1`
             log_gap=`grep -a -A2 "Logarithm" $file_out | tail -1`
-            echo $nspin $hx $V $hz $kick $T0 $gap_ratio $log_gap $iterations >> raw_$output
+            echo $nspin $hx $hy $hz $V $kick $T0 $gap_ratio $log_gap $iterations >> raw_$output
             echo ""
             echo "" >> raw_$output
           done

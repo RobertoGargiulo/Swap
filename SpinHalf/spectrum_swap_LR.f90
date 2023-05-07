@@ -103,7 +103,7 @@ program test_LR
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  93  format(A,I0, A,F4.2, A,I0, A,F5.3, A,I0,F0.2, A,I0,F0.2, A,F4.2, A,I0,F0.2, A)
+  93  format(A,I0, A,F4.2, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
  
   !------------------------------------------------
 

@@ -4,7 +4,7 @@ program flip
   use exponentiate, only: diagSYM, expSYM, diagUN
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference !, &
     !& exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
-  use matrices, only: buildHFlip, buildHMBL => buildHNayak
+  use matrices, only: buildHFlip, buildHMBL => buildHKhemani
   use printing, only: take_time, printmat
   use sorts, only: sort => dpquicksort
   use omp_lib
@@ -21,8 +21,8 @@ program flip
   integer (ip)     ::  i, j, l, k, p, q
   integer (ip)     ::  unit_ph
 
-  real(dp), dimension(:), allocatable :: Vzz, hz, hx
-  real(dp) :: T0, T1, Vzz_coupling, hz_coupling, hx_coupling, kick
+  real(dp), dimension(:), allocatable :: Vzz, hz, hx, hy
+  real(dp) :: T0, T1, Vzz_coupling, hz_coupling, hx_coupling, hy_coupling, kick
   real(dp) :: r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
   
   real (dp), dimension(:), allocatable :: r_avg, r_sq, r_avg2, r_sq2
@@ -67,6 +67,10 @@ program flip
   read (*,*) hx_coupling
   print*,""
 
+  write (*,*) "Transverse Field hy * Y"
+  read (*,*) hy_coupling
+  print*,""
+
   write (*,*) "Longitudinal Interaction Constant -V * ZZ"
   read (*,*) Vzz_coupling
   print*,""
@@ -88,15 +92,16 @@ program flip
 
   !DATA FILES
   
-  write(filestring,93) "data/eigen/quasienergies_Flip_nspin", &
+  write(filestring,93) "data/eigen/quasienergies_Khemani_nspin", &
     & nspin, "_period", T0, "_n_disorder", n_disorder, &
-    & "_hx", int(hx_coupling), hx_coupling-int(hx_coupling), "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
+    & "_hx", int(hx_coupling), hx_coupling-int(hx_coupling), "_hy", int(hy_coupling), hy_coupling-int(hy_coupling),&
+    & "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, ".txt"
   open(newunit=unit_ph,file=filestring)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  93  format(A,I0, A,F4.2, A,I0, A,I0,F0.3, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
+  93  format(A,I0, A,F4.2, A,I0, A,I0,F0.3, A,I0,F0.3, A,I0,F0.2, A,I0,F0.2, A,F4.2, A)
  
   !------------------------------------------------
 
@@ -112,7 +117,7 @@ program flip
 
   !---------------------------------------------------
   !Allocate local interactions and fields
-  allocate( hx(nspin), Vzz(nspin-1), hz(nspin))
+  allocate( hx(nspin), hx(nspin), Vzz(nspin-1), hz(nspin))
 
   !Allocate Floquet and MBL Operators
   !allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
@@ -143,7 +148,7 @@ program flip
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP DO private(i, hx, hz, Vzz, H, E, W_r, &
+  !$OMP DO private(i, hx, hy, hz, Vzz, H, E, W_r, &
   !$OMP & U, W, PH)
   do i = 1, n_disorder
  
@@ -159,14 +164,15 @@ program flip
     !PARAMETERS
  
     call random_number(hx)
-    hx = hx_coupling * hx !hx in [0,hx]
-
-    !Vzz = -Vzz_coupling
-    call random_number(Vzz)
-    Vzz = -Vzz_coupling + Vzz_coupling*(Vzz - 0.5) !Vzz in [-V,V]
- 
+    hx = hx_coupling + 2*hx_coupling*(hx-0.5)
+    call random_number(hy)
+    hy = hy_coupling + 2*hy_coupling*(hy-0.5)
     call random_number(hz)
-    hz = 2*hz_coupling*(hz-0.5) !hz in [-hz_coupling, hz_coupling]
+    hz = hz_coupling + 2*hz_coupling*(hz-0.5) !hz in [-delta_hz, delta_hz]
+
+    call random_number(Vzz)
+    Vzz = Vzz_coupling + Vzz_coupling*(Vzz - 0.5) !Vzz in [-V,V]
+ 
  
     !write (*,*) "hx = ", hx(:)
     !write (*,*) "Vzz = ", Vzz(:)
@@ -176,7 +182,7 @@ program flip
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim, hx, Vzz, hz, H )
+    call buildHMBL( nspin, dim, Vzz, hx, hy, hz, H )
     call diagSYM( 'V', dim, H, E, W_r )
     E_MBL(i,:) = E
 
@@ -192,24 +198,6 @@ program flip
     !print *, "Degeneracies of QE:"
     !call find_degeneracies( size(E), E, idxuE, deg) 
     !print *, sum(deg), dim
-
-    !QE_exact = exact_QE(nspin, dim, Vzz, hz)
-    !call sort(QE_exact)
-    !print *, "Degeneracies of QE_exact:"
-    !call find_degeneracies( size(QE_exact), QE_exact, idxuE, deg) 
-    !print *, sum(deg), dim
-
-    !E_exact = exact_E(nspin, dim, Vzz, hz)
-    !call sort(E_exact)
-
-
-
-    !print *, "Quasienergies:"
-    !print "(*(A26))", "Disorder Realization", "l", "QE", "QE_exact", "E_MBL"
-    !do l = 1, dim
-    !  write (*,*) i, l, QE(i,l), QE_exact(l), E_MBL(i,l), E_exact(l)
-    !enddo
-
 
     call gap_ratio(dim, E, r_avg(i), r_sq(i))
     call spectral_pairing(dim, E, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
@@ -278,9 +266,9 @@ subroutine write_info(unit_file)
 
   write (unit_file,*) "Some info: "
   write (unit_file,*) "Quasi-Energies of Floquet Operator U_F = U_flip e^(-i H)."
-  write (unit_file,*) "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + hx * X."
+  write (unit_file,*) "Spin-1/2 chain with hamiltonian H = sum V * ZZ + hx * X + hy * Y + hz * Z."
   write (unit_file,*) "Periodic perturbed flip, U_flip = exp(-i(pi/2 + kick) * sum X )."
-  write (unit_file,*) "V is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  hz is taken in [0, hx]."
+  write (unit_file,*) "V is taken in [V/2, 3V/2];  the h_i are taken in [0, 2*h_i]."
   write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
 
 end subroutine

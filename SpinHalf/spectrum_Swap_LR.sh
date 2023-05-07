@@ -3,7 +3,7 @@ filestring="spectrum_swap_LR"
 
 make $filestring
 
-n_threads=10
+n_threads=20
 export OMP_NUM_THREADS=$n_threads 
 
 output="Swap_LR_spectrum_L12_J_alpha_large_N_dis.txt"
@@ -15,24 +15,23 @@ mv temp $file_out $file_sort raw_$output output/
 ###Choice of parameters
 iterations_2=20480
 list_nspin=$(seq 4 2 12)
-list_J="0.001 0.01 0.1"
+list_J="0.00001 0.0001 0.001 0.01 0.1"
 list_V="3.00"
 list_hz="16.00"
 list_kick="0.001 0.01 0.05"
 list_alpha="0.50 1.00 3.00 10.00" #20.00
 list_T0="1.00"
 
-n1=`wc -w <<< $list_nspin`
-n2=`wc -w <<< $list_J`
-n3=`wc -w <<< $list_V`
-n4=`wc -w <<< $list_hz`
-n5=`wc -w <<< $list_kick`
-n6=`wc -w <<< $list_alpha`
-n7=`wc -w <<< $list_T0`
 
-list_nparam="$n1 $n2 $n3 $n4 $n5 $n6 $n7"
-echo "list_param = "$list_nparam
-nums=($list_nparam)
+nums=()
+nums+=(`wc -w <<< $list_nspin`)
+nums+=(`wc -w <<< $list_J`)
+nums+=(`wc -w <<< $list_V`)
+nums+=(`wc -w <<< $list_hz`)
+nums+=(`wc -w <<< $list_kick`)
+nums+=(`wc -w <<< $list_alpha`)
+nums+=(`wc -w <<< $list_T0`)
+
 echo "nums = ${nums[@]}"
 cols=`echo "${nums[@]}" | awk '{ indexes=""; for(i=1;i<=NF;i++) {if($i>1) {indexes=indexes i " "}} print indexes }'`
 echo "cols = "$cols
@@ -70,7 +69,6 @@ $hz
 $kick
 $alpha
 *
-              file_out="out.txt"
   	          ./$filestring < input.txt | tee $file_out
               echo "nspin = $nspin  J = $J  V = $V  hz = $hz  epsilon = $kick  alpha = $alpha  T0 = $T0"
               echo "iterations = $iterations   n_threads = $n_threads"
