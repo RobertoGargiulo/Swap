@@ -48,6 +48,9 @@ spectrum_flip: $(MOD) spectrum_flip.o
 spectrum_Khemani: $(MOD) spectrum_Khemani.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+prova: $(MOD) prova.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
 
 

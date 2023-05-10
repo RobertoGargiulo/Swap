@@ -3,10 +3,10 @@ filestring="spectrum_swap_LR"
 
 make $filestring
 
-n_threads=20
+n_threads=10
 export OMP_NUM_THREADS=$n_threads 
 
-output="Swap_LR_spectrum_L12_J_alpha_large_N_dis.txt"
+output="Swap_LR_spectrum_L12_small_J.txt"
 mv $output data/eigen/
 file_out="out.txt"
 file_sort="out_sort.txt"
@@ -32,11 +32,12 @@ nums+=(`wc -w <<< $list_kick`)
 nums+=(`wc -w <<< $list_alpha`)
 nums+=(`wc -w <<< $list_T0`)
 
-echo "nums = ${nums[@]}"
 cols=`echo "${nums[@]}" | awk '{ indexes=""; for(i=1;i<=NF;i++) {if($i>1) {indexes=indexes i " "}} print indexes }'`
-echo "cols = "$cols
 cols=($cols)
 nparam=${#cols[@]}
+echo "nums = ${nums[@]}"
+echo "cols = "${cols[@]}
+echo "nparam = "$nparam
 
 
 block=0
@@ -53,7 +54,6 @@ do
       do
         for V in $list_V
         do
-          #for idx in {0..10..1}
           for hz in $list_hz
           do
             #hz=`echo $(printf "%.2f" $(echo "0.04 * 2^($idx)" | bc) )`
@@ -96,9 +96,9 @@ ${nums[${cols[$nparam - 1]} - 1]}
   #echo "nums = "${nums[@]}
   #echo "nparam = "$nparam
   #echo "nums[cols[nparam]] = "${nums[${cols[$nparam - 1]} - 1]}
-  #./sort_data.sh temp < input_sort.txt | tee $file_sort
-  #mv sort_col${cols[$nparam - 1]}_temp $output
-  #mv temp output/
+  ./sort_data.sh temp < input_sort.txt | tee $file_sort
+  mv sort_col${cols[$nparam - 1]}_temp $output
+  mv temp output/
 
   cat > input_sort.txt << *
 $nparam

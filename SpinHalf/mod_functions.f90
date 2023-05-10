@@ -387,5 +387,47 @@ contains
   end function
 
 
+  subroutine find_degeneracies( n, E, idxuE, deg )
+    !Finds all degeneracies of a real ordered 1D array 'E' of length n (up to a fixed tolerance)
+    !idxuE contains the indices of the unique values of E
+    !deg contains the corresponding degeneracy
+  
+    use iso_c_binding
+    implicit none
+  
+    integer (c_int), intent(in) :: n
+    real (c_double), intent(in) :: E(n) !'E' has to be sorted already
+    !real (c_double), intent(out)  :: idxuE(n)
+    integer (c_int), intent(out)  :: deg(n), idxuE(n)
+  
+    integer :: i, j
+    real (c_double) :: tol = EPSILON(1.0_c_double) ! 1.0e-10
+
+    idxuE = 0
+    deg = 1
+  
+    j = 1
+    idxuE(j) = 1 !E(j)
+    do i = 2, n
+      if ( abs(E(i) - E(i-1)) > tol ) then
+        j = j + 1
+        !idxuE(j) = E(i)
+        idxuE(j) = i
+      else
+        deg(j) = deg(j) + 1
+      endif
+    enddo
+    deg(j+1:n) = 0
+  
+    !print *, "Degenerate E: "
+    !print "(*(A15))", "i", "idxunique(i)", "unique(idx)", "deg(i)"
+    !do i = 1, n
+    !  if (deg(i)>0) then
+    !    !print *, i, idxuE(i), E(idxuE(i)), deg(i)
+    !  endif
+    !enddo
+  
+  end subroutine
+
 
 end module functions

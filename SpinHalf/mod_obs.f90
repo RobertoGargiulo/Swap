@@ -433,7 +433,7 @@ contains
         !print *, ""
       endif
 
-      beta(alpha) = search(val, QE) !<--------- If you want the "minimal pi-distance"
+      beta(alpha) = search(val, QE) !<--------- If you want the "minimal pi-distance from above"
       !beta(alpha) = merge(alpha+dim/2, alpha-dim/2, alpha+dim/2<=dim)
 
       !print "(2(A12),4(A22,4X))", "i", "alpha", "a(i)", "val", "(a(alpha) + pi)_1", "a(alpha)"
@@ -461,8 +461,8 @@ contains
 
     !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
     !and paired eigenvalues (separated by half the spectrum)
-    ! log_near_avg = < log( E_{n+1} - E_n ) >
-    ! log_pair_avg = < log( E_{n+dim/2} - E_n ) >
+    ! log_near_avg = < log( E_{alpha+1} - E_alpha ) >
+    ! log_pair_avg = < log( E_beta - E_alpha ) >
     ! log_avg = log_pair_avg - log_near_avg
     ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
     ! If there is spectral pairing: Delta^alpha / Delta_0^alpha      -> 0  as L-> +infty
@@ -478,21 +478,16 @@ contains
 
     pi_paired = pi_pair(dim, energies)
 
+    print *, "log(Delta_pi)", "log(Delta_0)"
     do alpha = 1, dim 
 
-      !beta = merge(alpha+1,alpha+1-dim,alpha<=dim-1)
-      !near(alpha) = energies(beta) - energies(alpha)
-      
-      if (alpha<=dim-1) then
-        beta = alpha + 1
-        near(alpha) = energies(beta) - energies(alpha)
-      else if (alpha>dim-1) then
-        beta = alpha + 1 - dim
-        near(alpha) = energies(beta) + 2*pi - energies(alpha)
-      endif
+      beta = merge(alpha+1,1,alpha.ne.dim)
+      near(alpha) = energies(beta) + merge(0._dp,2*pi,alpha.ne.dim) - energies(alpha)
 
       beta = pi_paired(alpha)
       pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
+
+      print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
 
     enddo
 
@@ -523,16 +518,8 @@ contains
 
     do alpha = 1, dim 
 
-      !beta = merge(alpha+1,alpha+1-dim,alpha<=dim-1)
-      !near(alpha) = energies(beta) - energies(alpha)
-      
-      if (alpha<=dim-1) then
-        beta = alpha + 1
-        near(alpha) = energies(beta) - energies(alpha)
-      else if (alpha>dim-1) then
-        beta = alpha + 1 - dim
-        near(alpha) = energies(beta) + 2*pi - energies(alpha)
-      endif
+      beta = merge(alpha+1,1,alpha.ne.dim)
+      near(alpha) = energies(beta) + merge(0._dp,2*pi,alpha.ne.dim) - energies(alpha)
 
       beta = pi_paired(alpha)
       pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
@@ -543,6 +530,44 @@ contains
     near_avg = sum(near) / dim
 
   end subroutine gap_difference
+
+  subroutine log_gap_difference_half_spectrum_shift(dim, energies, log_pair_avg, log_near_avg, log_avg, log_sq)
+
+    !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
+    !and paired eigenvalues (separated by half the spectrum)
+    ! log_near_avg = < log( E_{alpha+1} - E_alpha ) >
+    ! log_pair_avg = < log( E_{alpha+N/2} - E_alpha ) >
+    ! log_avg = log_pair_avg - log_near_avg
+    ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
+    ! If there is spectral pairing: Delta^alpha / Delta_0^alpha      -> 0  as L-> +infty
+    !                               log(Delta^alpha / Delta_0^alpha) -> -infty
+
+
+    integer (c_int), intent(in) :: dim
+    real (c_double), intent(in) :: energies(dim)
+    real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
+    real (c_double) :: pair(dim), near(dim)
+
+    integer (c_int) :: alpha, beta, pi_paired(dim)
+
+
+    do alpha = 1, dim 
+
+      beta = merge(alpha+1,1,alpha.ne.dim)
+      near(alpha) = energies(beta) + merge(0._dp,2*pi,alpha.ne.dim) - energies(alpha)
+
+      beta = merge(alpha+dim/2, alpha-dim/2, alpha<=dim/2)
+      pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
+
+    enddo
+
+    log_pair_avg = sum(log(pair)) / dim
+    log_near_avg = sum(log(near)) / dim
+    log_avg = log_pair_avg - log_near_avg
+    log_sq = sum((log(pair) - log(near))**2) / dim
+
+  end subroutine
+
 
   function IPR(psi)
     complex (c_double_complex), intent(in) :: psi(:)

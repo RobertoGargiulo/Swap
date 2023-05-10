@@ -6,7 +6,7 @@ make $filestring
 n_threads=20
 export OMP_NUM_THREADS=$n_threads 
 
-output="Khemani_spectrum_L10_lambda.txt"
+output="Khemani_spectrum_L10_lambda_kick0.txt"
 mv $output data/eigen/
 file_out="out2.txt"
 file_sort="out_sort2.txt"
@@ -15,9 +15,9 @@ mv temp $file_out $file_sort raw_$output output/
 ###Choice of parameters
 iterations_2=20480
 list_nspin=$(seq 4 2 10)
-list_lambda="0.01 0.05 0.10 0.50 1.00"
+list_lambda=`echo 9 | awk '{ list=""; val = 0.01; for(i=1;i<=$1;i++) {list = list val " "; val = val * 2}; print list }'`
 list_V="1.00"
-list_kick="0.05"
+list_kick="0.00"
 list_T0="1.00"
 
 
@@ -45,30 +45,32 @@ do
   do
     for T0 in $list_T0
     do
-      for hx in $list_hx
+      for lambda in $list_lambda
       do
+        hx=`echo $lambda | awk '{print $1 * 0.1}'`
+        hy=`echo $lambda | awk '{print $1 * 0.15}'`
+        hz=`echo $lambda | awk '{print $1 * 0.45}'`
         for V in $list_V
         do
-          for hz in $list_hz
-          do
-            cat > input.txt << *
+          cat > input.txt << *
 $nspin
 $iterations
 $T0
 $hx
-$V
+$hy
 $hz
+$V
 $kick
 *
-  	        ./$filestring < input.txt | tee $file_out
-            echo "nspin = $nspin  hx = $hx  V = $V  hz = $hz  epsilon = $kick  T0 = $T0"
-            echo "iterations = $iterations   n_threads = $n_threads"
-            gap_ratio=`grep -a -A2 "Ratio" $file_out | tail -1`
-            log_gap=`grep -a -A2 "Logarithm" $file_out | tail -1`
-            echo $nspin $hx $hy $hz $V $kick $T0 $gap_ratio $log_gap $iterations >> raw_$output
-            echo ""
-            echo "" >> raw_$output
-          done
+  	      ./$filestring < input.txt | tee $file_out
+          echo "nspin = $nspin  lambda = $lambda  V = $V  epsilon = $kick  T0 = $T0  hx = $hx hy = $hy hz = $hz"
+          echo "iterations = $iterations   n_threads = $n_threads"
+          gap_ratio=`grep -a -A2 "Ratio" $file_out | tail -1`
+          log_gap=`grep -a -A2 "pi-Logarithmic" $file_out | tail -1`
+          shift_log_gap=`grep -a -A2 "Half Shifted Logarithmic" $file_out | tail -1`
+          echo $nspin $lambda $V $kick $T0 $hx $hy $hz $gap_ratio $log_gap $shift_log_gap $iterations >> raw_$output
+          echo ""
+          echo "" >> raw_$output
         done
       done
     done
