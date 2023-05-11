@@ -608,12 +608,13 @@ contains
 
     integer (c_int), intent(in) :: nspin, dim
     real (c_double), intent(in) :: Jzz(nspin-1), hx(nspin), hy(nspin), hz(nspin)
-    real (c_double), intent(out) :: H(dim,dim)
+    complex (c_double_complex), intent(out) :: H(dim,dim)
 
     integer :: config(nspin), spin(nspin)
     integer (c_int) :: i, j, k, m
 
     H = 0
+    print *, "Off-Diagonal Elements of HKhemani: "
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
@@ -626,12 +627,14 @@ contains
 
         j = i + (1-2*config(k)) * 2**(k-1)
         H(j+1,i+1) = H(j+1,i+1) + hx(k) + hy(k) * (-C_UNIT * spin(k) )
+        print *, H(j+1,i+1), hx(k), hy(k)
 
       enddo
       k = nspin
       H(i+1,i+1) = H(i+1,i+1) + hz(k) * spin(k)
       j = i + (1-2*config(k)) * 2**(k-1)
       H(j+1,i+1) = H(j+1,i+1) + hx(k) + hy(k) * (-C_UNIT * spin(k) )
+      print *, H(j+1,i+1), hx(k), hy(k)
     enddo
   end subroutine
 

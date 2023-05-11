@@ -23,7 +23,7 @@ module observables
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   integer (c_int), private, parameter :: dimSpin1 = 3
-  real (c_double), parameter, private :: pi = 4.d0 * datan(1.d0)
+  real (c_double), parameter, private :: pi = 4._c_double * atan(1._c_double)
 
 contains
 
@@ -425,6 +425,7 @@ contains
     integer (c_int) :: alpha, beta(dim)
     real (c_double) :: val
 
+    print *, "pi = ", pi, "4 * atan(1) = ", 4.d0 * datan(1.d0)
     do alpha = 1, dim
       val = mod(QE(alpha) + 2*pi, 2*pi) - pi
       if (val > QE(dim)) then 
@@ -478,7 +479,7 @@ contains
 
     pi_paired = pi_pair(dim, energies)
 
-    print *, "log(Delta_pi)", "log(Delta_0)"
+    print "(*(A26))", "Delta_pi", "Delta_0", "log(Delta_pi)", "log(Delta_0)"
     do alpha = 1, dim 
 
       beta = merge(alpha+1,1,alpha.ne.dim)
@@ -551,6 +552,7 @@ contains
     integer (c_int) :: alpha, beta, pi_paired(dim)
 
 
+    print "(*(A26))", "(Delta_pi)_half", "Delta_0", "log(Delta_pi)_half", "log(Delta_0)"
     do alpha = 1, dim 
 
       beta = merge(alpha+1,1,alpha.ne.dim)
@@ -558,6 +560,7 @@ contains
 
       beta = merge(alpha+dim/2, alpha-dim/2, alpha<=dim/2)
       pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
+      print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
 
     enddo
 
@@ -780,61 +783,77 @@ contains
   end subroutine
 
 
-  function exact_energy(nspin, Vzz, hz, i)
+  function exact_energy(nspin, Vzz, hz, i) result(E)
 
     integer (c_int), intent(in) :: nspin, i
-    real (c_double), intent(in) :: Vzz(nspin), hz(nspin)
-    real (c_double) :: exact_energy
+    real (c_double), intent(in) :: Vzz(nspin-1), hz(nspin)
 
-    integer (c_int) :: k, config(nspin)
     real (c_double) :: E
+    integer (c_int) :: k, config(nspin), spin(nspin)
 
     call decode(i, nspin, config)
-    config = 1 - 2*config
+    spin = 1 - 2*config
     E = 0
     do k = 1, nspin - 1
-      E = E + Vzz(k) * config(k) * config(k+1) + hz(k) * config(k)
+      E = E + Vzz(k) * spin(k) * spin(k+1) + hz(k) * spin(k)
     enddo
     k = nspin
-    E = E + hz(k) * config(k)
+    E = E + hz(k) * spin(k)
 
-    exact_energy = E
 
   end function
 
   subroutine exact_energies_Sz0(nspin, dim_Sz0, Vzz, hz, E)
 
     integer (c_int), intent(in) :: nspin, dim_Sz0
-    real (c_double), intent(in) :: Vzz(nspin), hz(nspin)
+    real (c_double), intent(in) :: Vzz(nspin-1), hz(nspin)
     real (c_double), intent(out) :: E(dim_Sz0)
 
     integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0)
 
     call zero_mag_states(nspin, dim_Sz0, states)
-    do i = 1, dim_Sz0
+    do l = 1, dim_Sz0
 
-      l = states(i)
-      call decode(l, nspin, config)
-      E(i) = exact_energy(nspin, Vzz, hz, l)
+      i = states(l)
+      call decode(i, nspin, config)
+      E(l) = exact_energy(nspin, Vzz, hz, i)
 
     enddo
 
   end subroutine
+
+  function exact_energies(nspin, dim, Vzz, hz) result(E)
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Vzz(nspin-1), hz(nspin)
+    real (c_double) :: E(dim)
+
+    integer (c_int) :: i, k, config(nspin)
+
+    do i = 1, dim
+
+      call decode(i, nspin, config)
+      E(i) = exact_energy(nspin, Vzz, hz, i)
+
+    enddo
+
+  end function
 
   function exact_quasi_energy(nspin, Vzz, hz, i) result(QE)
 
     integer (c_int), intent(in) :: nspin, i
     real (c_double), intent(in) :: Vzz(nspin-1), hz(nspin)
 
-    integer (c_int) :: k, m, config(nspin)
+    integer (c_int) :: k, j, config(nspin)
     real (c_double) :: QE
 
     call decode(i, nspin, config)
-    m = 0
+    j = 0
     do k = 1, nspin/2
-      m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
+      j = j + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
     enddo
-    QE = (exact_energy(nspin, Vzz, hz, i) + exact_energy(nspin, Vzz, hz, m)) / 2
+    QE = (exact_energy(nspin, Vzz, hz, i) + exact_energy(nspin, Vzz, hz, j)) / 2 + &
+      & merge(pi,0.0_dp,j>i)
 
   end function
 
@@ -862,7 +881,7 @@ contains
       !  m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
       !enddo
       QE(l) = exact_quasi_energy( nspin, Vzz, hz, i ) 
-      QE(l) = real(C_UNIT*log(exp(-C_UNIT*QE(l))), kind(1.0_c_double))
+      QE(l) = real(C_UNIT*log(exp(-C_UNIT*QE(l))), kind=c_double)
 
       write (*,"(*(I0))",advance='no'), config(:)
       write (*,*) QE(l)
@@ -1017,12 +1036,12 @@ contains
       call decode(i, nspin, config)
       !mu = exact_quasi_energy_LR(nspin, Vzz, hz, i)
       QE(l) = exact_quasi_energy_LR(nspin, Vzz, hz, i)
-      QE(l) = real(C_UNIT*log(exp(-C_UNIT*QE(l))), kind(dp))
+      QE(l) = real(C_UNIT*log(exp(-C_UNIT*QE(l))), kind=dp)
 
       !print *, "Energies:    E_exact,   mu = E_exact + (E_pair) "
       !print *, exact_energy_LR(nspin, Vzz, hz, i), mu
       !print *, "First BZ (mu): "
-      !print *, real(C_UNIT*log(exp(-C_UNIT*mu)), kind(dp)), mod(mu + pi,2*pi) - pi
+      !print *, real(C_UNIT*log(exp(-C_UNIT*mu)), kind=dp), mod(mu + pi,2*pi) - pi
 
       !print "(*(A16))", "i", "l", "config", "QE"
       !write (*,"(2(4X,I12))",advance='no') i, l
@@ -1034,7 +1053,7 @@ contains
 
     enddo
 
-    end function
+  end function
 
   subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)
     character, intent(in) :: option*1
@@ -1060,5 +1079,46 @@ contains
     t_sigma = sqrt(t_sigma/real(steps-start+1,c_double))
 
   end subroutine time_avg
+
+  function exact_quasi_energy_Flip(nspin, Vzz, hz, i) result(QE)
+
+    integer (c_int), intent(in) :: nspin, i
+    real (c_double), intent(in) :: Vzz(nspin-1), hz(nspin)
+
+    integer (c_int) :: k, j, config(nspin)
+    real (c_double) :: QE
+
+    call decode(i, nspin, config)
+    j = 0
+    do k = 1, nspin
+      j = j + (1-config(k)) * 2**(k-1)
+    enddo
+    print "(A,*(I0))", "config = ", config(:)
+    print "(A,*(I0))", "config' = ", 1-config(:)
+    print *, "i = ", i, "j = ", j
+    QE = (exact_energy(nspin, Vzz, hz, i) + exact_energy(nspin, Vzz, hz, j)) / 2 + &
+      & merge(pi,0.0_dp,j>i)
+
+  end function
+
+  function exact_quasi_energies_Flip(nspin, dim, Vzz, hz) result(QE)
+
+    integer (c_int), intent(in) :: nspin, dim
+    real (c_double), intent(in) :: Vzz(nspin-1), hz(nspin)
+    real (c_double) :: QE(dim)
+
+    integer (c_int) :: i, config(nspin), states(dim)
+    !real (c_double) :: mu
+
+    QE = 0
+    do i = 1, dim
+
+      !call decode(i-1, nspin, config)
+      QE(i) = exact_quasi_energy_Flip(nspin, Vzz, hz, i-1)
+      QE(i) = real(C_UNIT*log(exp(-C_UNIT*QE(i))), kind=dp)
+
+    enddo
+
+  end function
 
 end module observables

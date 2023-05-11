@@ -378,8 +378,8 @@ contains
 
     if (alpha > 1) then
       norm = 1
-    else if (alpha == 1) then
-      norm = log(real(nspin, kind(dp)))
+    else if (abs(alpha-1)<tol) then
+      norm = log(real(nspin, kind=dp))
     else
       norm = nspin**(1-alpha)
     endif
