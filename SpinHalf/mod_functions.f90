@@ -24,6 +24,7 @@ module functions
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   integer (c_int), private, parameter :: dimSpinHalf = 2
+  real (c_double), parameter, private :: pi = 4._c_double * atan(1._c_double)
   real (c_double), private, parameter :: tol = 1.0e-6
   !integer (c_int) :: i, j, s
   !real (c_double), parameter, private :: SigmaZ(3,3) = reshape((/ (( (2-i)*merge(1,0,i==j), j=1,3),i=1,3) /), shape(SigmaZ)) 
@@ -332,7 +333,9 @@ contains
  
   end function
 
-  function binsearch_closest(val, array) result(indx)
+  function binsearch_closest_in_circle(val, array) result(indx)
+
+    !Binary search for closest element to given value where the array contains angles in [-pi, pi]
 
     implicit none
     real (c_double), intent(in) :: val, array(:)
@@ -344,35 +347,50 @@ contains
 
     !range = right - left
 
-    !print "(3(A12),2(A26))", "left", "right", "mid", "array(mid)", "val"
+    if (val<array(1)) then
+      indx = merge(1, size(array), abs(array(1)-val)<= abs(array(size(array))-(val+2*pi)) )
+      print *, "indx(1) = ", indx
+      return
+    else if (val > array(size(array))) then
+      indx = merge(size(array), 1, abs(array(size(array))-val)<= abs(array(1)-(val-2*pi)) )
+      print *, "indx(n) = ", indx
+      return
+    endif
+
+    print "(6X,4(A12),2(A26))", "indx", "left", "right", "mid", "array(mid)", "val"
 
     do while (right > left)
 
       mid = (right + left) / 2
+      print *, "before", indx, left, right, mid, array(mid), val
 
       if (array(mid) == val) then
         indx = mid
+        print *, "indx = ", indx
         return
       else if (array(mid) > val) then
         if (mid>1 .and. array(mid-1) < val) then
-          indx = merge(array(mid), array(mid-1), val-array(mid-1)>= array(mid)-val)
+          indx = merge(mid, mid-1, val-array(mid-1) >= array(mid)-val)
+          print *, "indx(mid-1:mid) = ", indx
           return
         endif
-        left = mid + 1
+        right = mid-1
       else ! array(mid) < val) 
         if (mid<size(array) .and. array(mid+1) > val) then
-          indx = merge(array(mid), array(mid+1), array(mid+1)-val>= val-array(mid))
+          indx = merge(mid, mid+1, array(mid+1)-val >= val-array(mid))
+          print *, "indx(mid:mid+1) = ", indx
           return
         endif
-        right = mid
+        left = mid+1
       end if
       !range = right - left
       
-      !print *, left, right, mid, array(mid), val
+      print *, "after ", indx, left, right, mid, array(mid), val
 
     end do
 
-    indx = right! - 1 
+    !indx = right! - 1 
+    indx = mid
     print *, "indx = ", indx
  
   end function

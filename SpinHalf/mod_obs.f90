@@ -15,7 +15,7 @@ module observables
   
   use iso_c_binding, dp => c_double, ip => c_int, cp => c_double_complex
   use printing
-  use functions, search => binsearch_closest !_from_above
+  use functions, search => binsearch_closest_in_circle !_from_above
   implicit none
 
   complex (c_double_complex), private, parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
@@ -428,11 +428,11 @@ contains
     print *, "pi = ", pi, "4 * atan(1) = ", 4.d0 * datan(1.d0)
     do alpha = 1, dim
       val = mod(QE(alpha) + 2*pi, 2*pi) - pi
-      if (val >= QE(dim)) then 
-        val = val - 2*pi !If (QE(alpha)+pi)_1 > QE(beta) for all beta, then look from below by shifting by -2pi
+      !if (val >= QE(dim)) then 
+      !  val = val - 2*pi !If (QE(alpha)+pi)_1 > QE(beta) for all beta, then look from below by shifting by -2pi
         !print *, "Problem: alpha = ", alpha, "; a(alpha) = ", QE(alpha)
         !print *, ""
-      endif
+      !endif
 
       beta(alpha) = search(val, QE) !<--------- If you want the "minimal pi-distance from above"
       !beta(alpha) = merge(alpha+dim/2, alpha-dim/2, alpha+dim/2<=dim)
@@ -458,7 +458,7 @@ contains
 
   end function
 
-  subroutine log_gap_difference(dim, energies, log_pair_avg, log_near_avg, log_avg, log_sq)
+  subroutine log_gap_difference(dim, QE, log_pair_avg, log_near_avg, log_avg, log_sq)
 
     !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
     !and paired eigenvalues (separated by half the spectrum)
@@ -471,24 +471,43 @@ contains
 
 
     integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: energies(dim)
+    real (c_double), intent(in) :: QE(dim)
     real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
     real (c_double) :: pair(dim), near(dim)
 
-    integer (c_int) :: alpha, beta, pi_paired(dim)
+    integer (c_int) :: alpha, beta, pi_paired(dim), beta1, beta2
+    real (c_double) :: val
 
-    pi_paired = pi_pair(dim, energies)
+    pi_paired = pi_pair(dim, QE)
 
-    print "(*(A26))", "Delta_pi", "Delta_0", "log(Delta_pi)", "log(Delta_0)"
+    !print "(2(A12),3(A26))", "alpha", "beta", "E(alpha)", "(E(alpha)+pi)_1", "E(beta)"
+    !do alpha = 1, dim
+    !  beta = pi_paired(alpha)
+    !  print *, alpha, beta, QE(alpha), mod(QE(alpha) + 2*pi, 2*pi) - pi, QE(beta)
+    !enddo
+
+    !beta1 = 0
+    !print "(2(A12),3(A26))", "alpha", "beta", "dQE(beta-1)", "dQE(beta)", "dQE(beta+1)"
+    !do alpha = 1, dim
+    !  beta = pi_paired(alpha)
+    !  val = mod(QE(alpha) + 2*pi, 2*pi) - pi
+    !  !print *, alpha, beta, abs(QE(beta1)-val), abs(QE(beta) - val), abs(QE(beta2)-val)
+    !  print *, alpha, beta, minloc(abs(QE-val)), minloc( abs(exp(C_UNIT*(QE-val)) - 1), dim )
+    !  beta1 = beta1 + (beta - minloc( abs(exp(C_UNIT*(QE-val)) - 1), dim ) )
+    !enddo
+    !print *, "Total difference between binsearch and minloc|e^(i(QE-val))-1|:", beta1
+
+
+    !print "(*(A26))", "Delta_pi", "Delta_0", "log(Delta_pi)", "log(Delta_0)"
     do alpha = 1, dim 
 
       beta = merge(alpha+1,1,alpha.ne.dim)
-      near(alpha) = energies(beta) + merge(0._dp,2*pi,alpha.ne.dim) - energies(alpha)
+      near(alpha) = QE(beta) + merge(0._dp,2*pi,alpha.ne.dim) - QE(alpha)
 
       beta = pi_paired(alpha)
-      pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
+      pair(alpha) = abs(abs(QE(beta) - QE(alpha)) - pi)
 
-      print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
+      !print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
 
     enddo
 
@@ -499,7 +518,7 @@ contains
 
   end subroutine log_gap_difference
 
-  subroutine gap_difference(dim, energies, pair_avg, near_avg)
+  subroutine gap_difference(dim, QE, pair_avg, near_avg)
 
     !Computes the averages of gaps of neighbouring eigenvalues 
     !and paired eigenvalues (separated by half the spectrum)
@@ -509,21 +528,21 @@ contains
 
 
     integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: energies(dim)
+    real (c_double), intent(in) :: QE(dim)
     real (c_double), intent(out) :: pair_avg, near_avg 
     real (c_double) :: pair(dim), near(dim)
 
     integer (c_int) :: alpha, beta, pi_paired(dim)
 
-    pi_paired = pi_pair(dim, energies)
+    pi_paired = pi_pair(dim, QE)
 
     do alpha = 1, dim 
 
       beta = merge(alpha+1,1,alpha.ne.dim)
-      near(alpha) = energies(beta) + merge(0._dp,2*pi,alpha.ne.dim) - energies(alpha)
+      near(alpha) = QE(beta) + merge(0._dp,2*pi,alpha.ne.dim) - QE(alpha)
 
       beta = pi_paired(alpha)
-      pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
+      pair(alpha) = abs(abs(QE(beta) - QE(alpha)) - pi)
 
     enddo
 
@@ -532,7 +551,7 @@ contains
 
   end subroutine gap_difference
 
-  subroutine log_gap_difference_half_spectrum_shift(dim, energies, log_pair_avg, log_near_avg, log_avg, log_sq)
+  subroutine log_gap_difference_half_spectrum_shift(dim, QE, log_pair_avg, log_near_avg, log_avg, log_sq)
 
     !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
     !and paired eigenvalues (separated by half the spectrum)
@@ -545,7 +564,7 @@ contains
 
 
     integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: energies(dim)
+    real (c_double), intent(in) :: QE(dim)
     real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
     real (c_double) :: pair(dim), near(dim)
 
@@ -556,10 +575,10 @@ contains
     do alpha = 1, dim 
 
       beta = merge(alpha+1,1,alpha.ne.dim)
-      near(alpha) = energies(beta) + merge(0._dp,2*pi,alpha.ne.dim) - energies(alpha)
+      near(alpha) = QE(beta) + merge(0._dp,2*pi,alpha.ne.dim) - QE(alpha)
 
       beta = merge(alpha+dim/2, alpha-dim/2, alpha<=dim/2)
-      pair(alpha) = abs(abs(energies(beta) - energies(alpha)) - pi)
+      pair(alpha) = abs(abs(QE(beta) - QE(alpha)) - pi)
       print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
 
     enddo

@@ -1,7 +1,8 @@
 program test
 
+
   use sorts, only: sort => dpquicksort
-  use functions, only: search => binsearch_closest_from_above
+  use functions, only: search => binsearch_closest_in_circle
   use observables, only: log_gap_difference
   use iso_c_binding, only: dp => c_double, ip => c_int
   implicit none
@@ -20,6 +21,8 @@ program test
 
   call random_number(array)
   array = 2*pi*(array - 0.5)
+  array(n/2+1) = array(n/2)
+  array(n) = mod(array(n/2-1) + 2*pi,2*pi) - pi
   call sort(array)
 
   print "(1(A12),1(A22,4X))", "i", "a(i)"
