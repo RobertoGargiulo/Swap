@@ -343,6 +343,41 @@ contains
     !print *, ""
   end subroutine take_time
 
+  subroutine printmat_as_list_C(dim,M,t)
+
+    integer, intent(in) :: dim
+    complex(c_double_complex), intent(in), dimension(dim,dim) :: M
+    character, intent(in) :: t*1
+
+    integer :: i, j
+
+    if (t == 'C') then
+      do i = 1, dim
+        do j = 1, dim
+          print *, i, j, M(i,j)
+        enddo
+      enddo
+    else if (t == 'R') then
+      do i = 1, dim
+        do j = 1, dim
+          print *, i, j, real(M(i,j))
+        enddo
+      enddo
+    else if (t == 'I') then
+      do i = 1, dim
+        do j = 1, dim
+          print *, i, j, int(M(i,j))
+        enddo
+      enddo
+    else if (t == 'A') then
+      do i = 1, dim
+        do j = 1, dim
+          print *, i, j, abs(M(i,j))
+        enddo
+      enddo
+    end if
+
+  end subroutine printmat_C
 
 
 

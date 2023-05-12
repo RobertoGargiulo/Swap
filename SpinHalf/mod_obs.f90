@@ -15,7 +15,7 @@ module observables
   
   use iso_c_binding, dp => c_double, ip => c_int, cp => c_double_complex
   use printing
-  use functions, search => binsearch_closest_from_above
+  use functions, search => binsearch_closest !_from_above
   implicit none
 
   complex (c_double_complex), private, parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
@@ -428,7 +428,7 @@ contains
     print *, "pi = ", pi, "4 * atan(1) = ", 4.d0 * datan(1.d0)
     do alpha = 1, dim
       val = mod(QE(alpha) + 2*pi, 2*pi) - pi
-      if (val > QE(dim)) then 
+      if (val >= QE(dim)) then 
         val = val - 2*pi !If (QE(alpha)+pi)_1 > QE(beta) for all beta, then look from below by shifting by -2pi
         !print *, "Problem: alpha = ", alpha, "; a(alpha) = ", QE(alpha)
         !print *, ""

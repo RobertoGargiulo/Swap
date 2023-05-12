@@ -264,14 +264,15 @@ contains
 
 
 
-  integer (c_int) function binsearch(val, array)
+  function binsearch(val, array) result(indx)
   
   
     implicit none
     integer (c_int), intent(in) :: val, array(:)
+    integer (c_int) :: indx
     integer (c_int) :: mid, start, finish, range
     
-    binsearch = -1
+    indx = -1
     start = 1
     finish = size(array)
     
@@ -292,7 +293,7 @@ contains
     end do
     
     if (array(mid) == val) then
-      binsearch = mid
+      indx = mid
     end if
   
   end function binsearch
@@ -327,10 +328,52 @@ contains
     end do
 
     indx = right! - 1 
+    !print *, "indx = ", indx
+ 
+  end function
 
-    !if (array(mid) == val) then
-    !  binsearch = mid
-    !end if
+  function binsearch_closest(val, array) result(indx)
+
+    implicit none
+    real (c_double), intent(in) :: val, array(:)
+    integer (c_int) :: indx, mid, left, right!, range
+
+    indx = -1
+    left = 1
+    right = size(array) + 1
+
+    !range = right - left
+
+    !print "(3(A12),2(A26))", "left", "right", "mid", "array(mid)", "val"
+
+    do while (right > left)
+
+      mid = (right + left) / 2
+
+      if (array(mid) == val) then
+        indx = mid
+        return
+      else if (array(mid) > val) then
+        if (mid>1 .and. array(mid-1) < val) then
+          indx = merge(array(mid), array(mid-1), val-array(mid-1)>= array(mid)-val)
+          return
+        endif
+        left = mid + 1
+      else ! array(mid) < val) 
+        if (mid<size(array) .and. array(mid+1) > val) then
+          indx = merge(array(mid), array(mid+1), array(mid+1)-val>= val-array(mid))
+          return
+        endif
+        right = mid
+      end if
+      !range = right - left
+      
+      !print *, left, right, mid, array(mid), val
+
+    end do
+
+    indx = right! - 1 
+    print *, "indx = ", indx
  
   end function
 

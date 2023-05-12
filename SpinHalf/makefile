@@ -54,6 +54,11 @@ test_precision: $(MOD) test_precision.o
 test_khemani: $(MOD) test_khemani.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+test_diag: $(MOD) test_diag.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+test_search: $(MOD) test_search.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 
 

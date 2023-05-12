@@ -3,10 +3,10 @@ filestring="spectrum_swap_LR"
 
 make $filestring
 
-n_threads=10
+n_threads=16
 export OMP_NUM_THREADS=$n_threads 
 
-output="Swap_LR_spectrum_L12_small_J.txt"
+output="Swap_prova.txt" #_LR_spectrum_L12_small_J.txt"
 mv $output data/eigen/
 file_out="out.txt"
 file_sort="out_sort.txt"
@@ -18,7 +18,7 @@ list_nspin=$(seq 4 2 12)
 list_J="0.00001 0.0001 0.001 0.01 0.1"
 list_V="3.00"
 list_hz="16.00"
-list_kick="0.001 0.01 0.05"
+list_kick="0.001"
 list_alpha="0.50 1.00 3.00 10.00" #20.00
 list_T0="1.00"
 

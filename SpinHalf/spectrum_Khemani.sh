@@ -6,7 +6,7 @@ make $filestring
 n_threads=20
 export OMP_NUM_THREADS=$n_threads 
 
-output="Khemani_spectrum_L10_lambda_kick0.txt"
+output="Khemani_prova.txt"  #_spectrum_L10_lambda_kick0.txt"
 mv $output data/eigen/
 file_out="out2.txt"
 file_sort="out_sort2.txt"

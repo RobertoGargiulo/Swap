@@ -16,7 +16,7 @@ program flip
   complex (dcp), parameter :: C_ONE = dcmplx(1._dp, 0._dp)
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
-  real (dp), parameter :: pi = 4.d0 * datan(1.d0) !4.d0 * datan(1.d0)
+  real (dp), parameter :: pi = 4._dp * atan(1._dp)
 
   integer (ip)     ::  nspin, dim, n_disorder
   integer (ip)     ::  i, j, l, k, p, q
@@ -89,6 +89,16 @@ program flip
   print*,""
 
   T1 = pi/2 + kick
+  print *, "nspin = ", nspin
+  print *, "n_disorder = ", n_disorder
+  print *, "T0 = ", T0
+  print *, "hx = ", hx_coupling
+  print *, "hy = ", hy_coupling
+  print *, "hz = ", hz_coupling
+  print *, "Vzz = ", Vzz_coupling
+  print *, "kick = ", kick
+  print *, "pi/2 =", pi/2
+  print *, "T1 =", T1
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
@@ -208,7 +218,7 @@ program flip
     call expHE( dim, -C_UNIT*T0, E, W_c, U )
     U = matmul(UFlip,U)
     call diagUN( SELECT, dim, U, PH, W)
-    E = real(C_UNIT*log(PH), kind(dp))
+    E = real(C_UNIT*log(PH), kind=dp)
     call sort(E)
     QE(i,:) = E
 
@@ -230,8 +240,17 @@ program flip
     do j = 1, dim
       write (*,*) i, j, QE(i,j), QE(i,j) - QE_exact(j), E_MBL(i,j), E_MBL(i,j) - E_exact(j)
     enddo
+    print *, "Quasienergies:"
+    print "((2A12,*(A26)))", "Disorder Realization", "l", "QE", "QE_exact", "E_MBL", "E_MBL - E_exact"
+    do j = 1, dim
+      write (*,*) i, j, QE(i,j), QE_exact(j), E_MBL(i,j), E_MBL(i,j) - E_exact(j)
+    enddo
 
     call gap_ratio(dim, E, r_avg(i), r_sq(i))
+    print *, "QE_exact: "
+    call spectral_pairing(dim, QE_exact, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
+    call shift_spectral_pairing(dim, QE_exact, shift_log_pair_avg(i), shift_log_near_avg(i), shift_log_avg(i), shift_log_sq(i))
+    print *, "QE_exact: "
     call spectral_pairing(dim, E, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
     call shift_spectral_pairing(dim, E, shift_log_pair_avg(i), shift_log_near_avg(i), shift_log_avg(i), shift_log_sq(i))
     !print *, i, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i)

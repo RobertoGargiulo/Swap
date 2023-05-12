@@ -16,7 +16,7 @@ program flip
   complex (dcp), parameter :: C_ONE = dcmplx(1._dp, 0._dp)
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
-  real (dp), parameter :: pi = 4.d0 * datan(1.d0)
+  real (dp), parameter :: pi = 4._dp * atan(1._dp)
 
   integer (ip)     ::  nspin, dim, n_disorder
   integer (ip)     ::  i, j, l, k, p, q
@@ -195,7 +195,7 @@ program flip
     call expSYM( dim, -C_UNIT*T0, E, W_r, U )
     U = matmul(UFlip,U)
     call diagUN( SELECT, dim, U, PH, W)
-    E = real(C_UNIT*log(PH), kind(dp))
+    E = real(C_UNIT*log(PH), kind=dp)
     call sort(E)
     QE(i,:) = E
 

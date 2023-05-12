@@ -15,7 +15,7 @@ program test_LR
   complex (dcp), parameter :: C_ONE = dcmplx(1._dp, 0._dp)
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
-  real (dp), parameter :: pi = 4.d0 * datan(1.d0)
+  real (dp), parameter :: pi = 4._dp * atan(1._dp)
 
   integer (ip)     ::  nspin, dim, n_disorder
   integer (ip)     ::  i, j, l, k, p, q, dim_Sz0
@@ -206,7 +206,7 @@ program test_LR
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
     call diagUN( SELECT, dim_Sz0, U, PH, W)
-    E = real(C_UNIT*log(PH), kind(dp))
+    E = real(C_UNIT*log(PH), kind=dp)
     call sort(E)
     QE(i,:) = E
 

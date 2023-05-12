@@ -18,10 +18,14 @@ program prova
   integer (kind=int8) :: i8
 
 
+  real :: r
   real (c_double) :: r_double
   real (c_float) :: r_float
   real (c_long_double) :: r_long_double
   real (c_float128) :: r_float128
+
+  complex :: cn
+  complex (c_double_complex) :: cn_double_complex
 
 
   do i = 0, 4
@@ -80,13 +84,20 @@ program prova
   print *, "c_double_complex = ", cmplx(1,0,c_double_complex), &
     & cmplx(1,c_double_complex), cmplx(1,kind=c_double_complex)
 
-  print *, "c_float_complex = ", cmplx(1,0,c_float_complex), & 
+  print *, "c_float_complex = ", cmplx(1,0,c_float_complex), &
     & cmplx(1,c_float_complex), cmplx(1,kind=c_float_complex)
 
   print *, "c_long_double_complex = ", cmplx(1,0,c_long_double_complex), &
     & cmplx(1,c_long_double_complex), cmplx(1,kind=c_long_double_complex)
 
-  99 format(A,*(F26.20,SP,F26.20,'i'))
+  !99 format(A,*(F26.20,SP,F26.20,'i'))
+
+  print *, "kind(c_int) =", kind(i_int)
+  print *, "kind(int) =", kind(i)
+  print *, "kind(c_double) =", kind(r_double)
+  print *, "kind(c_double_complex) = ", kind(cn_double_complex)
+  print *, "kind(c_double_complex) = ", kind(real(cn_double_complex))
+  print *, "kind(real) = ", kind(r)
 
 
 end program
