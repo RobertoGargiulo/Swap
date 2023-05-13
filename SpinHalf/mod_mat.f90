@@ -1,7 +1,6 @@
 module matrices
   
   use functions
-  use printing
   !use ifport
   use iso_c_binding
   implicit none
@@ -614,7 +613,6 @@ contains
     integer (c_int) :: i, j, k, m
 
     H = 0
-    print *, "Off-Diagonal Elements of HKhemani: "
     do i = 0, dim - 1
 
       call decode(i, nspin, config)
@@ -627,14 +625,12 @@ contains
 
         j = i + (1-2*config(k)) * 2**(k-1)
         H(j+1,i+1) = H(j+1,i+1) + hx(k) + hy(k) * (-C_UNIT * spin(k) )
-        print *, H(j+1,i+1), hx(k), hy(k)
 
       enddo
       k = nspin
       H(i+1,i+1) = H(i+1,i+1) + hz(k) * spin(k)
       j = i + (1-2*config(k)) * 2**(k-1)
       H(j+1,i+1) = H(j+1,i+1) + hx(k) + hy(k) * (-C_UNIT * spin(k) )
-      print *, H(j+1,i+1), hx(k), hy(k)
     enddo
   end subroutine
 

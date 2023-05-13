@@ -89,16 +89,16 @@ program flip
   print*,""
 
   T1 = pi/2 + kick
-  print *, "nspin = ", nspin
-  print *, "n_disorder = ", n_disorder
-  print *, "T0 = ", T0
-  print *, "hx = ", hx_coupling
-  print *, "hy = ", hy_coupling
-  print *, "hz = ", hz_coupling
-  print *, "Vzz = ", Vzz_coupling
-  print *, "kick = ", kick
-  print *, "pi/2 =", pi/2
-  print *, "T1 =", T1
+  !print *, "nspin = ", nspin
+  !print *, "n_disorder = ", n_disorder
+  !print *, "T0 = ", T0
+  !print *, "hx = ", hx_coupling
+  !print *, "hy = ", hy_coupling
+  !print *, "hz = ", hz_coupling
+  !print *, "Vzz = ", Vzz_coupling
+  !print *, "kick = ", kick
+  !print *, "pi/2 =", pi/2
+  !print *, "T1 =", T1
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
@@ -122,13 +122,13 @@ program flip
   allocate(H_r(dim,dim), E(dim), W_r(dim,dim), UFlip(dim,dim))
   call buildHFlip(nspin, dim, H_r)
   call diagSYM( 'V', dim, H_r, E, W_r)
-  print *, "HFlip = "
-  call printmat(dim, H_r, 'R')
+  !print *, "HFlip = "
+  !call printmat(dim, H_r, 'R')
   deallocate(H_r)
   call expSYM( dim, -C_UNIT*T1, E, W_r, UFlip )
   deallocate(E, W_r)
-  print *, "UFlip = "
-  call printmat(dim, UFlip, 'C')
+  !print *, "UFlip = "
+  !call printmat(dim, UFlip, 'C')
 
   !---------------------------------------------------
   !Allocate local interactions and fields
@@ -179,37 +179,31 @@ program flip
     !-------------------------------------------------
     !PARAMETERS
  
-    print *, "h_coupling = ", hx_coupling, hy_coupling, hz_coupling
+    !print *, "h_coupling = ", hx_coupling, hy_coupling, hz_coupling
 
     call random_number(hx)
-    write (*,*) "hx = ", hx(:)
     hx = hx_coupling + 2*hx_coupling*(hx-0.5)
-    write (*,*) "hx = ", hx(:)
     call random_number(hy)
-    write (*,*) "hy = ", hy(:)
     hy = hy_coupling + 2*hy_coupling*(hy-0.5)
-    write (*,*) "hy = ", hy(:)
     call random_number(hz)
-    write (*,*) "hz = ", hz(:)
     hz = hz_coupling + 2*hz_coupling*(hz-0.5) !hz in [-delta_hz, delta_hz]
-    write (*,*) "hz = ", hz(:)
 
     call random_number(Vzz)
     Vzz = Vzz_coupling + Vzz_coupling*(Vzz - 0.5) !Vzz in [-V,V]
  
  
-    write (*,*) "hx = ", hx(:)
-    write (*,*) "hy = ", hy(:)
-    write (*,*) "hz = ", hz(:)
-    write (*,*) "Vzz = ", Vzz(:)
-    print *, ""
+    !write (*,*) "hx = ", hx(:)
+    !write (*,*) "hy = ", hy(:)
+    !write (*,*) "hz = ", hz(:)
+    !write (*,*) "Vzz = ", Vzz(:)
+    !print *, ""
  
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildHMBL( nspin, dim, Vzz, hx, hy, hz, H_c )
-    print *, "HMBL = "
-    call printmat(dim, H_c, 'C')
+    !print *, "HMBL = "
+    !call printmat(dim, H_c, 'C')
     call diagHE( 'V', dim, H_c, E, W_c )
     E_MBL(i,:) = E
 
@@ -230,30 +224,31 @@ program flip
     call sort(QE_exact)
     print *, "Degeneracies of QE_exact:"
     call find_degeneracies( size(QE_exact), QE_exact, idxuE, deg) 
-    print *, sum(deg), dim
+    print *, sum(deg, deg>1), dim
 
     E_exact = exact_E(nspin, dim, Vzz, hz)
     call sort(E_exact)
 
-    print *, "Quasienergies:"
-    print "((2A12,*(A26)))", "Disorder Realization", "l", "QE", "QE - QE_exact", "E_MBL", "E_MBL - E_exact"
-    do j = 1, dim
-      write (*,*) i, j, QE(i,j), QE(i,j) - QE_exact(j), E_MBL(i,j), E_MBL(i,j) - E_exact(j)
-    enddo
-    print *, "Quasienergies:"
-    print "((2A12,*(A26)))", "Disorder Realization", "l", "QE", "QE_exact", "E_MBL", "E_MBL - E_exact"
-    do j = 1, dim
-      write (*,*) i, j, QE(i,j), QE_exact(j), E_MBL(i,j), E_MBL(i,j) - E_exact(j)
-    enddo
+    !print *, "Quasienergies:"
+    !print "((2A12,*(A26)))", "Disorder Realization", "l", "QE", "QE - QE_exact", "E_MBL", "E_MBL - E_exact"
+    !do j = 1, dim
+    !  write (*,*) i, j, QE(i,j), QE(i,j) - QE_exact(j), E_MBL(i,j), E_MBL(i,j) - E_exact(j)
+    !enddo
+    !print *, "Quasienergies:"
+    !print "((2A12,*(A26)))", "Disorder Realization", "l", "QE", "QE_exact", "E_MBL", "E_MBL - E_exact"
+    !do j = 1, dim
+    !  write (*,*) i, j, QE(i,j), QE_exact(j), E_MBL(i,j), E_MBL(i,j) - E_exact(j)
+    !enddo
 
     call gap_ratio(dim, E, r_avg(i), r_sq(i))
-    print *, "QE_exact: "
-    call spectral_pairing(dim, QE_exact, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
-    call shift_spectral_pairing(dim, QE_exact, shift_log_pair_avg(i), shift_log_near_avg(i), shift_log_avg(i), shift_log_sq(i))
     print *, "QE_exact: "
     call spectral_pairing(dim, E, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
     call shift_spectral_pairing(dim, E, shift_log_pair_avg(i), shift_log_near_avg(i), shift_log_avg(i), shift_log_sq(i))
     !print *, i, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i)
+
+    !print *, "QE_exact: "
+    !call spectral_pairing(dim, QE_exact, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
+    !call shift_spectral_pairing(dim, QE_exact, shift_log_pair_avg(i), shift_log_near_avg(i), shift_log_avg(i), shift_log_sq(i))
 
 
 

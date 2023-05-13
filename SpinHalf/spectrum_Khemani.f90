@@ -1,7 +1,7 @@
 program flip
 
   use functions, only: init_random_seed, find_degeneracies
-  use exponentiate, only: diagSYM, expSYM, diagUN
+  use exponentiate, only: diagSYM, expSYM, diagUN, diagHE, expHE
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
     & shift_spectral_pairing => log_gap_difference_half_spectrum_shift
     !& exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
@@ -30,9 +30,9 @@ program flip
 
   integer (ip), allocatable :: deg(:), idxuE(:)
   real (dp), dimension(:), allocatable :: E, QE_exact, E_exact
-  real (dp), dimension(:,:), allocatable :: H, W_r, QE, E_MBL
+  real (dp), dimension(:,:), allocatable :: H_r, W_r, QE, E_MBL
   complex(dcp), dimension(:), allocatable :: PH
-  complex(dcp), dimension(:,:), allocatable :: U, W, UFlip
+  complex(dcp), dimension(:,:), allocatable :: U, W, UFlip, H_c
 
   real (dp), allocatable :: log_avg(:), log_sq(:), log_pair_avg(:), log_near_avg(:)
   real (dp) :: log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg
@@ -109,12 +109,12 @@ program flip
   !------------------------------------------------
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) UFlip = exp(-i*(pi/4 + eps)*HFlip)
-  allocate(H(dim,dim), E(dim), W_r(dim,dim), UFlip(dim,dim))
-  call buildHFlip(nspin, dim, H)
-  call diagSYM( 'V', dim, H, E, W_r)
+  allocate(H_r(dim,dim), E(dim), W_r(dim,dim), UFlip(dim,dim))
+  call buildHFlip(nspin, dim, H_r)
+  call diagSYM( 'V', dim, H_r, E, W_r)
 !  print *, "HFlip = "
 !  call printmat(dim, H, 'R')
-  deallocate(H)
+  deallocate(H_r)
   call expSYM( dim, -C_UNIT*T1, E, W_r, UFlip )
   deallocate(E, W_r)
 
@@ -124,7 +124,7 @@ program flip
 
   !Allocate Floquet and MBL Operators
   !allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
-  allocate(H(dim,dim), E(dim), W_r(dim,dim))
+  allocate(H_c(dim,dim), E(dim), W(dim,dim))
   allocate(U(dim,dim))
   !allocate(idx(dim))
 
@@ -138,7 +138,6 @@ program flip
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim))
-  allocate(W(dim,dim))
   allocate(E_MBL(n_disorder,dim),QE(n_disorder,dim))
 
   allocate(idxuE(dim), deg(dim), QE_exact(dim), E_exact(dim))
@@ -152,7 +151,7 @@ program flip
   call init_random_seed() 
   !print *, "Size of Thread team: ", omp_get_num_threads()
   !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP DO private(i, hx, hy, hz, Vzz, H, E, W_r, &
+  !$OMP DO private(i, hx, hy, hz, Vzz, H_c, E, &
   !$OMP & U, W, PH)
   do i = 1, n_disorder
  
@@ -186,13 +185,13 @@ program flip
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim, Vzz, hx, hy, hz, H )
-    call diagSYM( 'V', dim, H, E, W_r )
+    call buildHMBL( nspin, dim, Vzz, hx, hy, hz, H_c )
+    call diagHE( 'V', dim, H_c, E, W )
     E_MBL(i,:) = E
 
     call gap_ratio(dim, E, r_avg2(i), r_sq2(i))
 
-    call expSYM( dim, -C_UNIT*T0, E, W_r, U )
+    call expHE( dim, -C_UNIT*T0, E, W, U )
     U = matmul(UFlip,U)
     call diagUN( SELECT, dim, U, PH, W)
     E = real(C_UNIT*log(PH), kind=dp)
@@ -252,7 +251,7 @@ program flip
   print *, shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, shift_log_near_dis_avg
 
   deallocate(hx, Vzz, hz)
-  deallocate(H,E,W_r)
+  deallocate(H_r,E,W_r)
   deallocate(UFlip)
   deallocate(U, PH, W)
  

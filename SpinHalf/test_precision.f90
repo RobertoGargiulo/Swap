@@ -19,7 +19,7 @@ program prova
 
 
   real :: r
-  real (c_double) :: r_double
+  real (c_double) :: r_double, arr(2)
   real (c_float) :: r_float
   real (c_long_double) :: r_long_double
   real (c_float128) :: r_float128
@@ -98,6 +98,17 @@ program prova
   print *, "kind(c_double_complex) = ", kind(cn_double_complex)
   print *, "kind(c_double_complex) = ", kind(real(cn_double_complex))
   print *, "kind(real) = ", kind(r)
+
+  r_double = epsilon(arr)
+  r_long_double = epsilon(arr)
+  print *, "epsilon(array)", epsilon(arr), r_double, r_long_double
+
+  call random_number(arr)
+  arr(1) = 1e-17
+  print *, arr
+  arr = max(arr, epsilon(arr))
+  print *, arr
+
 
 
 end program

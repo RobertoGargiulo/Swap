@@ -425,7 +425,7 @@ contains
     integer (c_int) :: alpha, beta(dim)
     real (c_double) :: val
 
-    print *, "pi = ", pi, "4 * atan(1) = ", 4.d0 * datan(1.d0)
+    !print *, "pi = ", pi, "4 * atan(1) = ", 4.d0 * datan(1.d0)
     do alpha = 1, dim
       val = mod(QE(alpha) + 2*pi, 2*pi) - pi
       !if (val >= QE(dim)) then 
@@ -458,10 +458,10 @@ contains
 
   end function
 
-  subroutine log_gap_difference(dim, QE, log_pair_avg, log_near_avg, log_avg, log_sq)
+  subroutine log_gap_difference(dim, QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
 
     !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
-    !and paired eigenvalues (separated by half the spectrum)
+    !and paired eigenvalues (where pi-angle-distance has been minimized)
     ! log_near_avg = < log( E_{alpha+1} - E_alpha ) >
     ! log_pair_avg = < log( E_beta - E_alpha ) >
     ! log_avg = log_pair_avg - log_near_avg
@@ -472,10 +472,10 @@ contains
 
     integer (c_int), intent(in) :: dim
     real (c_double), intent(in) :: QE(dim)
-    real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
+    real (c_double), intent(out) :: log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq
     real (c_double) :: pair(dim), near(dim)
 
-    integer (c_int) :: alpha, beta, pi_paired(dim), beta1, beta2
+    integer (c_int) :: alpha, beta, pi_paired(dim) !, beta1, beta2
     real (c_double) :: val
 
     pi_paired = pi_pair(dim, QE)
@@ -510,9 +510,15 @@ contains
       !print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
 
     enddo
+    pair = max(pair, epsilon(pair))
+    near = max(near, epsilon(near))
 
     log_pair_avg = sum(log(pair)) / dim
+    log_pair_sq = sum((log(pair))**2) / dim
+
     log_near_avg = sum(log(near)) / dim
+    log_near_sq = sum((log(near))**2) / dim
+
     log_avg = log_pair_avg - log_near_avg
     log_sq = sum((log(pair) - log(near))**2) / dim
 
@@ -551,7 +557,7 @@ contains
 
   end subroutine gap_difference
 
-  subroutine log_gap_difference_half_spectrum_shift(dim, QE, log_pair_avg, log_near_avg, log_avg, log_sq)
+  subroutine log_gap_difference_half_spectrum_shift(dim, QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
 
     !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
     !and paired eigenvalues (separated by half the spectrum)
@@ -565,13 +571,13 @@ contains
 
     integer (c_int), intent(in) :: dim
     real (c_double), intent(in) :: QE(dim)
-    real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
+    real (c_double), intent(out) :: log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq
     real (c_double) :: pair(dim), near(dim)
 
     integer (c_int) :: alpha, beta, pi_paired(dim)
 
 
-    print "(*(A26))", "(Delta_pi)_half", "Delta_0", "log(Delta_pi)_half", "log(Delta_0)"
+    !print "(*(A26))", "(Delta_pi)_half", "Delta_0", "log(Delta_pi)_half", "log(Delta_0)"
     do alpha = 1, dim 
 
       beta = merge(alpha+1,1,alpha.ne.dim)
@@ -579,12 +585,18 @@ contains
 
       beta = merge(alpha+dim/2, alpha-dim/2, alpha<=dim/2)
       pair(alpha) = abs(abs(QE(beta) - QE(alpha)) - pi)
-      print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
+      !print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
 
     enddo
+    pair = max(pair, epsilon(pair))
+    near = max(near, epsilon(near))
 
     log_pair_avg = sum(log(pair)) / dim
+    log_pair_sq = sum((log(pair))**2) / dim
+
     log_near_avg = sum(log(near)) / dim
+    log_near_sq = sum((log(near))**2) / dim
+
     log_avg = log_pair_avg - log_near_avg
     log_sq = sum((log(pair) - log(near))**2) / dim
 
@@ -1112,9 +1124,9 @@ contains
     do k = 1, nspin
       j = j + (1-config(k)) * 2**(k-1)
     enddo
-    print "(A,*(I0))", "config = ", config(:)
-    print "(A,*(I0))", "config' = ", 1-config(:)
-    print *, "i = ", i, "j = ", j
+    !print "(A,*(I0))", "config = ", config(:)
+    !print "(A,*(I0))", "config' = ", 1-config(:)
+    !print *, "i = ", i, "j = ", j
     QE = (exact_energy(nspin, Vzz, hz, i) + exact_energy(nspin, Vzz, hz, j)) / 2 + &
       & merge(pi,0.0_dp,j>i)
 

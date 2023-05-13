@@ -1,5 +1,5 @@
 FC =  gfortran
-FFLAGS = -O3 -Wall -Wextra -g -fbacktrace -fcheck=all -pedantic -pg
+FFLAGS = -O3 -Wall -Wextra -g -fbacktrace -fcheck=all -pedantic #-pg
 #-ffpe-trap= invalid, zero, overflow
 #-Werror -ffree-line-length-500 #-fpp -D IFORT -qopenmp 
 #-pg -> per debugging   $ gprof <program-name> <gmon.out>

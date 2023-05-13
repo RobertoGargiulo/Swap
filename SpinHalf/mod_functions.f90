@@ -349,49 +349,49 @@ contains
 
     if (val<array(1)) then
       indx = merge(1, size(array), abs(array(1)-val)<= abs(array(size(array))-(val+2*pi)) )
-      print *, "indx(1) = ", indx
+      !print *, "indx(1) = ", indx
       return
     else if (val > array(size(array))) then
       indx = merge(size(array), 1, abs(array(size(array))-val)<= abs(array(1)-(val-2*pi)) )
-      print *, "indx(n) = ", indx
+      !print *, "indx(n) = ", indx
       return
     endif
 
-    print "(6X,4(A12),2(A26))", "indx", "left", "right", "mid", "array(mid)", "val"
+    !print "(6X,4(A12),2(A26))", "indx", "left", "right", "mid", "array(mid)", "val"
 
     do while (right > left)
 
       mid = (right + left) / 2
-      print *, "before", indx, left, right, mid, array(mid), val
+      !print *, "before", indx, left, right, mid, array(mid), val
 
       if (array(mid) == val) then
         indx = mid
-        print *, "indx = ", indx
+        !print *, "indx = ", indx
         return
       else if (array(mid) > val) then
         if (mid>1 .and. array(mid-1) < val) then
           indx = merge(mid, mid-1, val-array(mid-1) >= array(mid)-val)
-          print *, "indx(mid-1:mid) = ", indx
+          !print *, "indx(mid-1:mid) = ", indx
           return
         endif
         right = mid-1
       else ! array(mid) < val) 
         if (mid<size(array) .and. array(mid+1) > val) then
           indx = merge(mid, mid+1, array(mid+1)-val >= val-array(mid))
-          print *, "indx(mid:mid+1) = ", indx
+          !print *, "indx(mid:mid+1) = ", indx
           return
         endif
         left = mid+1
       end if
       !range = right - left
       
-      print *, "after ", indx, left, right, mid, array(mid), val
+      !print *, "after ", indx, left, right, mid, array(mid), val
 
     end do
 
     !indx = right! - 1 
     indx = mid
-    print *, "indx = ", indx
+    !print *, "indx = ", indx
  
   end function
 
