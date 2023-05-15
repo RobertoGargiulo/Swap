@@ -109,6 +109,8 @@ program prova
   arr = max(arr, epsilon(arr))
   print *, arr
 
+  print *, "Binary: "
+  print *, digits(i_int)
 
 
 end program

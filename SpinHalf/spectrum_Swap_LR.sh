@@ -3,18 +3,21 @@ filestring="spectrum_swap_LR"
 
 make $filestring
 
-n_threads=10
+n_threads=16
 export OMP_NUM_THREADS=$n_threads 
 
-output="Swap_prova.txt" #_LR_spectrum_L12_small_J.txt"
-mv $output data/eigen/
+output="Swap_LR_spectrum_L12_small_J.txt"
+sorting=false
 file_out="out.txt"
 file_sort="out_sort.txt"
-mv temp $file_out $file_sort raw_$output output/
+if [ "$sorting" = true ] ; then
+  mv $output data/eigen/
+  mv temp $file_out $file_sort raw_$output output/
+fi
 
 ###Choice of parameters
 iterations_2=20480
-list_nspin=$(seq 4 2 12)
+list_nspin="12" #$(seq 4 2 12)
 list_J="0.00001 0.0001 0.001 0.01 0.1 0.5"
 list_V="3.00"
 list_hz="16.00"
@@ -56,7 +59,6 @@ do
         do
           for hz in $list_hz
           do
-            #hz=`echo $(printf "%.2f" $(echo "0.04 * 2^($idx)" | bc) )`
             for alpha in $list_alpha
             do
               cat > input.txt << *
@@ -73,8 +75,9 @@ $alpha
               echo "nspin = $nspin  J = $J  V = $V  hz = $hz  epsilon = $kick  alpha = $alpha  T0 = $T0"
               echo "iterations = $iterations   n_threads = $n_threads"
               gap_ratio=`grep -a -A2 "Ratio" $file_out | tail -1`
-              log_gap=`grep -a -A2 "Logarithm" $file_out | tail -1`
-              echo $nspin $J $V $hz $kick $alpha $T0 $gap_ratio $log_gap $iterations >> raw_$output
+              log_gap=`grep -a -A2 "pi-Logarithmic" $file_out | tail -1`
+              shift_log_gap=`grep -a -A2 "Half Shifted Logarithmic" $file_out | tail -1`
+              echo $nspin $J $V $hz $kick $alpha $T0 $gap_ratio $log_gap $shift_log_gap $iterations >> raw_$output
             done
             echo ""
             echo "" >> raw_$output
@@ -84,35 +87,39 @@ $alpha
       done
     done
   done
-  column -t < raw_$output >> temp
-  cat > input_sort.txt << *
+  if [ "$sorting" = true ] ; then
+    column -t < raw_$output >> temp
+    cat > input_sort.txt << *
 $nparam
 `echo ${cols[@]} | tr ' ' '\n'`
 ${nums[${cols[$nparam - 1]} - 1]}
 *
-  #echo "input_sort.txt: "
-  #cat input_sort.txt
-  #echo "cols = "${cols[@]}
-  #echo "nums = "${nums[@]}
-  #echo "nparam = "$nparam
-  #echo "nums[cols[nparam]] = "${nums[${cols[$nparam - 1]} - 1]}
-  ./sort_data.sh temp < input_sort.txt | tee $file_sort
-  mv sort_col${cols[$nparam - 1]}_temp $output
-  mv temp output/
-
-  cat > input_sort.txt << *
+    #echo "input_sort.txt: "
+    #cat input_sort.txt
+    #echo "cols = "${cols[@]}
+    #echo "nums = "${nums[@]}
+    #echo "nparam = "$nparam
+    #echo "nums[cols[nparam]] = "${nums[${cols[$nparam - 1]} - 1]}
+    ./sort_data.sh temp < input_sort.txt | tee $file_sort
+    mv sort_col${cols[$nparam - 1]}_temp $output
+    mv temp output/
+  
+    cat > input_sort.txt << *
 $nparam
 `echo ${cols[@]:1:$nparam - 1} | tr ' ' '\n'`
 ${cols[0]}
 $block
 *
-  #echo "input_sort.txt: "
-  #cat input_sort.txt
-  #echo "cols[2] = "${cols[1]}
-  #echo "cols[2:nparam] = ${cols[@]:1:$nparam - 1}"
-  #echo "cols[1] = "${cols[0]}
-  
-  ./sort_data.sh $output < input_sort.txt | tee $file_sort
+    #echo "input_sort.txt: "
+    #cat input_sort.txt
+    #echo "cols[2] = "${cols[1]}
+    #echo "cols[2:nparam] = ${cols[@]:1:$nparam - 1}"
+    #echo "cols[1] = "${cols[0]}
+    
+    ./sort_data.sh $output < input_sort.txt | tee $file_sort
+  fi
 done
 
-mv temp $file_out $file_sort raw_$output output/
+if [ "$sorting" = true ] ; then
+  mv temp $file_out $file_sort raw_$output output/
+fi

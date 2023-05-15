@@ -392,15 +392,15 @@ contains
 
   end subroutine
 
-  subroutine gap_ratio(dim, energies, r_avg, r_sq)
+  subroutine gap_ratio(energies, r_avg, r_sq)
 
-    integer, intent(in) :: dim
-    real (c_double), intent(in) :: energies(dim)
+    real (c_double), intent(in) :: energies(:)
     real (c_double), intent(out) :: r_avg, r_sq
 
-    integer :: n
+    integer :: n, dim
     real (c_double) :: gap1, gap2
 
+    dim = size(energies)
     r_avg = 0
     r_sq = 0
     do n = 1, dim - 2
@@ -458,7 +458,7 @@ contains
 
   end function
 
-  subroutine log_gap_difference(dim, QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
+  subroutine log_gap_difference(QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
 
     !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
     !and paired eigenvalues (where pi-angle-distance has been minimized)
@@ -470,13 +470,17 @@ contains
     !                               log(Delta^alpha / Delta_0^alpha) -> -infty
 
 
-    integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: QE(dim)
+    real (c_double), intent(in) :: QE(:)
     real (c_double), intent(out) :: log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq
-    real (c_double) :: pair(dim), near(dim)
 
-    integer (c_int) :: alpha, beta, pi_paired(dim) !, beta1, beta2
+    real (c_double), allocatable :: pair(:), near(:)
+    integer (c_int), allocatable :: pi_paired(:)
+
+    integer (c_int) :: dim, alpha, beta !, beta1, beta2
     real (c_double) :: val
+
+    dim = size(QE)
+    allocate(pair(dim), near(dim), pi_paired(dim))
 
     pi_paired = pi_pair(dim, QE)
 
@@ -557,7 +561,7 @@ contains
 
   end subroutine gap_difference
 
-  subroutine log_gap_difference_half_spectrum_shift(dim, QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
+  subroutine log_gap_difference_half_spectrum_shift(QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
 
     !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
     !and paired eigenvalues (separated by half the spectrum)
@@ -569,12 +573,17 @@ contains
     !                               log(Delta^alpha / Delta_0^alpha) -> -infty
 
 
-    integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: QE(dim)
+    real (c_double), intent(in) :: QE(:)
     real (c_double), intent(out) :: log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq
-    real (c_double) :: pair(dim), near(dim)
 
-    integer (c_int) :: alpha, beta, pi_paired(dim)
+    real (c_double), allocatable :: pair(:), near(:)
+    integer (c_int), allocatable :: pi_paired(:)
+
+    integer (c_int) :: dim, alpha, beta !, beta1, beta2
+    real (c_double) :: val
+
+    dim = size(QE)
+    allocate(pair(dim), near(dim), pi_paired(dim))
 
 
     !print "(*(A26))", "(Delta_pi)_half", "Delta_0", "log(Delta_pi)_half", "log(Delta_0)"

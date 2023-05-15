@@ -1,8 +1,10 @@
 program exact_LR
 
-  use functions, only: binom, init_random_seed, zero_mag_states, norm
+  use functions, only: binom, init_random_seed, zero_mag_states, norm, disorder_average, &
+    & find_degeneracies
   use exponentiate, only: diagSYM, expSYM, diagUN
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
+    & shift_spectral_pairing => log_gap_difference_half_spectrum_shift, &
     & exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR, &
     & gap_difference
   use matrices, only: buildHSwap => buildSz0_HSwap, buildHMBL => buildSz0_HMBL_LR
@@ -16,7 +18,7 @@ program exact_LR
   complex (dcp), parameter :: C_ONE = dcmplx(1._dp, 0._dp)
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
-  real (dp), parameter :: pi = 4.d0 * datan(1.d0)
+  real (dp), parameter :: pi = 4._dp * atan(1._dp)
 
   integer (ip)     ::  nspin, dim, n_disorder
   integer (ip)     ::  i, j, l, k, p, q, dim_Sz0
@@ -33,13 +35,20 @@ program exact_LR
   real (dp), dimension(:), allocatable :: E
   real (dp), dimension(:,:), allocatable :: QE, E_MBL
 
-  real (dp), allocatable :: log_avg(:), log_sq(:), log_pair_avg(:), log_near_avg(:)
-  real (dp), allocatable :: pair_avg(:), near_avg(:)
-  real (dp), allocatable :: tot_deg(:) 
-  real (dp) :: log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg
-  real (dp) :: pair_dis_avg, near_dis_avg, tot_deg_avg, max_deg, min_deg
+  real (dp), allocatable :: log_avg(:), log_sq(:), log_pair_avg(:), log_near_avg(:), &
+    & log_pair_sq(:), log_near_sq(:)
+  real (dp) :: log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg, &
+    & log_pair_dis_sigma, log_near_dis_sigma
+  real (dp), allocatable :: shift_log_avg(:), shift_log_sq(:), shift_log_pair_avg(:), shift_log_near_avg(:), &
+    & shift_log_pair_sq(:), shift_log_near_sq(:)
+  real (dp) :: shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, shift_log_near_dis_avg, &
+    & shift_log_pair_dis_sigma, shift_log_near_dis_sigma
 
-  integer (ip), allocatable :: idx(:), config(:), states(:)
+  real (dp), allocatable :: pair_avg(:), near_avg(:)
+  real (dp) :: pair_dis_avg, near_dis_avg
+
+  integer (ip), allocatable :: idx(:), config(:), states(:), tot_deg(:)
+  integer (ip) :: tot_deg_avg, max_deg, min_deg
 
   logical :: SELECT
   EXTERNAL SELECT
@@ -107,6 +116,8 @@ program exact_LR
   
   !Allocate gap vectors 
   allocate( log_avg(n_disorder), log_sq(n_disorder), log_pair_avg(n_disorder), log_near_avg(n_disorder))
+  allocate( shift_log_avg(n_disorder), shift_log_sq(n_disorder), shift_log_pair_avg(n_disorder), shift_log_near_avg(n_disorder))
+  allocate( log_pair_sq(n_disorder), log_near_sq(n_disorder), shift_log_pair_sq(n_disorder), shift_log_near_sq(n_disorder) )
   allocate( pair_avg(n_disorder), near_avg(n_disorder))
   allocate( tot_deg(n_disorder) )
 
@@ -171,14 +182,15 @@ program exact_LR
     E = exact_E( nspin, dim_Sz0, Vzz, hz)
     call sort(E)
     E_MBL(i,:) = E
-    call gap_ratio(dim_Sz0, E, r_avg2(i), r_sq2(i))
+    call gap_ratio(E, r_avg2(i), r_sq2(i))
 
     E = exact_QE( nspin, dim_Sz0, Vzz, hz )
     call sort(E)
     QE(i,:) = E
-    call gap_ratio( dim_Sz0, E, r_avg(i), r_sq(i) )
-    call spectral_pairing( dim_Sz0, E, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i) )
-    call gap_difference( dim_Sz0, E, pair_avg(i), near_avg(i) )
+    call gap_ratio(E, r_avg(i), r_sq(i))
+    call spectral_pairing(E, log_pair_avg(i), log_pair_sq(i), log_near_avg(i), log_near_sq(i), log_avg(i), log_sq(i))
+    call shift_spectral_pairing(E, shift_log_pair_avg(i), shift_log_pair_sq(i), &
+      & shift_log_near_avg(i), shift_log_near_sq(i), shift_log_avg(i), shift_log_sq(i))
 
     !print *, "Degeneracies of QE_exact:"
     call find_degeneracies( size(E), E, idxuE, deg) 
@@ -199,32 +211,38 @@ program exact_LR
   !  enddo
   !enddo
 
-  r_dis_avg = sum(r_avg) / n_disorder
-  r_dis_sigma = sqrt( ( sum(r_sq)/n_disorder - r_dis_avg**2 ) / n_disorder )
-  r_dis_avg2 = sum(r_avg2) / n_disorder
-  r_dis_sigma2 = sqrt( ( sum(r_sq2)/n_disorder - r_dis_avg2**2 ) / n_disorder )
+  call disorder_average(r_avg, r_sq, r_dis_avg, r_dis_sigma)
+  call disorder_average(r_avg2, r_sq2, r_dis_avg2, r_dis_sigma2)
 
-  log_dis_avg = sum(log_avg) / n_disorder
-  log_dis_sigma = sqrt( ( sum(log_sq)/n_disorder - log_dis_avg**2 ) / n_disorder )
-  log_pair_dis_avg = sum(log_pair_avg)/n_disorder
-  log_near_dis_avg = sum(log_near_avg)/n_disorder
+  call disorder_average(log_avg, log_sq, log_dis_avg, log_dis_sigma)
+  call disorder_average(log_pair_avg, log_pair_sq, log_pair_dis_avg, log_pair_dis_sigma)
+  call disorder_average(log_near_avg, log_near_sq, log_near_dis_avg, log_near_dis_sigma)
 
-  pair_dis_avg = sum(pair_avg)/n_disorder
-  near_dis_avg = sum(near_avg)/n_disorder
+  call disorder_average( shift_log_avg, shift_log_sq, shift_log_dis_avg, shift_log_dis_sigma)
+  call disorder_average( shift_log_pair_avg, shift_log_pair_sq, shift_log_pair_dis_avg, &
+    & shift_log_pair_dis_sigma)
+  call disorder_average( shift_log_near_avg, shift_log_near_sq, shift_log_near_dis_avg, &
+    & shift_log_near_dis_sigma)
 
-  tot_deg_avg = sum(tot_deg)/(n_disorder * dim_Sz0)
+  tot_deg_avg = real(sum(tot_deg), kind=dp)/(n_disorder * dim_Sz0)
   min_deg = minval(tot_deg)
   max_deg = maxval(tot_deg)
 
-
   print *, "Average of Gap Ratio (over the spectrum and then disorder)"
-  print "(*(A26))", "<r>_Swap", "sigma(r)_Swap", "<r>_MBL", "sigma(r)_MBL"
+  print "(*(A26))", "<r>_Flip", "sigma(r)_Flip", "<r>_MBL", "sigma(r)_MBL"
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
-  print *, "Average of Logarithmic (pi-)Gap"
-  print "(*(A26))", "<log(Delta_pi/Delta_0)>_Swap", "sigma(log(Delta_pi/Delta_0))_Swap", &
-    & "<log(Delta_pi)>_Swap", "<log(Delta_0)>_Swap"
-  print *, log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg
+  print *, "Average of pi-Logarithmic (pi-)Gap"
+  print "(*(A26))", "<log(Delta_pi/Delta_0)>", "sigma(log(Delta_pi/Delta_0))", & 
+    & "<log(Delta_pi)>", "sigma(log(Delta_pi))", "<log(Delta_0)>", "sigma(log(Delta_0))"
+  print *, log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_pair_dis_sigma, &
+   & log_near_dis_avg, log_near_dis_sigma
+
+  print *, "Average of Half Shifted Logarithmic (pi-)Gap"
+  print "(*(A26))", "<log(Delta_pi/Delta_0)>", "sigma(log(Delta_pi/Delta_0))", & 
+    & "<log(Delta_pi)>", "sigma(log(Delta_pi))", "<log(Delta_0)>", "sigma(log(Delta_0))"
+  print *, shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, &
+    & shift_log_pair_dis_sigma, shift_log_near_dis_avg, shift_log_near_dis_sigma
 
   print *, "Average of Ordinary (pi-)Gap"
   print "(*(A26))", "<Delta_pi>_Swap", "<Delta_0>_Swap"

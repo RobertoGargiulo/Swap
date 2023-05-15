@@ -1,6 +1,6 @@
 program flip
 
-  use functions, only: init_random_seed, find_degeneracies
+  use functions, only: init_random_seed, find_degeneracies, disorder_average
   use exponentiate, only: diagSYM, expSYM, diagUN, diagHE, expHE
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
     & shift_spectral_pairing => log_gap_difference_half_spectrum_shift, &
@@ -34,10 +34,14 @@ program flip
   complex(dcp), dimension(:), allocatable :: PH
   complex(dcp), dimension(:,:), allocatable :: U, W, UFlip, H_c, W_c
 
-  real (dp), allocatable :: log_avg(:), log_sq(:), log_pair_avg(:), log_near_avg(:)
-  real (dp) :: log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg
-  real (dp), allocatable :: shift_log_avg(:), shift_log_sq(:), shift_log_pair_avg(:), shift_log_near_avg(:)
-  real (dp) :: shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, shift_log_near_dis_avg
+  real (dp), allocatable :: log_avg(:), log_sq(:), log_pair_avg(:), log_near_avg(:), &
+    & log_pair_sq(:), log_near_sq(:)
+  real (dp) :: log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg, &
+    & log_pair_dis_sigma, log_near_dis_sigma
+  real (dp), allocatable :: shift_log_avg(:), shift_log_sq(:), shift_log_pair_avg(:), shift_log_near_avg(:), &
+    & shift_log_pair_sq(:), shift_log_near_sq(:)
+  real (dp) :: shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, shift_log_near_dis_avg, &
+    & shift_log_pair_dis_sigma, shift_log_near_dis_sigma
 
   integer (ip), allocatable :: idx(:), config(:), states(:)
 
@@ -147,6 +151,7 @@ program flip
   !Allocate gap vectors 
   allocate( log_avg(n_disorder), log_sq(n_disorder), log_pair_avg(n_disorder), log_near_avg(n_disorder))
   allocate( shift_log_avg(n_disorder), shift_log_sq(n_disorder), shift_log_pair_avg(n_disorder), shift_log_near_avg(n_disorder))
+  allocate( log_pair_sq(n_disorder), log_near_sq(n_disorder), shift_log_pair_sq(n_disorder), shift_log_near_sq(n_disorder) )
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(PH(dim))
@@ -192,18 +197,18 @@ program flip
     Vzz = Vzz_coupling + Vzz_coupling*(Vzz - 0.5) !Vzz in [-V,V]
  
  
-    !write (*,*) "hx = ", hx(:)
-    !write (*,*) "hy = ", hy(:)
-    !write (*,*) "hz = ", hz(:)
-    !write (*,*) "Vzz = ", Vzz(:)
+    write (*,*) "hx = ", hx(:)
+    write (*,*) "hy = ", hy(:)
+    write (*,*) "hz = ", hz(:)
+    write (*,*) "Vzz = ", Vzz(:)
     !print *, ""
  
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildHMBL( nspin, dim, Vzz, hx, hy, hz, H_c )
-    !print *, "HMBL = "
-    !call printmat(dim, H_c, 'C')
+    print *, "HMBL = "
+    call printmat(dim, H_c, 'C')
     call diagHE( 'V', dim, H_c, E, W_c )
     E_MBL(i,:) = E
 
@@ -241,10 +246,10 @@ program flip
     !enddo
 
     call gap_ratio(dim, E, r_avg(i), r_sq(i))
-    print *, "QE_exact: "
-    call spectral_pairing(dim, E, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
-    call shift_spectral_pairing(dim, E, shift_log_pair_avg(i), shift_log_near_avg(i), shift_log_avg(i), shift_log_sq(i))
-    !print *, i, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i)
+    call spectral_pairing(dim, E, log_pair_avg(i), log_pair_sq(i), log_near_avg(i), log_near_sq(i), log_avg(i), log_sq(i))
+    call shift_spectral_pairing(dim, E, shift_log_pair_avg(i), shift_log_pair_sq(i), &
+      & shift_log_near_avg(i), shift_log_near_sq(i), shift_log_avg(i), shift_log_sq(i))
+    !print *, i, log_pair_avg(i), log_near_avg(i), log_avg(i)
 
     !print *, "QE_exact: "
     !call spectral_pairing(dim, QE_exact, log_pair_avg(i), log_near_avg(i), log_avg(i), log_sq(i))
@@ -268,34 +273,34 @@ program flip
   enddo
 
 
-  r_dis_avg = sum(r_avg) / n_disorder
-  r_dis_sigma = sqrt( ( sum(r_sq)/n_disorder - r_dis_avg**2 ) / n_disorder )
-  r_dis_avg2 = sum(r_avg2) / n_disorder
-  r_dis_sigma2 = sqrt( ( sum(r_sq2)/n_disorder - r_dis_avg2**2 ) / n_disorder )
+  call disorder_average(r_avg, r_sq, r_dis_avg, r_dis_sigma)
+  call disorder_average(r_avg2, r_sq2, r_dis_avg2, r_dis_sigma2)
 
-  log_dis_avg = sum(log_avg) / n_disorder
-  log_dis_sigma = sqrt( ( sum(log_sq)/n_disorder - log_dis_avg**2 ) / n_disorder )
-  log_pair_dis_avg = sum(log_pair_avg)/n_disorder
-  log_near_dis_avg = sum(log_near_avg)/n_disorder
+  call disorder_average(log_avg, log_sq, log_dis_avg, log_dis_sigma)
+  call disorder_average(log_pair_avg, log_pair_sq, log_pair_dis_avg, log_pair_dis_sigma)
+  call disorder_average(log_near_avg, log_near_sq, log_near_dis_avg, log_near_dis_sigma)
 
-  shift_log_dis_avg = sum(shift_log_avg) / n_disorder
-  shift_log_dis_sigma = sqrt( ( sum(shift_log_sq)/n_disorder - shift_log_dis_avg**2 ) / n_disorder )
-  shift_log_pair_dis_avg = sum(shift_log_pair_avg)/n_disorder
-  shift_log_near_dis_avg = sum(shift_log_near_avg)/n_disorder
+  call disorder_average( shift_log_avg, shift_log_sq, shift_log_dis_avg, shift_log_dis_sigma)
+  call disorder_average( shift_log_pair_avg, shift_log_pair_sq, shift_log_pair_dis_avg, &
+    & shift_log_pair_dis_sigma)
+  call disorder_average( shift_log_near_avg, shift_log_near_sq, shift_log_near_dis_avg, &
+    & shift_log_near_dis_sigma)
 
   print *, "Average of Gap Ratio (over the spectrum and then disorder)"
   print "(*(A26))", "<r>_Flip", "sigma(r)_Flip", "<r>_MBL", "sigma(r)_MBL"
   print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
   print *, "Average of pi-Logarithmic (pi-)Gap"
-  print "(*(A26))", "<log(Delta_pi/Delta_0)>_Flip", "sigma(log(Delta_pi/Delta_0))_Flip", & 
-    & "<log(Delta_pi)>_Flip", "<log(Delta_0)>_Flip"
-  print *, log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg
+  print "(*(A26))", "<log(Delta_pi/Delta_0)>", "sigma(log(Delta_pi/Delta_0))", & 
+    & "<log(Delta_pi)>", "sigma(log(Delta_pi))", "<log(Delta_0)>", "sigma(log(Delta_0))"
+  print *, log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_pair_dis_sigma, &
+   & log_near_dis_avg, log_near_dis_sigma
 
   print *, "Average of Half Shifted Logarithmic (pi-)Gap"
-  print "(*(A26))", "<log(Delta_pi/Delta_0)>_Flip", "sigma(log(Delta_pi/Delta_0))_Flip", & 
-    & "<log(Delta_pi)>_Flip", "<log(Delta_0)>_Flip"
-  print *, shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, shift_log_near_dis_avg
+  print "(*(A26))", "<log(Delta_pi/Delta_0)>", "sigma(log(Delta_pi/Delta_0))", & 
+    & "<log(Delta_pi)>", "sigma(log(Delta_pi))", "<log(Delta_0)>", "sigma(log(Delta_0))"
+  print *, shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, &
+    & shift_log_pair_dis_sigma, shift_log_near_dis_avg, shift_log_near_dis_sigma
 
   deallocate(hx, Vzz, hz)
   deallocate(E,H_c,W_c)
@@ -331,3 +336,5 @@ subroutine write_info(unit_file)
   write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
 
 end subroutine
+
+

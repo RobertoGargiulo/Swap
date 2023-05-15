@@ -624,7 +624,7 @@ contains
         & hz(k) * spin(k)
 
         j = i + (1-2*config(k)) * 2**(k-1)
-        H(j+1,i+1) = H(j+1,i+1) + hx(k) + hy(k) * (-C_UNIT * spin(k) )
+        H(j+1,i+1) = H(j+1,i+1) + hx(k) + hy(k) * (C_UNIT * spin(k) )
 
       enddo
       k = nspin

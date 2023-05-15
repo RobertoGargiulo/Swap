@@ -142,7 +142,7 @@ contains
     enddo
 
     !U = matmul(W,matmul(Udiag,transpose(W)))
-    print *, "C_ONE = ", C_ONE, "C_ZERO = ", C_ZERO
+    !print *, "C_ONE = ", C_ONE, "C_ZERO = ", C_ZERO
 
     call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim , cmplx(W, kind=c_double_complex), dim, C_ZERO, Uaux, dim)
     call zgemm('N','N', dim, dim, dim, C_ONE, cmplx(W, kind=c_double_complex), dim , Uaux, dim, C_ZERO, U, dim)
@@ -170,7 +170,7 @@ contains
     enddo
 
     !U = matmul(W,matmul(Udiag,transpose(W)))
-    print *, "C_ONE = ", C_ONE, "C_ZERO = ", C_ZERO
+    !print *, "C_ONE = ", C_ONE, "C_ZERO = ", C_ZERO
 
     call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim, W, dim, C_ZERO, Uaux, dim)
     call zgemm('N','N', dim, dim, dim, C_ONE, W, dim , Uaux, dim, C_ZERO, U, dim)

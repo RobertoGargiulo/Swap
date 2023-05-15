@@ -490,5 +490,61 @@ contains
   
   end subroutine
 
+  subroutine printmat_as_list_C(nspin, dim, M, t)
+
+    integer, intent(in) :: nspin, dim
+    complex(c_double_complex), intent(in), dimension(dim,dim) :: M
+    character, intent(in) :: t*1
+
+    integer :: i, j, config1(nspin), config2(nspin)
+
+    if (t == 'C') then
+      do i = 1, dim
+        do j = 1, dim
+          call decode(i-1, nspin, config1)
+          call decode(j-1, nspin, config2)
+          print "(*(I0))", config1
+          write (*, 97) M(i,j), config2
+          97 format('|',(1(sf26.20spf26.20x'i':x),*(I0)))
+        enddo
+      enddo
+    else if (t == 'R') then
+      do i = 1, dim
+        do j = 1, dim
+          print *, i, j, real(M(i,j), kind=kind(M))
+        enddo
+      enddo
+    else if (t == 'I') then
+      do i = 1, dim
+        do j = 1, dim
+          print *, i, j, int(M(i,j))
+        enddo
+      enddo
+    else if (t == 'A') then
+      do i = 1, dim
+        do j = 1, dim
+          print *, i, j, abs(M(i,j))
+        enddo
+      enddo
+    end if
+
+  end subroutine
+
+
+  subroutine disorder_average(local_avg, local_sq, global_avg, global_sigma)
+    
+    real (dp), intent(in) :: local_avg(:), local_sq(:)
+    real (dp), intent(out) :: global_avg, global_sigma
+  
+    real (dp) :: global_sq
+    integer (ip) :: n
+  
+    n = size(local_avg)
+  
+    global_avg = sum(local_avg) / n
+    global_sq = sum(local_sq) / n
+    global_sigma = sqrt( (global_sq - global_avg**2) / n )
+  
+  end subroutine
 
 end module functions
