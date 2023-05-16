@@ -191,6 +191,7 @@ program exact_LR
     call spectral_pairing(E, log_pair_avg(i), log_pair_sq(i), log_near_avg(i), log_near_sq(i), log_avg(i), log_sq(i))
     call shift_spectral_pairing(E, shift_log_pair_avg(i), shift_log_pair_sq(i), &
       & shift_log_near_avg(i), shift_log_near_sq(i), shift_log_avg(i), shift_log_sq(i))
+    call gap_difference(E, pair_avg(i), near_avg(i))
 
     !print *, "Degeneracies of QE_exact:"
     call find_degeneracies( size(E), E, idxuE, deg) 
@@ -223,6 +224,9 @@ program exact_LR
     & shift_log_pair_dis_sigma)
   call disorder_average( shift_log_near_avg, shift_log_near_sq, shift_log_near_dis_avg, &
     & shift_log_near_dis_sigma)
+
+  pair_dis_avg = sum(pair_avg) / n_disorder
+  near_dis_avg = sum(near_avg) / n_disorder
 
   tot_deg_avg = real(sum(tot_deg), kind=dp)/(n_disorder * dim_Sz0)
   min_deg = minval(tot_deg)

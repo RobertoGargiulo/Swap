@@ -2,34 +2,49 @@ program test
 
 
   use sorts, only: sort => dpquicksort
-  use functions, only: search => binsearch_closest_in_circle
-  use observables, only: log_gap_difference, pi_pair
+  use functions, only: search => binsearch_closest_in_circle, binom
+  use observables, only: log_gap_difference, pi_pair, &
+    & exact_QE => exact_quasi_energies_Sz0_LR
   use iso_c_binding, only: dp => c_double, ip => c_int, c_double_complex
   implicit none
 
-  complex (c_double_complex), parameter :: C_UNIT = cmplx(0._dp, 1._dp)
+  complex (c_double_complex), parameter :: C_UNIT = cmplx(0._dp, 1._dp, kind=c_double_complex)
   real (dp), parameter :: pi = 4*datan(1.0_dp)
-  real (dp), allocatable :: array(:), pair(:), near(:)
+  real (dp), allocatable :: array(:), pair(:), near(:), pair1(:), pair2(:)
   real (dp) :: val, log_pair_avg, log_near_avg, log_avg, log_sq
-  integer (ip) :: i, n, alpha, beta, n_dis
+  integer (ip) :: i, n, alpha, beta, n_dis, dim, dim_Sz0
   integer (ip), allocatable :: pi_paired(:)
+  integer (ip) :: beta1, betap, betas, beta1s, beta1p, beta2
 
-  write (*,*) "Size of array:"
-  read (*,*) n
+  integer (ip) :: nspin
+  real (dp), allocatable :: Vzz(:,:), hz(:)
+
+  write (*,*) "Length of Chain:"
+  read (*,*) nspin
   print *, ""
+  dim_Sz0 = binom(nspin, nspin/2)
+  n = dim_Sz0
+  
 
   write (*,*) "Number of Iterations:"
   read (*,*) n_dis
   print *, ""
 
   allocate(array(n), pi_paired(n), pair(n), near(n))
+  allocate(pair1(n), pair2(n))
+  allocate(Vzz(nspin-1,nspin), hz(nspin))
 
   do i = 1, n_dis
 
-    call random_number(array)
-    array = 2*pi*(array - 0.5)
-    array(n/2+1) = array(n/2)
-    array(n) = mod(array(n/2-1) + 2*pi,2*pi) - pi
+    !call random_number(array)
+    !array = 2*pi*(array - 0.5)
+    !array(n/2+1) = array(n/2)
+    !array(n) = mod(array(n/2-1) + 2*pi,2*pi) - pi
+
+    call random_number(Vzz)
+    call random_number(hz)
+
+    array = exact_QE(nspin, dim_Sz0, Vzz, hz)
     call sort(array)
 
     !print "(1(A12),1(A22,4X))", "i", "a(i)"
@@ -39,30 +54,43 @@ program test
     !print *, ""
     !print *, ""
 
-    !call log_gap_difference(n, array, log_pair_avg, log_near_avg, log_avg, log_sq)
-    !print *, "log_avg = ", log_avg
+    pi_paired = pi_pair(array)
 
-    !pi_paired = pi_pair(n, array)
+    do alpha = 1, n
 
-    do alpha = 1, n 
+      val = mod( array(alpha) + 2*pi, 2*pi) - pi
 
       beta = merge(alpha+1,1,alpha.ne.n)
       near(alpha) = array(beta) + merge(0._dp,2*pi,alpha.ne.n) - array(alpha)
 
-      !beta = pi_paired(alpha)
-      beta = minloc( abs(exp(C_UNIT*(array-val)) - 1), n )
-      pair(alpha) = abs(abs(array(beta) - array(alpha)) - pi)
+      beta = pi_paired(alpha)
+      beta1 = minloc( abs(exp(C_UNIT*(array-val)) - 1), n )
+      beta2 = merge(alpha+n/2, alpha-n/2, alpha<=n/2)
 
-      !print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
+      betap = merge(beta-1,n, beta .ne. 1)
+      betas = merge(beta+1,1, beta .ne. n)
+
+      beta1p = merge(beta1-1,n, beta1 .ne. 1)
+      beta1s = merge(beta1+1,1, beta1 .ne. n)
+
+      pair(alpha) = abs(abs(array(beta) - array(alpha)) - pi)
+      pair1(alpha) = abs(abs(array(beta1) - array(alpha)) - pi)
+      pair2(alpha) = abs(abs(array(beta2) - array(alpha)) - pi)
+
+      print *, alpha, beta, beta1, beta2
+      print *, array(alpha), val, array(beta), array(beta1), array(beta2)
+
+      print *, pair(alpha), pair1(alpha), pair2(alpha)
+      print *, ""
 
     enddo
-
-    log_pair_avg = sum(log(pair)) / n
-    log_near_avg = sum(log(near)) / n
-    log_avg = log_pair_avg - log_near_avg
-    log_sq = sum((log(pair) - log(near))**2) / n
+    pair = max(pair,epsilon(pair))
+    log_avg = log_avg + sum(log(pair))/n
 
   enddo
 
+  log_avg = log_avg/n_dis
+
+  print *, "log_dis_avg = ", log_avg
   
 end program

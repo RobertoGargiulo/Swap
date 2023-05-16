@@ -17,7 +17,7 @@ iterations_2=20480
 list_nspin=$(seq 4 2 18)
 list_V="3.00"
 list_hz="16.00"
-list_alpha="0.50 1.00 3.00 10.00 50.00" #20.00
+list_alpha="0.50 1.00 3.00 10.00"
 list_T0="1.00"
 
 

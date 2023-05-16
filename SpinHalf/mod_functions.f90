@@ -297,7 +297,7 @@ contains
       indx = mid
     end if
   
-  end function binsearch
+  end function
 
   function binsearch_closest_from_above(val, array) result(indx)
 
@@ -333,65 +333,72 @@ contains
  
   end function
 
-  function binsearch_closest_in_circle(val, array) result(indx)
+  function binsearch_closest_in_circle(theta, array) result(indx)
 
     !Binary search for closest element to given value where the array contains angles in [-pi, pi]
 
     implicit none
-    real (c_double), intent(in) :: val, array(:)
+    real (c_double), intent(in) :: theta, array(:)
     integer (c_int) :: indx, mid, left, right!, range
+    integer (c_int) :: prev, next, n
 
     indx = -1
     left = 1
     right = size(array) + 1
+    n = size(array)
 
     !range = right - left
 
-    if (val<array(1)) then
-      indx = merge(1, size(array), abs(array(1)-val)<= abs(array(size(array))-(val+2*pi)) )
-      !print *, "indx(1) = ", indx
+    if (theta < array(1)) then
+      indx = merge(1, size(array), abs(array(1)-theta)<= abs( (theta+2*pi)-array(size(array)) ) )
+      print *, "indx(1) = ", indx
       return
-    else if (val > array(size(array))) then
-      indx = merge(size(array), 1, abs(array(size(array))-val)<= abs(array(1)-(val-2*pi)) )
-      !print *, "indx(n) = ", indx
+    else if (theta > array(size(array))) then
+      indx = merge(size(array), 1, abs( theta - array(size(array)) )<= abs(array(1)-(theta-2*pi)) )
+      print *, "indx(n) = ", indx
       return
     endif
 
-    !print "(6X,4(A12),2(A26))", "indx", "left", "right", "mid", "array(mid)", "val"
+    print "(6X,4(A12),2(A26))", "indx", "left", "right", "mid", "array(mid)", "val"
 
+    mid = (right + left) / 2
     do while (right > left)
 
-      mid = (right + left) / 2
-      !print *, "before", indx, left, right, mid, array(mid), val
+      prev = merge(mid-1,n, mid.ne.1)
+      next = merge(mid+1,1, mid.ne.n)
+      print *, "before", indx, left, right, mid, array(mid), theta
+      print *, array(prev), array(mid), array(next)
 
-      if (array(mid) == val) then
+      if (array(mid) == theta) then
         indx = mid
-        !print *, "indx = ", indx
+        print *, "indx = ", indx
         return
-      else if (array(mid) > val) then
-        if (mid>1 .and. array(mid-1) < val) then
-          indx = merge(mid, mid-1, val-array(mid-1) >= array(mid)-val)
-          !print *, "indx(mid-1:mid) = ", indx
+      else if (array(mid) > theta) then
+        if (mid>1 .and. array(mid-1) < theta) then
+          indx = merge(mid, mid-1, theta-array(mid-1) >= array(mid)-theta)
+          print *, "indx(mid-1:mid) = ", indx
           return
         endif
         right = mid-1
       else ! array(mid) < val) 
-        if (mid<size(array) .and. array(mid+1) > val) then
-          indx = merge(mid, mid+1, array(mid+1)-val >= val-array(mid))
-          !print *, "indx(mid:mid+1) = ", indx
+        if (mid<size(array) .and. array(mid+1) > theta) then
+          indx = merge(mid, mid+1, array(mid+1)-theta >= theta-array(mid))
+          print *, "indx(mid:mid+1) = ", indx
           return
         endif
         left = mid+1
       end if
       !range = right - left
+      mid = (right + left) / 2
       
-      !print *, "after ", indx, left, right, mid, array(mid), val
+      print *, "after ", indx, left, right, mid, array(mid), theta
+      print *, array(prev), array(mid), array(next)
 
     end do
 
     !indx = right! - 1 
     indx = mid
-    !print *, "indx = ", indx
+    print *, "indx(end) = ", indx
  
   end function
 

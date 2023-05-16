@@ -137,11 +137,11 @@ i = 0 #alpha=0.50
 j = 0 #kick = 0.001
 k = 0 #J = 0.00001
 set terminal pngcairo dashed font ",13"
-set output "figures/Swap_Log_Gap_Difference_J_alpha".word(list_alpha,k+1)."_L".word(list_L,num_L).".png"
+set output "figures/Swap_Log_Gap_Difference_L_alpha".word(list_alpha,k+1)."_L".word(list_L,num_L).".png"
 set title "N_d = 2^{1-L/2}20480, T0 = ".T0.", V = ".V.", kick = ".word(list_kick,j+1).",\n alpha = ".word(list_alpha,k+1)
 plot for [k=0:num_J-1] file every :::f(i,j,k)::f(i,j,k) u 1:($12/log(10)):($13/log(10)) w errorlines title "J = ".word(list_J,k+1) lc palette frac (k+0.0)/num_J pt 4
 
-set output "figures/Swap_Log_Gap_Comparison_J_alpha".word(list_alpha,k+1)."_L".word(list_L,num_L).".png"
+set output "figures/Swap_Log_Gap_Comparison_L_alpha".word(list_alpha,k+1)."_L".word(list_L,num_L).".png"
 plot for [k=0:num_J-1] file every :::f(i,j,k)::f(i,j,k) u 1:($14/log(10)):($15/log(10))w errorlines title "J = ".word(list_J,k+1).", Delta_{pi}" lc palette frac (k+0.0)/num_J pt 2 ,\
      for [k=0:num_J-1] "" every :::f(i,j,k)::f(i,j,k) u 1:($16/log(10)):($17/log(10))w errorlines title "J = ".word(list_J,k+1).", Delta_0" lc palette frac (k+0.0)/num_J pt 4 ,\
 #     for [k=0:num_J-1] log10(0.01*x**(word(list_L,i+1))) lw 1.2 lc palette frac (i+0.0)/num_L dt 2 title "log10(lambda^L)"

@@ -418,12 +418,16 @@ contains
 
   end subroutine gap_ratio
 
-  function pi_pair(dim, QE) result(beta)
+  function pi_pair(QE) result(beta)
 
-    integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: QE(dim)
-    integer (c_int) :: alpha, beta(dim)
+    real (c_double), intent(in) :: QE(:)
+
+    integer (c_int) :: alpha, dim
+    integer (c_int), allocatable :: beta(:)
     real (c_double) :: val
+
+    dim = size(QE)
+    allocate(beta(dim))
 
     !print *, "pi = ", pi, "4 * atan(1) = ", 4.d0 * datan(1.d0)
     do alpha = 1, dim
@@ -434,7 +438,9 @@ contains
         !print *, ""
       !endif
 
+      print *, "alpha = ", alpha, "QE(alpha) = ", QE(alpha), "val =", val
       beta(alpha) = search(val, QE) !<--------- If you want the "minimal pi-distance from above"
+      print *, ""
       !beta(alpha) = merge(alpha+dim/2, alpha-dim/2, alpha+dim/2<=dim)
 
       !print "(2(A12),4(A22,4X))", "i", "alpha", "a(i)", "val", "(a(alpha) + pi)_1", "a(alpha)"
@@ -482,7 +488,7 @@ contains
     dim = size(QE)
     allocate(pair(dim), near(dim), pi_paired(dim))
 
-    pi_paired = pi_pair(dim, QE)
+    pi_paired = pi_pair(QE)
 
     !print "(2(A12),3(A26))", "alpha", "beta", "E(alpha)", "(E(alpha)+pi)_1", "E(beta)"
     !do alpha = 1, dim
@@ -526,9 +532,9 @@ contains
     log_avg = log_pair_avg - log_near_avg
     log_sq = sum((log(pair) - log(near))**2) / dim
 
-  end subroutine log_gap_difference
+  end subroutine
 
-  subroutine gap_difference(dim, QE, pair_avg, near_avg)
+  subroutine gap_difference(QE, pair_avg, near_avg)
 
     !Computes the averages of gaps of neighbouring eigenvalues 
     !and paired eigenvalues (separated by half the spectrum)
@@ -536,22 +542,25 @@ contains
     ! pair_avg = < log( E_{n+dim/2} - E_n ) >
     ! If there is spectral pairing: Delta^alpha / Delta_0^alpha      -> 0  as L-> +infty
 
-
-    integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: QE(dim)
+    real (c_double), intent(in) :: QE(:)
     real (c_double), intent(out) :: pair_avg, near_avg 
-    real (c_double) :: pair(dim), near(dim)
 
-    integer (c_int) :: alpha, beta, pi_paired(dim)
+    real (c_double), allocatable :: pair(:), near(:)
+    integer (c_int), allocatable :: pi_paired(:)
 
-    pi_paired = pi_pair(dim, QE)
+    integer (c_int) :: dim, alpha, beta !, beta1, beta2
+
+    dim = size(QE)
+    allocate(pair(dim), near(dim), pi_paired(dim))
+    pi_paired = pi_pair(QE)
 
     do alpha = 1, dim 
 
       beta = merge(alpha+1,1,alpha.ne.dim)
       near(alpha) = QE(beta) + merge(0._dp,2*pi,alpha.ne.dim) - QE(alpha)
 
-      beta = pi_paired(alpha)
+      !beta = pi_paired(alpha)
+      beta = merge(alpha+dim/2, alpha-dim/2, alpha<=dim/2)
       pair(alpha) = abs(abs(QE(beta) - QE(alpha)) - pi)
 
     enddo
@@ -559,7 +568,7 @@ contains
     pair_avg = sum(pair) / dim
     near_avg = sum(near) / dim
 
-  end subroutine gap_difference
+  end subroutine
 
   subroutine log_gap_difference_half_spectrum_shift(QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
 
