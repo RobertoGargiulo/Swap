@@ -351,39 +351,39 @@ contains
 
     if (theta < array(1)) then
       indx = merge(1, size(array), abs(array(1)-theta)<= abs( (theta+2*pi)-array(size(array)) ) )
-      print *, "indx(1) = ", indx
+      !print *, "indx(1) = ", indx
       return
     else if (theta > array(size(array))) then
       indx = merge(size(array), 1, abs( theta - array(size(array)) )<= abs(array(1)-(theta-2*pi)) )
-      print *, "indx(n) = ", indx
+      !print *, "indx(n) = ", indx
       return
     endif
 
-    print "(6X,4(A12),2(A26))", "indx", "left", "right", "mid", "array(mid)", "val"
+    !print "(6X,4(A12),2(A26))", "indx", "left", "right", "mid", "array(mid)", "val"
 
     mid = (right + left) / 2
     do while (right > left)
 
-      prev = merge(mid-1,n, mid.ne.1)
-      next = merge(mid+1,1, mid.ne.n)
-      print *, "before", indx, left, right, mid, array(mid), theta
-      print *, array(prev), array(mid), array(next)
+      !prev = merge(mid-1,n, mid.ne.1)
+      !next = merge(mid+1,1, mid.ne.n)
+      !print *, "before", indx, left, right, mid, array(mid), theta
+      !print *, array(prev), array(mid), array(next)
 
       if (array(mid) == theta) then
         indx = mid
-        print *, "indx = ", indx
+        !print *, "indx = ", indx
         return
       else if (array(mid) > theta) then
         if (mid>1 .and. array(mid-1) < theta) then
           indx = merge(mid, mid-1, theta-array(mid-1) >= array(mid)-theta)
-          print *, "indx(mid-1:mid) = ", indx
+          !print *, "indx(mid-1:mid) = ", indx
           return
         endif
         right = mid-1
       else ! array(mid) < val) 
         if (mid<size(array) .and. array(mid+1) > theta) then
           indx = merge(mid, mid+1, array(mid+1)-theta >= theta-array(mid))
-          print *, "indx(mid:mid+1) = ", indx
+          !print *, "indx(mid:mid+1) = ", indx
           return
         endif
         left = mid+1
@@ -391,14 +391,14 @@ contains
       !range = right - left
       mid = (right + left) / 2
       
-      print *, "after ", indx, left, right, mid, array(mid), theta
-      print *, array(prev), array(mid), array(next)
+      !print *, "after ", indx, left, right, mid, array(mid), theta
+      !print *, array(prev), array(mid), array(next)
 
     end do
 
     !indx = right! - 1 
     indx = mid
-    print *, "indx(end) = ", indx
+    !print *, "indx(end) = ", indx
  
   end function
 

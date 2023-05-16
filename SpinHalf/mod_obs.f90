@@ -429,36 +429,11 @@ contains
     dim = size(QE)
     allocate(beta(dim))
 
-    !print *, "pi = ", pi, "4 * atan(1) = ", 4.d0 * datan(1.d0)
     do alpha = 1, dim
       val = mod(QE(alpha) + 2*pi, 2*pi) - pi
-      !if (val >= QE(dim)) then 
-      !  val = val - 2*pi !If (QE(alpha)+pi)_1 > QE(beta) for all beta, then look from below by shifting by -2pi
-        !print *, "Problem: alpha = ", alpha, "; a(alpha) = ", QE(alpha)
-        !print *, ""
-      !endif
 
-      print *, "alpha = ", alpha, "QE(alpha) = ", QE(alpha), "val =", val
+      !print *, "alpha = ", alpha, "QE(alpha) = ", QE(alpha), "val =", val
       beta(alpha) = search(val, QE) !<--------- If you want the "minimal pi-distance from above"
-      print *, ""
-      !beta(alpha) = merge(alpha+dim/2, alpha-dim/2, alpha+dim/2<=dim)
-
-      !print "(2(A12),4(A22,4X))", "i", "alpha", "a(i)", "val", "(a(alpha) + pi)_1", "a(alpha)"
-      !do i = 1, size(QE)
-      !  print *, i, alpha, QE(i), val, mod(QE(alpha) + 2*pi, 2*pi) - pi, QE(alpha)
-      !enddo
-
-      !print "(2(A12),4(A22,4X))", "beta", "alpha", "a(beta)", "val", "(a(alpha) + pi)_1", "a(alpha)"
-      !print *, beta, alpha, QE(beta), val, mod(QE(alpha) + 2*pi, 2*pi) - pi, QE(alpha)
-
-      !print *, "Check: "
-      !print "(1(A12),1(A22,4X))", "i", "a(i) - val"!, "|a(i) - a(alpha)|-pi"
-      !do i = 1, size(QE)
-      !  print *, i, QE(i) - val!, abs(QE(i) - QE(alpha)) - pi
-      !enddo
-      !print *, ""
-      !print *, ""
-      !print *, ""
 
     enddo
 

@@ -15,6 +15,7 @@ program test
   integer (ip) :: i, n, alpha, beta, n_dis, dim, dim_Sz0
   integer (ip), allocatable :: pi_paired(:)
   integer (ip) :: beta1, betap, betas, beta1s, beta1p, beta2
+  real (dp) :: log_avg1, log_avg2
 
   integer (ip) :: nspin
   real (dp), allocatable :: Vzz(:,:), hz(:)
@@ -34,6 +35,9 @@ program test
   allocate(pair1(n), pair2(n))
   allocate(Vzz(nspin-1,nspin), hz(nspin))
 
+  log_avg = 0
+  log_avg1 = 0
+  log_avg2 = 0
   do i = 1, n_dis
 
     !call random_number(array)
@@ -77,20 +81,27 @@ program test
       pair1(alpha) = abs(abs(array(beta1) - array(alpha)) - pi)
       pair2(alpha) = abs(abs(array(beta2) - array(alpha)) - pi)
 
-      print *, alpha, beta, beta1, beta2
-      print *, array(alpha), val, array(beta), array(beta1), array(beta2)
+      !print *, alpha, beta, beta1, beta2
+      !print *, array(alpha), val, array(beta), array(beta1), array(beta2)
 
-      print *, pair(alpha), pair1(alpha), pair2(alpha)
-      print *, ""
+      !print *, pair(alpha), pair1(alpha), pair2(alpha)
+      !print *, ""
 
     enddo
     pair = max(pair,epsilon(pair))
+    pair1 = max(pair1,epsilon(pair1))
+    pair2 = max(pair2,epsilon(pair2))
+
     log_avg = log_avg + sum(log(pair))/n
+    log_avg1 = log_avg1 + sum(log(pair1))/n
+    log_avg2 = log_avg2 + sum(log(pair2))/n
 
   enddo
 
   log_avg = log_avg/n_dis
+  log_avg1 = log_avg1/n_dis
+  log_avg2 = log_avg2/n_dis
 
-  print *, "log_dis_avg = ", log_avg
+  print *, "log_dis_avg = ", log_avg, log_avg1, log_avg2
   
 end program
