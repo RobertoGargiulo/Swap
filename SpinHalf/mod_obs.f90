@@ -354,6 +354,8 @@ contains
 
   function sigmaz_tot_corr_Sz0(nspin, dim_Sz0, psi_Sz0) result(tot_corr)
 
+    ! tot_corr  = sum_{distinct (q,p)} C(sigma_q^z, sigma_p^z) =
+    !           = sum_{q=1}^{L-1} sum_{p=q+1}^L C(sigma_q^z, sigma_p^z)
     integer (c_int), intent(in) :: nspin, dim_Sz0
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
     real (c_double) :: tot_corr
@@ -364,8 +366,8 @@ contains
     CORR = sigmaz_corr_matrix_Sz0(nspin, dim_Sz0, psi_Sz0)
     
     tot_corr = 0
-    do q = 1, nspin
-      do p = 1, nspin
+    do q = 1, nspin-1
+      do p = q+1, nspin
         tot_corr = tot_corr + abs(CORR(q,p))
       enddo
     enddo
