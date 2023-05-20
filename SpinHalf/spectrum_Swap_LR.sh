@@ -3,11 +3,11 @@ filestring="spectrum_swap_LR"
 
 make $filestring
 
-n_threads=16
+n_threads=10
 export OMP_NUM_THREADS=$n_threads 
 
-output="Swap_LR_spectrum_L12_small_J.txt"
-sorting=false
+output="Swap_LR_spectrum_kick.txt"
+sorting=true
 file_out="out.txt"
 file_sort="out_sort.txt"
 if [ "$sorting" = true ] ; then
@@ -17,12 +17,12 @@ fi
 
 ###Choice of parameters
 iterations_2=20480
-list_nspin="12" #$(seq 4 2 12)
+list_nspin=$(seq 4 2 12)
 list_J="0.00001 0.0001 0.001 0.01 0.1 0.5"
 list_V="3.00"
 list_hz="16.00"
-list_kick="0.001"
-list_alpha="0.50 1.00 3.00 10.00" #20.00
+list_kick="0.0 0.001 0.01 0.05 0.10"
+list_alpha="0.50 3.00" #20.00
 list_T0="1.00"
 
 
@@ -88,36 +88,39 @@ $alpha
     done
   done
   if [ "$sorting" = true ] ; then
-    column -t < raw_$output >> temp
+  column -t < raw_$output >> temp
+
     cat > input_sort.txt << *
 $nparam
-`echo ${cols[@]} | tr ' ' '\n'`
-${nums[${cols[$nparam - 1]} - 1]}
-*
-    #echo "input_sort.txt: "
-    #cat input_sort.txt
-    #echo "cols = "${cols[@]}
-    #echo "nums = "${nums[@]}
-    #echo "nparam = "$nparam
-    #echo "nums[cols[nparam]] = "${nums[${cols[$nparam - 1]} - 1]}
-    ./sort_data.sh temp < input_sort.txt | tee $file_sort
-    mv sort_col${cols[$nparam - 1]}_temp $output
-    mv temp output/
-  
-    cat > input_sort.txt << *
-$nparam
-`echo ${cols[@]:1:$nparam - 1} | tr ' ' '\n'`
+`echo ${cols[@]:1:$nparam} | tr ' ' '\n'`
 ${cols[0]}
 $block
 *
-    #echo "input_sort.txt: "
-    #cat input_sort.txt
-    #echo "cols[2] = "${cols[1]}
-    #echo "cols[2:nparam] = ${cols[@]:1:$nparam - 1}"
-    #echo "cols[1] = "${cols[0]}
-    
+    ./sort_data.sh temp < input_sort.txt | tee $file_sort
+    mv sort_col${cols[0]}_temp $output
+    mv temp output/
+
+    for i in $(seq 2 1 $(( $nparam - 1)) )
+    do
+      cat > input_sort.txt << *
+$nparam
+`echo ${cols[@]:$i:$nparam} | tr ' ' '\n'`
+`echo ${cols[@]:0:$i} | tr ' ' '\n'`
+${nums[${cols[$i - 1]} - 1]}
+*
+      ./sort_data.sh $output < input_sort.txt | tee $file_sort
+    done
+
+    i=$nparam
+    cat > input_sort.txt << *
+$nparam
+`echo ${cols[@]:0:$i} | tr ' ' '\n'`
+${nums[${cols[$i - 1]} - 1]}
+*
     ./sort_data.sh $output < input_sort.txt | tee $file_sort
+  
   fi
+
 done
 
 if [ "$sorting" = true ] ; then

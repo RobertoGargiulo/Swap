@@ -24,6 +24,8 @@ echo "Ordering options: " $ordering
 echo "Number of different values of parameter ${nparam} (aka block size): "
 read bsize
 
+mv $output output/
+
 step=$((bsize + 1)) #Step size is equal to the block size plus the one blank line
 
 
