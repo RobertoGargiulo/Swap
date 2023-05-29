@@ -606,7 +606,7 @@ contains
 
       call decode(i, nspin, config)
 
-      if (sum(1-config)==Sz) then
+      if (sum(1-2*config)==Sz) then
         l = l+1
         states(l) = i
         inverse(i+1) = l
@@ -658,7 +658,7 @@ contains
     mag_psi = 0
     do i = 1, dim
       call decode(i-1, nspin, config)
-      mag_s = sum(1-config)
+      mag_s = sum(1-2*config)
       mag_psi = mag_psi + abs(psi(i))**2 * mag_s
     enddo
     print *, "Magnetization of State:", mag_psi
@@ -667,7 +667,7 @@ contains
     flag = .True.
     do i = 1, dim
       call decode(i-1, nspin, config)
-      mag_s = sum(1-config)
+      mag_s = sum(1-2*config)
       if ( abs( (mag_s - mag_psi) * psi(i) ) > tol ) flag = .False.
     enddo
 
@@ -686,10 +686,12 @@ contains
     call basis_Sz(nspin, dim_Sz, Sz, states)
     !print *, "psi initialized"
     do l = 1, dim_Sz
-      i = states(l) + 1
-      psi_Sz(l) = psi(i)
-      !print *,l, psi(l)
-      !print *, l, dim, i, dim_Sz0
+      i = states(l)
+      !call decode(i, nspin, config)
+      psi_Sz(l) = psi(i+1)
+      !print *, l, psi(l)
+      !print *, l, dim, i, dim_Sz, psi(l)
+      !print "(*(I0))", config(:)
     enddo
 
     if(abs( dot_product(psi_Sz,psi_Sz) - dot_product(psi,psi) ) > tol) & 

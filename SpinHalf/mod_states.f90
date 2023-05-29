@@ -155,15 +155,15 @@ contains
     call zero_mag_states(nspin, dim_Sz0, indx)
 
     psi = 0
-    l = 0
+    i = 0
     do k = 1, nspin/2
-      l = l + 2**(2*k-1)
+      i = i + 2**(2*k-1)
     enddo
     !print *, l
     
-    do i = 1, dim_Sz0
-      if(indx(i)==l) then
-        psi(i) = 1
+    do l = 1, dim_Sz0
+      if(indx(l)==i) then
+        psi(l) = 1
         exit
       endif
     enddo
@@ -290,7 +290,7 @@ contains
     do k = 1, nspin/2
       i = i + 2**(2*k-1)
     enddo
-    psi(i) = 1
+    psi(i+1) = 1
 
   end subroutine
 
@@ -308,7 +308,7 @@ contains
     do k = 1, nspin/4
       i = i + 2**(2*k-1)
     enddo
-    psi(i) = 1
+    psi(i+1) = 1
 
   end subroutine
 
