@@ -18,11 +18,11 @@ fi
 ###Choice of parameters
 iterations_2=20480
 list_nspin=$(seq 4 2 12)
-list_J="0.00001 0.0001 0.001 0.01 0.1 0.5"
+list_J="0.00001 0.0001 0.001 0.01 0.1 1.0"
 list_V="3.00"
 list_hz="16.00"
-list_kick="0.0 0.001 0.01 0.05 0.10"
-list_alpha="0.50 3.00" #20.00
+list_kick="0.0 0.001 0.01 0.10 0.50"
+list_alpha="0.50 3.00" #1.00 10.00
 list_T0="1.00"
 
 
