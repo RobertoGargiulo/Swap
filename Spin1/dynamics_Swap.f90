@@ -1,12 +1,12 @@
 program prova
 
-  use functions, only : dimSpin1_Sz0, init_random_seed, dimSpin1_Sz, &
+  use functions, only : init_random_seed, dimSpin1_Sz, &
     & project => projectState_FullHS_to_Sz
   use matrices, only: buildSz_HSwap, buildSz_HMBL, &
     & print_hamiltonian_Sz, print_unitary_Sz
   use states, only: buildstate => buildUpZeroState, &
     & printstate_Sz
-  use observables, only: sigmaz_Sz!, sigma_Sz
+  use observables, only: sigmaz_Sz
   use printing
   use exponentiate, only: diagSYM, expSYM
   implicit none
@@ -16,11 +16,9 @@ program prova
   integer (c_int), parameter :: dimSpin1 = 3
   character(len=*), parameter :: name_initial_state = "UpZero"
 
-  integer (c_int) :: nspin, dim, dim_Sz0, dim_Sz, Sz
-  integer (c_int), allocatable :: config(:), idxSz0(:), idxSz(:)
+  integer (c_int) :: nspin, dim, dim_Sz, Sz
+  integer (c_int), allocatable :: config(:), idxSz(:)
   integer (c_int) :: i, j, k, n 
-
-  complex (c_double_complex) :: alpha(dimSpin1)
 
   real (c_double) :: norm
   complex (c_double_complex), allocatable :: psi(:), state(:), psi_swap(:), psi_Sz(:)
@@ -28,9 +26,8 @@ program prova
   real (c_double) :: hz_coupling, J_coupling, V_coupling, T0, T1, kick
   real (c_double), allocatable :: H(:,:), hz(:), Jxy(:), Vz(:)
   real (c_double), allocatable :: E(:), W_r(:,:)
-  complex (c_double_complex), allocatable :: USwap(:,:), PH(:), W(:,:), U(:,:)
+  complex (c_double_complex), allocatable :: USwap(:,:), U(:,:)
 
-  real (c_double), allocatable :: imb_avg(:), imb_sq(:)
   real (c_double), allocatable :: sigmaz_avg(:,:), sigmaz_sq(:,:)
 
   integer(c_int) :: count_beginning, count_end, count_rate
@@ -87,7 +84,6 @@ program prova
   call system_clock(count_beginning, count_rate)
 
   dim = dimSpin1**nspin
-  dim_Sz0 = dimSpin1_Sz0(nspin)
   T1 = pi/2 + kick
 
   !------------------- File Manager ------------------------!
@@ -109,7 +105,6 @@ program prova
   allocate(psi(dim))
   call buildstate(nspin, dim, psi)
   call project(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
-  !if(dim_Sz == dim_Sz0) print *, "Sz = 0."
   call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, trim(name_initial_state))
 
 

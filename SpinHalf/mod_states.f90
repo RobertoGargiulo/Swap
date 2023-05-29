@@ -276,6 +276,82 @@ contains
 !
 !  end subroutine
 
+  subroutine buildNeelState(nspin, dim, psi)
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(out) :: psi(dim)
+    
+    integer :: i, k
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+
+    psi = 0
+    i = 0
+    do k = 1, nspin/2
+      i = i + 2**(2*k-1)
+    enddo
+    psi(i) = 1
+
+  end subroutine
+
+  subroutine buildHalfNeelState(nspin, dim, psi)
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(out) :: psi(dim)
+    
+    integer :: i, k
+
+    if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
+
+    psi = 0
+    i = 0
+    do k = 1, nspin/4
+      i = i + 2**(2*k-1)
+    enddo
+    psi(i) = 1
+
+  end subroutine
+
+  subroutine printstate(nspin, dim, state, state_name)
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: state(dim)
+    character(len=*), intent(in) :: state_name
+
+    integer :: i, config(nspin)
+
+    print *, state_name
+    do i = 0, dim-1
+      if (abs(state(i+1))**2 > tol) then
+        call decode(i, nspin, config)
+        print "( 4X,F8.4, 4X,I6, 4X,*(I0) )", abs(state(i+1))**2, i, config(:)
+      endif
+    enddo
+    print *, ""
+
+  end subroutine
+
+  subroutine printstate_Sz(nspin, dim_Sz, Sz, state, state_name)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    complex (c_double_complex), intent(in) :: state(dim_Sz)
+    character(len=*), intent(in) :: state_name
+
+    integer :: i, l, config(nspin), idxSz(dim_Sz)
+
+    print *, state_name // " initial state:"
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+    print "( 2X,A10, 2(4X,A6), 4X,A )", "|psi(l)|^2", "l", "i", "config"
+    do l = 1, dim_Sz
+      if (abs(state(l))**2 > tol) then
+        i = idxSz(l)
+        call decode(i, nspin, config)
+        print "( 4X,F8.4, 2(4X,I6), 4X,*(I0) )", abs(state(l))**2, l, i, config(:)
+      endif
+    enddo
+    print *, ""
+
+  end subroutine
 
 
 end module states

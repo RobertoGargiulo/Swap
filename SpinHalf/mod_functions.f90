@@ -1,16 +1,16 @@
 !This module contains various functions and procedures used throughout the project
 
 !Specifically it includes all decoding/encoding procedures to go 
-!   from an integer to a basis (full Hilbert space, Sz=0 subspace)
+!   from an integer to a basis (full Hilbert space, Sz=0 subspace, generic Sz)
 
 !Binomial function, which is used to compute Hilbert space dimensions
 
 !Some procedures which compute the imbalance, local imbalance of the spin basis
 
 !A procedure which generates the full Hilbert-space state corresponding to
-!   the Sz=0 subspace
+!   the Sz=0 subspace and generic Sz subspace
 
-!Other utilities: binary search algorithm, conversion from 1D grid to 2D grid
+!Other utilities: binary search algorithm(s), conversion from 1D grid to 2D grid
 
 module functions
   
@@ -553,5 +553,149 @@ contains
     global_sigma = sqrt( (global_sq - global_avg**2) / n )
   
   end subroutine
+
+  function dimSpinHalf_Sz(nspin, Sz) result(dim_Sz)
+
+    integer (ip), intent(in) :: nspin, Sz
+    integer (ip) :: dim_Sz
+
+    dim_Sz = binom(nspin, (nspin + Sz)/2)
+
+  end function
+
+  subroutine basis_Sz(nspin, dim_Sz, Sz, states)
+
+    !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    integer (c_int), intent(out) :: states(dim_Sz)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, l, dim
+
+    dim = dimSpinHalf**nspin
+    l = 0
+    states = 0
+    !print "(2(A4,4X),A4)", "k", "i", "conf"
+    do i = 0, dim-1
+
+      call decode(i, nspin, config)
+
+      if (sum(1-2*config)==Sz) then
+        l = l+1
+        states(l) = i
+        !print "(2(I4,4X),*(I0))", k, i, config(:)
+      endif
+    enddo
+
+  end subroutine
+
+  subroutine basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)
+
+    !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    integer (c_int), intent(out) :: states(dim_Sz), inverse(dimSpinHalf**nspin)
+
+    integer :: config(nspin)
+    integer (c_int) :: i, l, dim
+
+    dim = dimSpinHalf**nspin
+    l = 0
+    states = 0
+    inverse = -1
+    do i = 0, dim-1
+
+      call decode(i, nspin, config)
+
+      if (sum(1-config)==Sz) then
+        l = l+1
+        states(l) = i
+        inverse(i+1) = l
+        !print "(2(I4,4X),*(I0))", i, l, config(:)
+      endif
+    enddo
+
+  end subroutine
+
+  subroutine buildState_Sz_to_FullHS(nspin, dim, dim_Sz, Sz, psi_Sz, psi)
+    !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
+    !simply by constructing a vector which has zero components outside the Sz=0 subspace
+
+    integer (c_int), intent(in) :: nspin, dim, dim_Sz, Sz
+    complex (c_double_complex), intent(in) :: psi_Sz(dim_Sz)
+    complex (c_double_complex), intent(out) :: psi(dim)
+
+    integer :: i, l, states(dim_Sz)
+
+    call basis_Sz(nspin, dim_Sz, Sz, states)
+
+    psi = 0
+    !print *, "psi initialized"
+    do l = 1, dim_Sz
+      i = states(l) + 1
+      psi(i) = psi_Sz(l)
+      !print *,l, psi(l)
+      !print *, l, dim, i, dim_Sz0
+    enddo
+
+  end subroutine buildState_Sz_to_FullHS
+
+  subroutine projectState_FullHS_to_Sz(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
+    !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
+    !simply by constructing a vector which has zero components outside the Sz=0 subspace
+
+    integer (c_int), intent(in) :: nspin, dim
+    complex (c_double_complex), intent(in) :: psi(dim)
+    complex (c_double_complex), allocatable, intent(out) :: psi_Sz(:)
+    integer (c_int), intent(out) :: dim_Sz, Sz
+
+    integer :: i, l, sigmaz(nspin), config(nspin)
+    real :: mag_psi, mag_s
+    integer, allocatable :: states(:)
+    logical :: flag
+
+
+    !--------- Check Sz ----------!
+    mag_psi = 0
+    do i = 1, dim
+      call decode(i-1, nspin, config)
+      mag_s = sum(1-config)
+      mag_psi = mag_psi + abs(psi(i))**2 * mag_s
+    enddo
+    print *, "Magnetization of State:", mag_psi
+
+
+    flag = .True.
+    do i = 1, dim
+      call decode(i-1, nspin, config)
+      mag_s = sum(1-config)
+      if ( abs( (mag_s - mag_psi) * psi(i) ) > tol ) flag = .False.
+    enddo
+
+
+    Sz = int(mag_psi)
+    dim_Sz = dimSpinHalf_Sz(nspin, Sz)
+    if (flag) then
+      print *, "The State has a definite magnetization Sz = ", Sz
+    else
+      stop "The State is not an eigenstate of Sz"
+    endif
+
+    allocate(psi_Sz(dim_Sz), states(dim_Sz))
+
+    psi_Sz = 0
+    call basis_Sz(nspin, dim_Sz, Sz, states)
+    !print *, "psi initialized"
+    do l = 1, dim_Sz
+      i = states(l) + 1
+      psi_Sz(l) = psi(i)
+      !print *,l, psi(l)
+      !print *, l, dim, i, dim_Sz0
+    enddo
+
+    if(abs( dot_product(psi_Sz,psi_Sz) - dot_product(psi,psi) ) > tol) & 
+      & stop "Error with projection of state to Sz subspace"
+
+  end subroutine
+
 
 end module functions

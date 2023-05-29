@@ -63,6 +63,8 @@ test_search: $(MOD) test_search.o
 correlations_swap_LR: $(MOD) correlations_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+dynamics_swap_LR: $(MOD) dynamics_swap_LR.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 
 all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0

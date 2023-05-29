@@ -189,7 +189,7 @@ program test_LR
     do k = 1, nspin-1
       Vzz(k,1:k) = 0
       do q = k+1, nspin
-        Vzz(k,q) = Vzz(k,q) / ( abs(k-q)**alpha * norm(alpha,nspin) )
+        Vzz(k,q) = Vzz(k,q) / ( abs(k-q)**alpha )
       enddo
       !write (*,*) Vzz(k,:)
     enddo

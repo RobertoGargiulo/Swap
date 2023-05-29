@@ -10,7 +10,7 @@ module matrices
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   integer (c_int), private, parameter :: dimSpinHalf = 2
-  real (c_double), private, parameter :: tol = 1.0e-6
+  real (c_double), private, parameter :: tol = 1.0e-10
 
 
 contains
@@ -634,5 +634,154 @@ contains
     enddo
   end subroutine
 
+  subroutine buildSz_HSwap(nspin, dim_Sz, Sz, H)
+
+    !dim_Sz0 is the dimensione of the Sz=0 subsapce
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(out) :: H(dim_Sz,dim_Sz)
+
+    integer :: config(nspin), states(dim_Sz), inverse(dimSpinHalf**nspin)
+    integer (c_int) :: i, j, k, m, n, l, r, rflag
+ 
+    H = 0
+    call basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)
+    do l = 1, dim_Sz
+
+      i = states(l)
+      call decode(i,nspin,config)
+
+      do k = 1, nspin/2
+
+        H(l,l) = H(l,l) + (1 - 2 * config(2*k-1)) * &
+          & (1 - 2 * config(2*k))-1
+
+        if (config(2*k-1)/=config(2*k)) then
+          j = i + (1-2*config(2*k-1))*2**(2*k-2) + (1-2*config(2*k))*2**(2*k-1)
+          r = inverse(j+1)
+          
+
+          H(r,l) = H(r,l) + 2 * (config(2*k-1) - config(2*k))**2
+        endif
+      enddo
+    enddo
+
+  end subroutine buildSz_HSwap
+
+  subroutine buildSz_HMBL_LR(nspin, dim_Sz, Sz, Jxy, Vzz, hz, H)
+
+    !dim_Sz0 is the dimensione of the Sz=0 subsapce
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1,nspin), hz(nspin)
+    real (c_double), intent(out) :: H(dim_Sz,dim_Sz)
+
+    integer :: config(nspin), states(dim_Sz), spin(nspin), inverse(dimSpinHalf**nspin)
+    integer (c_int) :: i, j, l, r, k, q 
+
+    H = 0
+    call basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)
+    do l = 1, dim_Sz
+
+      i = states(l)
+      call decode(i,nspin,config)
+      spin = 1 - 2*config
+
+      do k = 1, nspin-1
+
+        H(l,l) = H(l,l) + hz(k) * spin(k)
+
+        do q = k+1, nspin
+          H(l,l) = H(l,l) + Vzz(k,q) * spin(k) * spin(q)
+        enddo
+
+        if (spin(k)/=spin(k+1)) then
+          j = i + (1 - 2*config(k))*2**(k-1) + (1 - 2*config(k+1))*2**(k)
+          r = inverse(j+1) 
+
+          H(r,l) = H(r,l) + Jxy(k) * (spin(k) - spin(k+1))**2/2
+        endif
+      enddo
+      k = nspin
+      H(l,l) = H(l,l) + hz(k) * spin(k)
+    enddo
+
+  end subroutine
+
+  subroutine print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double_complex), intent(in) :: H(dim_Sz, dim_Sz)
+
+    integer :: i, j, r, l, config(nspin), config2(nspin)
+    integer :: idxSz(dim_Sz)
+
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+
+    print "(4X,1(A6,X),2(A3,3X),A4)", "H(r,l)", "i", "r/l", "conf"
+    do l = 1, dim_Sz
+      i = idxSz(l)
+      call decode(i,nspin,config)
+
+      if(abs(H(l,l)) > tol) then
+        print "(4X,1(F6.2,X),2(I3,3X),*(I0))", H(l,l), l, i, config(:)
+      endif
+
+      do r = 1, dim_Sz
+
+        if(r==l) then 
+          cycle
+        else if (abs(H(r,l)) > tol) then
+          j = idxSz(r)
+          call decode(j,nspin, config2)
+          print "(4X,1(F6.2,X),2(I3,3X),*(I0))", H(r,l), l, i, config(:)
+          print "(4X,1(A6,X),2(I3,3X),*(I0))", "", r, j, config2(:)
+        endif
+
+      enddo
+
+    enddo
+    print *, ""
+
+
+  end subroutine
+
+  subroutine print_unitary_Sz(nspin, dim_Sz, Sz, U)
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    complex (c_double_complex), intent(in) :: U(dim_Sz, dim_Sz)
+
+    integer :: i, j, r, l, config(nspin), config2(nspin)
+    integer :: idxSz(dim_Sz)
+
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+
+    print "(4X,1(A18,X),2(A3,3X),A4)", "U(r,l)", "i", "r/l", "conf"
+    do l = 1, dim_Sz
+      i = idxSz(l)
+      call decode(i,nspin,config)
+
+      if(abs(U(l,l)) > tol) then
+        print "(4X,1((f8.2f8.2x'i'),X),2(I3,3X),*(I0))", U(l,l), l, i, config(:)
+      endif
+
+      do r = 1, dim_Sz
+
+        if(r==l) then 
+          cycle
+        else if (abs(U(r,l)) > tol) then
+          j = idxSz(r)
+          call decode(j,nspin, config2)
+          print "(4X,1(f8.2f8.2x'i',X),2(I3,3X),*(I0))", U(r,l), l, i, config(:)
+          print "(4X,1(A18,X),2(I3,3X),*(I0))", "", r, j, config2(:)
+        endif
+
+      enddo
+
+    enddo
+    print *, ""
+
+
+  end subroutine
 
 end module matrices
