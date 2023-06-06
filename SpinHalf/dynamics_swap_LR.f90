@@ -7,7 +7,7 @@ program test_LR
   use matrices, only: buildHSwap => buildSz_HSwap, buildHMBL => buildSz_HMBL_LR, &
     & print_hamiltonian_Sz, print_unitary_Sz
   use printing, only: take_time, printmat
-  use states, only: buildstate => buildHalfNeelState, &
+  use states, only: buildstate => buildNeelState, &
     & printstate_Sz, printstate
   use omp_lib
   use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
@@ -19,7 +19,7 @@ program test_LR
 
   real (dp), parameter :: pi = 4._dp * atan(1._dp)
   real (dp), parameter :: tol = 1.0e-8
-  character(len=*), parameter :: name_initial_state = "HalfNeel"
+  character(len=*), parameter :: name_initial_state = "Neel"
 
   integer (ip)     ::  nspin, dim, n_disorder, steps
   integer (ip)     ::  i, j, l, r, k, p, q, dim_Sz, Sz
@@ -105,21 +105,21 @@ program test_LR
   !DATA FILES
   
   write(filestring,93) "data/dynamics/sigmaz_Swap_LR_" // trim(name_initial_state) // "_nspin", &
-    & nspin, "_period", T0, "_n_disorder", n_disorder, &
+    & nspin, "_steps", steps, "_period", T0, "_n_disorder", n_disorder, &
     & "_Jxy", Jxy_coupling, "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, &
     & "_alpha", int(alpha), alpha-int(alpha), ".txt"
-  !open(newunit=unit_sigmaz, file=filestring)
+  open(newunit=unit_sigmaz, file=filestring)
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  93  format(A,I0, A,F4.2, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
+  93  format(A,I0, A,I0, A,F4.2, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
 
 
   !------------- Initial State ------------------!
   allocate(psi(dim))
   call buildstate(nspin, dim, psi)
-  call printstate(nspin, dim, psi, trim(name_initial_state))
+  !call printstate(nspin, dim, psi, trim(name_initial_state))
   call project(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
   call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, trim(name_initial_state))
 
@@ -130,10 +130,13 @@ program test_LR
   allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz), USwap(dim_Sz,dim_Sz))
   call buildHSwap(nspin, dim_Sz, Sz, H)
   call diagSYM( 'V', dim_Sz, H, E, W_r)
-!  print *, "HSwap = "
-!  call printmat(dim, H, 'R')
+  !print *, "HSwap = "
+  !call print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
+  !call printmat(dim, H, 'R')
   deallocate(H)
   call expSYM( dim_Sz, -C_UNIT*T1, E, W_r, USwap )
+  !print *, "USwap = "
+  !call print_unitary_Sz(nspin, dim_Sz, Sz, USwap)
   deallocate(E, W_r)
 
   !---------------------------------------------------
@@ -182,17 +185,15 @@ program test_LR
     do k = 1, nspin-1
       Vzz(k,1:k) = 0
       do q = k+1, nspin
-        Vzz(k,q) = Vzz(k,q) / ( abs(k-q)**alpha )
+        Vzz(k,q) = Vzz(k,q) / ( abs(k-q)**alpha * normalization_Vzz(alpha, nspin) )
       enddo
       !write (*,*) Vzz(k,:)
     enddo
-    Vzz = Vzz / normalization_Vzz(alpha, nspin)
  
     call random_number(hz)
     hz = 2*hz_coupling*(hz-0.5) !hz in [-hz_coupling, hz_coupling]
  
     !write (*,*) "Jxy = ", Jxy(:)
-    !write (*,*) "Vzz = ", Vzz(:)
     !write (*,*) "hz = ", hz(:)
     !print *, ""
  
@@ -200,6 +201,8 @@ program test_LR
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildHMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, H )
+    !print *, "HMBL = "
+    !call print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
     call diagSYM( 'V', dim_Sz, H, E, W_r )
     call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
@@ -227,19 +230,19 @@ program test_LR
 
   sigmaz_avg = sigmaz_avg / n_disorder
   sigmaz_sq = sqrt( (sigmaz_sq/n_disorder - sigmaz_avg**2) / n_disorder )
-  !call write_info(unit_sigmaz)
+  call write_info(unit_sigmaz)
   columns = column_titles(nspin)
   write (*,*) columns
   do j = 1, steps, max(steps/100, 1)
-    write (*,*) j*T0, sigmaz_avg(j,:)!, sigmaz_sq(j,:)
+    write (*,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
   enddo
 
-  !write (unit_sigmaz,*) columns
-  !do j = 1, steps
-  !  write (unit_sigmaz,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
-  !enddo
+  write (unit_sigmaz,*) columns
+  do j = 1, steps
+    write (unit_sigmaz,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
+  enddo
  
-  !close(unit_sigmaz)
+  close(unit_sigmaz)
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 
