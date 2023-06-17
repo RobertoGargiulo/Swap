@@ -651,6 +651,104 @@ contains
 
   end function int_1dto2d
 
+  function binsearch_closest_in_circle(theta, array) result(indx)
 
+    !Binary search for closest element to given value where the array contains angles in [-pi, pi]
+
+    implicit none
+    real (c_double), intent(in) :: theta, array(:)
+    integer (c_int) :: indx, mid, left, right!, range
+    integer (c_int) :: prev, next, n
+
+    indx = -1
+    left = 1
+    right = size(array) + 1
+    n = size(array)
+
+    !range = right - left
+
+    if (theta < array(1)) then
+      indx = merge(1, size(array), abs(array(1)-theta)<= abs( (theta+2*pi)-array(size(array)) ) )
+      !print *, "indx(1) = ", indx
+      return
+    else if (theta > array(size(array))) then
+      indx = merge(size(array), 1, abs( theta - array(size(array)) )<= abs(array(1)-(theta-2*pi)) )
+      !print *, "indx(n) = ", indx
+      return
+    endif
+
+    !print "(6X,4(A12),2(A26))", "indx", "left", "right", "mid", "array(mid)", "val"
+
+    mid = (right + left) / 2
+    do while (right > left)
+
+      !prev = merge(mid-1,n, mid.ne.1)
+      !next = merge(mid+1,1, mid.ne.n)
+      !print *, "before", indx, left, right, mid, array(mid), theta
+      !print *, array(prev), array(mid), array(next)
+
+      if (array(mid) == theta) then
+        indx = mid
+        !print *, "indx = ", indx
+        return
+      else if (array(mid) > theta) then
+        if (mid>1 .and. array(mid-1) < theta) then
+          indx = merge(mid, mid-1, theta-array(mid-1) >= array(mid)-theta)
+          !print *, "indx(mid-1:mid) = ", indx
+          return
+        endif
+        right = mid-1
+      else ! array(mid) < val) 
+        if (mid<size(array) .and. array(mid+1) > theta) then
+          indx = merge(mid, mid+1, array(mid+1)-theta >= theta-array(mid))
+          !print *, "indx(mid:mid+1) = ", indx
+          return
+        endif
+        left = mid+1
+      end if
+      !range = right - left
+      mid = (right + left) / 2
+      
+      !print *, "after ", indx, left, right, mid, array(mid), theta
+      !print *, array(prev), array(mid), array(next)
+
+    end do
+
+    !indx = right! - 1 
+    indx = mid
+    !print *, "indx(end) = ", indx
+ 
+  end function
+
+  subroutine disorder_average(local_avg, local_sq, global_avg, global_sigma)
+    
+    real (dp), intent(in) :: local_avg(:), local_sq(:)
+    real (dp), intent(out) :: global_avg, global_sigma
+  
+    real (dp) :: global_sq
+    integer (ip) :: n
+  
+    n = size(local_avg)
+  
+    global_avg = sum(local_avg) / n
+    global_sq = sum(local_sq) / n
+    global_sigma = sqrt( (global_sq - global_avg**2) / n )
+  
+  end subroutine
+
+  function normalization_power_law(alpha, nspin) result(norm)
+
+    real (dp) :: alpha, norm
+    integer (ip) :: nspin
+
+    if (alpha > 1) then
+      norm = 1
+    else if (abs(alpha-1)<tol) then
+      norm = log(real(nspin, kind=dp))
+    else
+      norm = nspin**(1-alpha)
+    endif
+
+  end function
 
 end module functions

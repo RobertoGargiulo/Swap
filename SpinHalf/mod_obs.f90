@@ -954,6 +954,7 @@ contains
 
     QE = (exact_energy_LR(nspin, Vzz, hz, i) + exact_energy_LR(nspin, Vzz, hz, j)) / 2 + &
       & merge(pi,0.0_dp,j>i)
+    QE = real(C_UNIT*log(exp(-C_UNIT*QE)), kind=dp)
     !print "(*(A26))", "E(i)", "E(j)", "QE = (E(i)+E(j))/2"
     !print *, exact_energy_LR(nspin, Vzz, hz, i), exact_energy_LR(nspin, Vzz, hz, j), QE
 
@@ -979,7 +980,6 @@ contains
       call decode(i, nspin, config)
       !mu = exact_quasi_energy_LR(nspin, Vzz, hz, i)
       QE(l) = exact_quasi_energy_LR(nspin, Vzz, hz, i)
-      QE(l) = real(C_UNIT*log(exp(-C_UNIT*QE(l))), kind=dp)
 
       !print *, "Energies:    E_exact,   mu = E_exact + (E_pair) "
       !print *, exact_energy_LR(nspin, Vzz, hz, i), mu

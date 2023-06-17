@@ -15,7 +15,7 @@ module observables
   
   use iso_c_binding
   use printing
-  use functions
+  use functions, search => binsearch_closest_in_circle
   implicit none
 
   complex (c_double_complex), private, parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
@@ -702,57 +702,6 @@ contains
 
   end subroutine gap_ratio
 
-  !real function avg_gap_ratio_C(nspin, quasi_energies)
-
-    !
-
-  !end function avg_gap_ratio_C
-
-  subroutine log_gap_difference(dim, energies, log_pair_avg, log_near_avg, log_avg, log_sq)
-
-    !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
-    !and paired eigenvalues (separated by half the spectrum)
-    ! log_near_avg = < log( E_{n+1} - E_n ) >
-    ! log_pair_avg = < log( E_{n+dim/2} - E_n ) >
-    ! log_avg = log_pair_avg - log_near_avg
-    ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
-
-
-    integer (c_int), intent(in) :: dim
-    real (c_double), intent(in) :: energies(dim)
-    real (c_double), intent(out) :: log_avg, log_pair_avg, log_near_avg, log_sq
-    real (c_double) :: pair(dim), near(dim)
-
-    integer (c_int) :: i, j
-
-    do i = 1, dim 
-      
-      if (i<=dim-1) then
-        j = i + 1
-        near(i) = energies(j) - energies(i)
-      else if (i>dim-1) then
-        j = i + 1 -dim
-        near(i) = energies(j) + 2*pi - energies(i)
-      endif
-  
-      if (i<=dim/2) then
-        j = i + dim/2
-        pair(i) = abs( energies(j) - energies(i) - pi )
-      else if (i>dim/2) then
-        j = i - dim/2
-        pair(i) = abs( energies(j) + 2*pi - energies(i) - pi  )
-      endif
-
-    enddo
-
-    log_pair_avg = sum(log(pair)) / dim
-    log_near_avg = sum(log(near)) / dim
-    log_avg = log_pair_avg - log_near_avg
-    log_sq = sum((log(pair) - log(near))**2) / dim
-
-  end subroutine log_gap_difference
-
-
   function IPR(psi)
     complex (c_double_complex), intent(in) :: psi(:)
     real (c_double) :: IPR
@@ -768,5 +717,244 @@ contains
 
   end function IPR
 
+  function pi_pair(QE) result(beta)
+
+    real (dp), intent(in) :: QE(:)
+
+    integer (ip) :: alpha, dim
+    integer (ip), allocatable :: beta(:)
+    real (dp) :: val
+
+    dim = size(QE)
+    allocate(beta(dim))
+
+    do alpha = 1, dim
+      val = mod(QE(alpha) + 2*pi, 2*pi) - pi
+
+      !print *, "alpha = ", alpha, "QE(alpha) = ", QE(alpha), "val =", val
+      beta(alpha) = search(val, QE) !<--------- If you want the "minimal pi-distance from above"
+
+    enddo
+
+  end function
+
+  subroutine log_gap_difference(QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
+
+    !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
+    !and paired eigenvalues (where pi-angle-distance has been minimized)
+    ! log_near_avg = < log( E_{alpha+1} - E_alpha ) >
+    ! log_pair_avg = < log( E_beta - E_alpha ) >
+    ! log_avg = log_pair_avg - log_near_avg
+    ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
+    ! If there is spectral pairing: Delta^alpha / Delta_0^alpha      -> 0  as L-> +infty
+    !                               log(Delta^alpha / Delta_0^alpha) -> -infty
+
+
+    real (dp), intent(in) :: QE(:)
+    real (dp), intent(out) :: log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq
+
+    real (dp), allocatable :: pair(:), near(:)
+    integer (ip), allocatable :: pi_paired(:)
+
+    integer (ip) :: dim, alpha, beta !, beta1, beta2
+    real (dp) :: val
+
+    dim = size(QE)
+    allocate(pair(dim), near(dim), pi_paired(dim))
+
+    pi_paired = pi_pair(QE)
+
+    !print "(2(A12),3(A26))", "alpha", "beta", "E(alpha)", "(E(alpha)+pi)_1", "E(beta)"
+    !do alpha = 1, dim
+    !  beta = pi_paired(alpha)
+    !  print *, alpha, beta, QE(alpha), mod(QE(alpha) + 2*pi, 2*pi) - pi, QE(beta)
+    !enddo
+
+    !beta1 = 0
+    !print "(2(A12),3(A26))", "alpha", "beta", "dQE(beta-1)", "dQE(beta)", "dQE(beta+1)"
+    !do alpha = 1, dim
+    !  beta = pi_paired(alpha)
+    !  val = mod(QE(alpha) + 2*pi, 2*pi) - pi
+    !  !print *, alpha, beta, abs(QE(beta1)-val), abs(QE(beta) - val), abs(QE(beta2)-val)
+    !  print *, alpha, beta, minloc(abs(QE-val)), minloc( abs(exp(C_UNIT*(QE-val)) - 1), dim )
+    !  beta1 = beta1 + (beta - minloc( abs(exp(C_UNIT*(QE-val)) - 1), dim ) )
+    !enddo
+    !print *, "Total difference between binsearch and minloc|e^(i(QE-val))-1|:", beta1
+
+
+    !print "(*(A26))", "Delta_pi", "Delta_0", "log(Delta_pi)", "log(Delta_0)"
+    do alpha = 1, dim 
+
+      beta = merge(alpha+1,1,alpha.ne.dim)
+      near(alpha) = QE(beta) + merge(0._dp,2*pi,alpha.ne.dim) - QE(alpha)
+
+      beta = pi_paired(alpha)
+      pair(alpha) = abs(abs(QE(beta) - QE(alpha)) - pi)
+
+      !print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
+
+    enddo
+    pair = max(pair, epsilon(pair))
+    near = max(near, epsilon(near))
+
+    log_pair_avg = sum(log(pair)) / dim
+    log_pair_sq = sum((log(pair))**2) / dim
+
+    log_near_avg = sum(log(near)) / dim
+    log_near_sq = sum((log(near))**2) / dim
+
+    log_avg = log_pair_avg - log_near_avg
+    log_sq = sum((log(pair) - log(near))**2) / dim
+
+  end subroutine
+
+  subroutine log_gap_difference_half_spectrum_shift(QE, log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq)
+
+    !Computes the averages of the logarithm of gaps of neighbouring eigenvalues 
+    !and paired eigenvalues (separated by half the spectrum)
+    ! log_near_avg = < log( E_{alpha+1} - E_alpha ) >
+    ! log_pair_avg = < log( E_{alpha+N/2} - E_alpha ) >
+    ! log_avg = log_pair_avg - log_near_avg
+    ! log_sq = < (log Delta^alpha - log Delta_0^alpha)^2 >
+    ! If there is spectral pairing: Delta^alpha / Delta_0^alpha      -> 0  as L-> +infty
+    !                               log(Delta^alpha / Delta_0^alpha) -> -infty
+
+
+    real (dp), intent(in) :: QE(:)
+    real (dp), intent(out) :: log_pair_avg, log_pair_sq, log_near_avg, log_near_sq, log_avg, log_sq
+
+    real (dp), allocatable :: pair(:), near(:)
+    integer (ip), allocatable :: pi_paired(:)
+
+    integer (ip) :: dim, alpha, beta !, beta1, beta2
+    real (dp) :: val
+
+    dim = size(QE)
+    allocate(pair(dim), near(dim), pi_paired(dim))
+
+
+    !print "(*(A26))", "(Delta_pi)_half", "Delta_0", "log(Delta_pi)_half", "log(Delta_0)"
+    do alpha = 1, dim 
+
+      beta = merge(alpha+1,1,alpha.ne.dim)
+      near(alpha) = QE(beta) + merge(0._dp,2*pi,alpha.ne.dim) - QE(alpha)
+
+      beta = merge(alpha+dim/2, alpha-dim/2, alpha<=dim/2)
+      pair(alpha) = abs(abs(QE(beta) - QE(alpha)) - pi)
+      !print *, pair(alpha), near(alpha), log(pair(alpha)), log(near(alpha))
+
+    enddo
+    pair = max(pair, epsilon(pair))
+    near = max(near, epsilon(near))
+
+    log_pair_avg = sum(log(pair)) / dim
+    log_pair_sq = sum((log(pair))**2) / dim
+
+    log_near_avg = sum(log(near)) / dim
+    log_near_sq = sum((log(near))**2) / dim
+
+    log_avg = log_pair_avg - log_near_avg
+    log_sq = sum((log(pair) - log(near))**2) / dim
+
+  end subroutine
+
+  function exact_energy_LR(nspin, Vzz, hz, i) result(E)
+
+    integer (ip), intent(in) :: nspin, i
+    real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
+
+    integer (ip) :: k, q, config(nspin), spin(nspin)
+    real (dp) :: E
+
+    call decode(i, nspin, config)
+    spin = 1 - config
+    E = 0
+    do k = 1, nspin - 1
+      E = E + hz(k) * spin(k)
+      do q = k+1, nspin
+        E = E + Vzz(k,q) * spin(k) * spin(q)
+      enddo
+    enddo
+    k = nspin
+    E = E + hz(k) * spin(k)
+
+  end function
+
+  function exact_quasi_energy_LR(nspin, Vzz, hz, i) result(QE)
+
+    integer (ip), intent(in) :: nspin, i
+    real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
+
+    real (dp) :: QE
+    integer (ip) :: k, j, config(nspin), config_swap(nspin)
+
+    call decode(i, nspin, config)
+    j = 0
+    do k = 1, nspin/2
+      j = j + config(2*k) * 2**(2*k-2)  + config(2*k-1) * 2**(2*k-1)
+    enddo
+
+    QE = (exact_energy_LR(nspin, Vzz, hz, i) + exact_energy_LR(nspin, Vzz, hz, j)) / 2 + &
+      & merge(pi,0.0_dp,j>i)
+    QE = real(C_UNIT*log(exp(-C_UNIT*QE)), kind=dp)
+
+  end function
+
+  function exact_quasi_energies_LR_Sz(nspin, dim_Sz, Sz, Vzz, hz) result(QE)
+
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
+    real (dp) :: QE(dim_Sz0)
+
+    integer (c_int) :: i, k, l, config(nspin), idxSz(dim_Sz)
+    !real (dp) :: mu
+
+    QE = 0
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+    !print *, "(Start) Exact Quasienergies"
+    do l = 1, dim_Sz
+
+      !print *, "Quasienergy at l = ", l
+      i = idxSz(l)
+      call decode(i, nspin, config)
+      !mu = exact_quasi_energy_LR(nspin, Vzz, hz, i)
+      QE(l) = exact_quasi_energy_LR(nspin, Vzz, hz, i)
+
+      !print *, "Energies:    E_exact,   mu = E_exact + (E_pair) "
+      !print *, exact_energy_LR(nspin, Vzz, hz, i), mu
+      !print *, "First BZ (mu): "
+      !print *, real(C_UNIT*log(exp(-C_UNIT*mu)), kind=dp), mod(mu + pi,2*pi) - pi
+
+      !print "(*(A16))", "i", "l", "config", "QE"
+      !write (*,"(2(4X,I12))",advance='no') i, l
+      !write (*,"(4X,*(I0))",advance='no'), config(:)
+      !write (*,*) QE(l)
+
+      !print *, ""
+      !print *, ""
+
+    enddo
+
+  end function
+
+  function exact_energies_LR_Sz(nspin, dim_Sz, Sz, Vzz, hz) result(E)
+
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
+    real (dp) :: E(dim_Sz0)
+
+    integer (c_int) :: i, k, l, config(nspin), idxSz(dim_Sz)
+
+    E = 0
+    call basis_Sz(nspin, dim_Sz, Sz, idxSz)
+    do l = 1, dim_Sz
+
+      i = idxSz(l)
+      call decode(i, nspin, config)
+      E(l) = exact_energy_LR(nspin, Vzz, hz, i)
+
+    enddo
+
+  end function
 
 end module

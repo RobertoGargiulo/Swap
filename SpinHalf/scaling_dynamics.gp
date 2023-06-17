@@ -1,6 +1,7 @@
 reset session
 ########## sigmaz Dynamics wrt L #############
 
+init_state = "HalfNeel"
 list_L = "4 6 8 10 12"
 list_dis = "10240 5120 2560 1280 640"
 T0 = "1.00"
@@ -29,7 +30,7 @@ num_alpha = words(list_alpha)
 #
 #set table $DataSelected
 #
-#plot for [q=0:num_L-1] "data/dynamics/sigmaz_Swap_LR_HalfNeel_nspin".word(list_L,q+1)."_period".T0."_n_disorder".word(list_dis,q+1)."_Jxy".Jxy."_Vzz".V."_hz".hz."_kick".kick."_alpha".alpha.".txt" \
+#plot for [q=0:num_L-1] "data/dynamics/sigmaz_Swap_LR_".init_state."_nspin".word(list_L,q+1)."_period".T0."_n_disorder".word(list_dis,q+1)."_Jxy".Jxy."_Vzz".V."_hz".hz."_kick".kick."_alpha".alpha.".txt" \
 #every ::1::17 u 1:( column(1 + word(list_L,q+1)/4 * 2) ) : ( column(1 + word(list_L,q+1) - 1) ) w table
 #unset table
 #print $DataSelected
@@ -38,19 +39,17 @@ num_alpha = words(list_alpha)
 #  }
 #}
 
-#set xrange [word(list_L,1)-0.3:word(list_L,num_L)+0.3]
-#set xrange [word(list_lambda,1):word(list_L,num_L)+0.3]
-set size ratio 0.5
-set margins -1,2,0,0
+#set size ratio 0.5
+#set margins -1,2,0,0
 set key out right box 3
 unset colorbox
-set size ratio 0.8
+#set size ratio 0.8
 set logscale x
 set yrange [-1.1:1.1]
 set xlabel "t"
-set ylabel "I(t)"
+set ylabel "\\sigma^z_{2(L/4)}(t)"
 
-do for [i=0:num_alpha-1] {
+do for [i=0:num_J-1] {
   do for [j=0:num_alpha-1] {
     do for [k=0:num_kick-1] {
   
@@ -59,17 +58,20 @@ Jxy = word(list_J,i+1)
 alpha = word(list_alpha,j+1)
 kick = word(list_kick,k+1)
 print Jxy, " ", alpha, " ", kick
+do for [q=0:num_L-1] {
+  print "columns: ", 1, 1 + word(list_L,q+1)/4 * 2, word(list_L,q+1)
+}
 
 set terminal pngcairo dashed font ",13"
-set output "figures/Swap_Dynamics_sigmaz_avg_wrt_L_J".Jxy."_kick".kick."_alpha".alpha."_L".word(list_L,num_L).".png"
+set output "figures/Swap_Dynamics_".init_state."_sigmaz_avg_wrt_L_J".Jxy."_kick".kick."_alpha".alpha."_L".word(list_L,num_L).".png"
 set title "N_d = 2^{1-L/2}20480, steps = ".steps.", T0 = ".T0.",\n J = ".Jxy.", V = ".V.", hz = ".hz.",\n kick = ".kick.", alpha = ".alpha
-plot for [q=0:num_L-1] "data/dynamics/sigmaz_Swap_LR_HalfNeel_nspin".word(list_L,q+1)."_period".T0."_n_disorder".word(list_dis,q+1)."_Jxy".Jxy."_Vzz".V."_hz".hz."_kick".kick."_alpha".alpha.".txt" \
-  u 1:( column( word(list_L,i+1)/4 * 2  ) ) w lp title "L = ".word(list_L,q+1) lc palette frac (q+0.0)/num_L
+plot for [q=0:num_L-1] "data/dynamics/sigmaz_Swap_LR_".init_state."_nspin".word(list_L,q+1)."_period".T0."_n_disorder".word(list_dis,q+1)."_Jxy".Jxy."_Vzz".V."_hz".hz."_kick".kick."_alpha".alpha.".txt" \
+  u 1:( (-1)**($1/T0) * column( 1 + word(list_L,q+1)/4 * 2  ) ) w lp title "L = ".word(list_L,q+1) lc palette frac (q+0.0)/num_L
 
 
 #set output "figures/Swap_Dynamics_sigmaz_err_wrt_L_J".Jxy."kick".kick."_alpha".alpha."_L".word(list_L,num_L).".png"
 #set title "N_d = 2^{1-L/2}20480, T0 = ".T0.", V = ".V.", kick = ".kick.",\n hz = ".hz.", alpha = ".alpha
-#plot for [i=0:num_L-1] file u 1:column( word(list_L,i+1)/4 * 2  ) w errorlines title "L = ".word(list_L,i+1) lc palette frac (i+0.0)/num_L pt 4
+#plot for [i=0:num_L-1] file u 1:column( 1 + word(list_L,q+1)/4 * 2  ) w errorlines title "L = ".word(list_L,i+1) lc palette frac (i+0.0)/num_L pt 4
   
     }
   }
