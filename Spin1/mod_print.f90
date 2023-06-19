@@ -377,7 +377,7 @@ contains
       enddo
     end if
 
-  end subroutine printmat_C
+  end subroutine
 
 
 

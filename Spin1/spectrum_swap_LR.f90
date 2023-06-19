@@ -1,11 +1,13 @@
 program test_LR
 
-  use functions, only: binom, init_random_seed, norm, disorder_average
+  use functions, only: binom, init_random_seed, dimSpin1_Sz, &
+    & norm => normalization_power_law , disorder_average
   use exponentiate, only: diagSYM, expSYM, diagUN
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
     & shift_spectral_pairing => log_gap_difference_half_spectrum_shift, &
-    & exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
-  use matrices, only: buildHSwap => buildSz0_HSwap, buildHMBL => buildSz0_HMBL_LR
+    & exact_QE => exact_quasi_energies_LR_Sz, exact_E => exact_energies_LR_Sz
+  use matrices, only: buildHSwap => buildSz_HSwap, buildHMBL => buildSz_HMBL_LR, &
+    & print_unitary_Sz
   use printing, only: take_time, printmat
   use sorts, only: sort => dpquicksort
   use omp_lib
@@ -16,10 +18,12 @@ program test_LR
   complex (dcp), parameter :: C_ONE = dcmplx(1._dp, 0._dp)
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
+  integer (ip), parameter :: dimSpin1 = 3
+
   real (dp), parameter :: pi = 4._dp * atan(1._dp)
 
   integer (ip)     ::  nspin, dim, n_disorder
-  integer (ip)     ::  i, j, l, k, p, q, dim_Sz0
+  integer (ip)     ::  i, j, l, k, p, q, m, dim_Sz, Sz
   integer (ip)     ::  unit_ph
 
   real(dp), dimension(:), allocatable :: Jxy, hz
@@ -35,6 +39,8 @@ program test_LR
   complex(dcp), dimension(:), allocatable :: PH
   complex(dcp), dimension(:,:), allocatable :: U, W, USwap
 
+  complex (dcp) :: c_var
+
   real (dp), allocatable :: log_avg(:), log_sq(:), log_pair_avg(:), log_near_avg(:), &
     & log_pair_sq(:), log_near_sq(:)
   real (dp) :: log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_near_dis_avg, &
@@ -49,7 +55,7 @@ program test_LR
   logical :: SELECT
   EXTERNAL SELECT
 
-  integer(ip) :: count_beginning, count_end, count_rate, count1, count2
+  integer(ip) :: count_beginning, count_end, count_rate
   character(len=200) :: filestring
 
 
@@ -61,8 +67,6 @@ program test_LR
   write (*,*) "Number of Spins"
   read (*,*) nspin
   print*,""
-  dim = 2**nspin
-  dim_Sz0 = binom(nspin,nspin/2)
 
   write (*,*) "Number of Disorder Realizations"
   read (*,*) n_disorder
@@ -86,7 +90,7 @@ program test_LR
 
   !---Read below for distributions of J, V, hz
 
-  write (*,*) "Perturbation on Kick T1 = pi/4 + kick"
+  write (*,*) "Perturbation on Kick T1 = pi/2 + kick"
   read (*,*) kick
   print*,""
 
@@ -94,35 +98,40 @@ program test_LR
   read (*,*) alpha
   print*,""
  
-  T1 = pi/4 + kick
+  dim = dimSpin1**nspin
+  T1 = pi/2 + kick
+  Sz = 0 !!!!!!! <------- Magnetization of Subspace
+  dim_Sz = dimSpin1_Sz(nspin, Sz)
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
 
   !DATA FILES
   
-  write(filestring,93) "data/eigen/quasienergies_Swap_LR_Sz0_nspin", &
+  write(filestring,93) "data/spectrum/quasienergies_Swap_LR_Sz0_nspin", &
     & nspin, "_period", T0, "_n_disorder", n_disorder, &
     & "_Jxy", Jxy_coupling, "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, &
     & "_alpha", int(alpha), alpha-int(alpha), ".txt"
-  open(newunit=unit_ph,file=filestring)
+  print *, "Output: ", trim(filestring)
 
-  !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   93  format(A,I0, A,F4.2, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
+  open(newunit=unit_ph,file=filestring)
+  call write_info(unit_ph)
  
   !------------------------------------------------
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
-  allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0), USwap(dim_Sz0,dim_Sz0))
-  call buildHSwap(nspin, dim_Sz0, H)
-  call diagSYM( 'V', dim_Sz0, H, E, W_r)
+  allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz), USwap(dim_Sz,dim_Sz))
+  call buildHSwap(nspin, dim_Sz, Sz, H)
+  call diagSYM( 'V', dim_Sz, H, E, W_r)
 !  print *, "HSwap = "
 !  call printmat(dim, H, 'R')
   deallocate(H)
-  call expSYM( dim_Sz0, -C_UNIT*T1, E, W_r, USwap )
+  call expSYM( dim_Sz, -C_UNIT*T1, E, W_r, USwap )
   deallocate(E, W_r)
+  !print *, "USwap = "
+  !call printmat(dim_Sz, USwap, 'C')
 
   !---------------------------------------------------
   !Allocate local interactions and fields
@@ -130,9 +139,9 @@ program test_LR
 
   !Allocate Floquet and MBL Operators
   !allocate(H_sparse(nz_Sz0_dim), ROWS(nz_Sz0_dim), COLS(nz_Sz0_dim))
-  allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0))
-  allocate(U(dim_Sz0,dim_Sz0))
-  !allocate(idx(dim_Sz0))
+  allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
+  allocate(U(dim_Sz,dim_Sz))
+  !allocate(idx(dim_Sz))
 
   !Allocate observables and averages
   allocate( r_avg(n_disorder), r_sq(n_disorder))
@@ -144,13 +153,13 @@ program test_LR
   allocate( log_pair_sq(n_disorder), log_near_sq(n_disorder), shift_log_pair_sq(n_disorder), shift_log_near_sq(n_disorder) )
 
   !Allocate for Eigenvalues/Eigenvectors
-  allocate(PH(dim_Sz0))
-  allocate(W(dim_Sz0,dim_Sz0))
-  allocate(E_MBL(n_disorder,dim_Sz0),QE(n_disorder,dim_Sz0))
+  allocate(PH(dim_Sz))
+  allocate(W(dim_Sz,dim_Sz))
+  allocate(E_MBL(n_disorder,dim_Sz),QE(n_disorder,dim_Sz))
 
-  allocate(config(nspin), states(dim_Sz0))
+  allocate(config(nspin), states(dim_Sz))
 
-  allocate(idxuE(dim_Sz0), deg(dim_Sz0), QE_exact(dim_Sz0), E_exact(dim_Sz0))
+  allocate(idxuE(dim_Sz), deg(dim_Sz), QE_exact(dim_Sz), E_exact(dim_Sz))
 
   r_avg = 0
   r_sq = 0
@@ -204,40 +213,32 @@ program test_LR
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call buildHMBL( nspin, dim_Sz0, Jxy, Vzz, hz, H )
-    call diagSYM( 'V', dim_Sz0, H, E, W_r )
+    call buildHMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, H )
+    call diagSYM( 'V', dim_Sz, H, E, W_r )
     E_MBL(i,:) = E
 
     call gap_ratio(E, r_avg2(i), r_sq2(i))
 
-    call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
+    call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
-    call diagUN( SELECT, dim_Sz0, U, PH, W)
+    call diagUN( SELECT, dim_Sz, U, PH, W)
+
     E = real(C_UNIT*log(PH), kind=dp)
     call sort(E)
     QE(i,:) = E
 
-    !print *, "Degeneracies of QE:"
-    !call find_degeneracies( size(E), E, idxuE, deg) 
-    !print *, sum(deg), dim_Sz0
-
-    !QE_exact = exact_QE(nspin, dim_Sz0, Vzz, hz)
+    !QE_exact = exact_QE(nspin, dim_Sz, Sz, Vzz, hz)
     !call sort(QE_exact)
-    !print *, "Degeneracies of QE_exact:"
-    !call find_degeneracies( size(QE_exact), QE_exact, idxuE, deg) 
-    !print *, sum(deg), dim_Sz0
-
-    !E_exact = exact_E(nspin, dim_Sz0, Vzz, hz)
+    !E_exact = exact_E(nspin, dim_Sz, Sz, Vzz, hz)
     !call sort(E_exact)
-
-
-
     !print *, "Quasienergies:"
-    !print "(*(A26))", "Disorder Realization", "l", "QE", "QE_exact", "E_MBL"
-    !do l = 1, dim_Sz0
-    !  write (*,*) i, l, QE(i,l), QE_exact(l), E_MBL(i,l), E_exact(l)
+    !print "(2(A12),*(A26))", "Disorder Realization", "l", "QE", "QE_exact", "E_MBL", "E_exact"
+    !do l = 1, dim_Sz
+    !  write (*,*) i, l, QE(i,l), QE_exact(l), E_MBL(i,l), E_exact(l), QE(i,l) - QE_exact(l), E_MBL(i,l) - E_exact(l)
     !enddo
 
+    !print *, "Total difference E = ", sum(E_MBL(i,:) - E_exact(:))
+    !print *, "Total difference QE = ", sum(QE(i,:) - QE_exact(:))
 
     call gap_ratio(E, r_avg(i), r_sq(i))
     call spectral_pairing(E, log_pair_avg(i), log_pair_sq(i), log_near_avg(i), log_near_sq(i), log_avg(i), log_sq(i))
@@ -249,11 +250,10 @@ program test_LR
   !$OMP END DO
   !$OMP END PARALLEL 
 
-  call write_info(unit_ph)
   !print "(*(A26))", "Disorder Realization", "l", "QE", "E_MBL"
   write (unit_ph, "(2(A12),2(A26))") "Disorder Realization", "l", "QE", "E_MBL"
   do i = 1, n_disorder
-    do l = 1, dim_Sz0
+    do l = 1, dim_Sz
       !write (*,*) i, l, QE(i,l), E_MBL(i,l)
       write (unit_ph,*) i, l, QE(i,l), E_MBL(i,l)
     enddo
@@ -316,8 +316,8 @@ subroutine write_info(unit_file)
 
   write (unit_file,*) "Some info: "
   write (unit_file,*) "Quasi-Energies of Floquet Operator U_F = U_swap e^(-i H)."
-  write (unit_file,*) "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
-  write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/4 + kick) * sum (sigma*sigma) )."
+  write (unit_file,*) "Spin-1 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
+  write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/2 + kick) * sum (sigma*sigma)^2 + (sigma*sigma) - 2 )."
   write (unit_file,*) "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  J is uniform."
   write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
 

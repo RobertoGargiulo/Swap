@@ -13,26 +13,26 @@
 
 module observables
   
-  use iso_c_binding
+  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
   use printing
   use functions, search => binsearch_closest_in_circle
   implicit none
 
-  complex (c_double_complex), private, parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
-  complex (c_double_complex), private, parameter :: C_ONE = dcmplx(1._c_double, 0._c_double) 
-  complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
+  complex (dcp), private, parameter :: C_ZERO = dcmplx(0._dp, 0._dp)
+  complex (dcp), private, parameter :: C_ONE = dcmplx(1._dp, 0._dp) 
+  complex (dcp), private, parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
-  integer (c_int), private, parameter :: dimSpin1 = 3
-  real (c_double), parameter, private :: pi = 4.d0 * datan(1.d0)
+  integer (ip), private, parameter :: dimSpin1 = 3
+  real (dp), parameter, private :: pi = 4._dp * atan(1._dp)
 
 contains
 
   function sigmaz_Sz(nspin, dim_Sz, Sz, psi_Sz) result(sigmaz)
-    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
-    complex (c_double_complex), intent(in) :: psi_Sz(dim_Sz)
-    real (c_double) :: sigmaz(nspin)
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    complex (dcp), intent(in) :: psi_Sz(dim_Sz)
+    real (dp) :: sigmaz(nspin)
 
-    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz), s
+    integer (ip) :: i, k, l, config(nspin), states(dim_Sz), s
 
     call basis_Sz(nspin, dim_Sz, Sz, states)
     sigmaz = 0
@@ -49,12 +49,12 @@ contains
 
 
   function sigmaz_Sz0(nspin, dim_Sz0, psi_Sz0)
-    integer (c_int), intent(in) :: nspin, dim_Sz0
-    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
-    real (c_double) :: sigmaz_Sz0(nspin)
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    real (dp) :: sigmaz_Sz0(nspin)
 
-    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0), s
-    real (c_double) :: sigmaz(nspin)
+    integer (ip) :: i, k, l, config(nspin), states(dim_Sz0), s
+    real (dp) :: sigmaz(nspin)
 
     call zero_mag_states(nspin, dim_Sz0, states)
     sigmaz = 0
@@ -72,11 +72,11 @@ contains
 
   function imbalance_Sz0(nspin, dim_Sz0, state)
 
-    integer(c_int), intent(in) :: nspin, dim_Sz0
-    complex(c_double_complex), intent(in) :: state(dim_Sz0)
-    real (c_double) :: imbalance_Sz0
-    real(c_double) :: imb, imbaux
-    integer (c_int) :: i, k, l, indx(dim_Sz0), config(nspin), s
+    integer(ip), intent(in) :: nspin, dim_Sz0
+    complex(dcp), intent(in) :: state(dim_Sz0)
+    real (dp) :: imbalance_Sz0
+    real(dp) :: imb, imbaux
+    integer (ip) :: i, k, l, indx(dim_Sz0), config(nspin), s
 
     imb = 0
     call zero_mag_states(nspin, dim_Sz0, indx)
@@ -99,12 +99,12 @@ contains
   end function imbalance_Sz0
 
   function local_imbalance_Sz0(nspin, dim_Sz0, psi_Sz0)
-    integer (c_int), intent(in) :: nspin, dim_Sz0
-    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
-    real (c_double) :: local_imbalance_Sz0
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    real (dp) :: local_imbalance_Sz0
 
-    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0), s1, s2
-    real (c_double) :: LI, LI_part
+    integer (ip) :: i, k, l, config(nspin), states(dim_Sz0), s1, s2
+    real (dp) :: LI, LI_part
 
     call zero_mag_states(nspin, dim_Sz0, states)
     LI = 0
@@ -125,12 +125,12 @@ contains
 
   function sigmaz_corr_c_Sz0(nspin, dim_Sz0, q, p, psi_Sz0)
 
-    integer (c_int), intent(in) :: nspin, dim_Sz0, q, p
-    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
-    real (c_double) :: sigmaz_corr_c_Sz0
+    integer (ip), intent(in) :: nspin, dim_Sz0, q, p
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    real (dp) :: sigmaz_corr_c_Sz0
 
-    integer (c_int) :: i, k, l, config(nspin), states(dim_Sz0), sp, sq
-    real (c_double) :: corr, avgq, avgp
+    integer (ip) :: i, k, l, config(nspin), states(dim_Sz0), sp, sq
+    real (dp) :: corr, avgq, avgp
 
     avgq = 0
     avgp = 0
@@ -159,10 +159,10 @@ contains
 
 !  subroutine magntz(i, nspin, mag)
 !
-!    integer(c_int), intent(in) :: i, nspin
-!    integer(c_int) :: config(nspin)
-!    real(c_double) :: mag
-!    integer (c_int) :: j, k, m
+!    integer(ip), intent(in) :: i, nspin
+!    integer(ip) :: config(nspin)
+!    real(dp) :: mag
+!    integer (ip) :: j, k, m
 !
 !    call decode(i, nspin, config)
 !
@@ -176,18 +176,18 @@ contains
 !
 !  real function mag_z(nspin, dim, state)
 !
-!    integer(c_int), intent(in) :: nspin, dim
-!    complex(c_double_complex), intent(in) :: state(dim)
-!    real(c_double) :: mag, magaux
+!    integer(ip), intent(in) :: nspin, dim
+!    complex(dcp), intent(in) :: state(dim)
+!    real(dp) :: mag, magaux
 !    integer :: config(nspin)
-!    integer (c_int) :: i, j, k, m
+!    integer (ip) :: i, j, k, m
 !
 !    mag = 0
 !    do i = 1, dim
 !      call decode(i-1,nspin,config)
 !      magaux = 0
 !      do k = 1, nspin
-!        magaux = magaux + (1._c_double - 2._c_double * config(k))
+!        magaux = magaux + (1._dp - 2._dp * config(k))
 !      enddo
 !      magaux = magaux * abs(state(i))**2
 !      mag = mag + magaux
@@ -199,11 +199,11 @@ contains
 !
 !  real function mag_z_p(nspin, dim, state, p)
 !
-!    integer(c_int), intent(in) :: nspin, dim, p
-!    complex(c_double_complex), intent(in) :: state(dim)
-!    real(c_double) :: mag
+!    integer(ip), intent(in) :: nspin, dim, p
+!    complex(dcp), intent(in) :: state(dim)
+!    real(dp) :: mag
 !    integer :: config(nspin)
-!    integer (c_int) :: i, j, k, m
+!    integer (ip) :: i, j, k, m
 !
 !    mag = 0
 !    do i = 1, dim
@@ -216,19 +216,19 @@ contains
 !
 !  real function mag_stag_z(nspin, dim, state)
 !
-!    integer(c_int), intent(in) :: nspin, dim
-!    complex(c_double_complex), intent(in) :: state(dim)
-!    real(c_double) :: mag
-!    real(c_double) :: magaux
+!    integer(ip), intent(in) :: nspin, dim
+!    complex(dcp), intent(in) :: state(dim)
+!    real(dp) :: mag
+!    real(dp) :: magaux
 !    integer :: config(nspin)
-!    integer (c_int) :: i, j, k, m
+!    integer (ip) :: i, j, k, m
 !
 !    mag = 0
 !    do i = 1, dim
 !      call decode(i-1,nspin,config)
 !      magaux = 0
 !      do k = 1, nspin
-!        magaux = magaux + (-1)**k * (1._c_double - 2._c_double * config(k))
+!        magaux = magaux + (-1)**k * (1._dp - 2._dp * config(k))
 !      enddo
 !      magaux = magaux * abs(state(i))**2
 !      mag = mag + magaux
@@ -240,11 +240,11 @@ contains
 !  
 !  real function imbalance(nspin, dim, state)
 !
-!    integer(c_int), intent(in) :: nspin, dim
-!    complex(c_double_complex), intent(in) :: state(dim)
-!    real(c_double) :: imb, imbaux, mag, magaux
+!    integer(ip), intent(in) :: nspin, dim
+!    complex(dcp), intent(in) :: state(dim)
+!    real(dp) :: imb, imbaux, mag, magaux
 !    integer :: config(nspin)
-!    integer (c_int) :: i, j, k, m
+!    integer (ip) :: i, j, k, m
 !
 !    mag = 0
 !    imb = 0
@@ -271,11 +271,11 @@ contains
 !
 !  real function imbalance_Sz0(nspin, dim_Sz0, state)
 !
-!    integer(c_int), intent(in) :: nspin, dim_Sz0
-!    complex(c_double_complex), intent(in) :: state(dim_Sz0)
-!    real(c_double) :: imb, imbaux
+!    integer(ip), intent(in) :: nspin, dim_Sz0
+!    complex(dcp), intent(in) :: state(dim_Sz0)
+!    real(dp) :: imb, imbaux
 !    integer :: config(nspin)
-!    integer (c_int) :: i, j, k, m, l, indx(dim_Sz0)
+!    integer (ip) :: i, j, k, m, l, indx(dim_Sz0)
 !
 !    imb = 0
 !    call zero_mag_states(nspin, dim_Sz0, indx)
@@ -298,11 +298,11 @@ contains
 !
 !  real function imbalance_sq_Sz0(nspin, dim_Sz0, state)
 !
-!    integer(c_int), intent(in) :: nspin, dim_Sz0
-!    complex(c_double_complex), intent(in) :: state(dim_Sz0)
-!    real(c_double) :: imb, imbaux
+!    integer(ip), intent(in) :: nspin, dim_Sz0
+!    complex(dcp), intent(in) :: state(dim_Sz0)
+!    real(dp) :: imb, imbaux
 !    integer :: config(nspin)
-!    integer (c_int) :: i, k1, k2, l, indx(dim_Sz0)
+!    integer (ip) :: i, k1, k2, l, indx(dim_Sz0)
 !
 !    imb = 0
 !    call zero_mag_states(nspin, dim_Sz0, indx)
@@ -327,8 +327,8 @@ contains
 !
 !  function imbalance_basis(nspin, i)
 !
-!    integer(c_int), intent(in) :: nspin, i
-!    real (c_double) :: imb, imbalance_basis
+!    integer(ip), intent(in) :: nspin, i
+!    real (dp) :: imb, imbalance_basis
 !    integer :: config(nspin), k
 !
 !    call decode(i,nspin,config)
@@ -344,8 +344,8 @@ contains
 !
 !  function imbalance_sq_basis(nspin, i)
 !
-!    integer(c_int), intent(in) :: nspin, i
-!    real (c_double) :: imb, imbalance_sq_basis
+!    integer(ip), intent(in) :: nspin, i
+!    real (dp) :: imb, imbalance_sq_basis
 !    integer :: config(nspin), k
 !
 !    call decode(i,nspin,config)
@@ -360,11 +360,11 @@ contains
 !  end function imbalance_sq_basis
 !
 !  function local_imbalance_basis(nspin, i)
-!    integer (c_int), intent(in) :: nspin, i
-!    real (c_double) :: local_imbalance_basis
+!    integer (ip), intent(in) :: nspin, i
+!    real (dp) :: local_imbalance_basis
 !
-!    integer (c_int) :: k, config(nspin)
-!    real (c_double) :: LI
+!    integer (ip) :: k, config(nspin)
+!    real (dp) :: LI
 !
 !    LI = 0
 !    call decode(i, nspin, config)
@@ -378,12 +378,12 @@ contains
 !  end function
 !
 !  function local_imbalance(nspin, dim, psi)
-!    integer (c_int), intent(in) :: nspin, dim
-!    complex (c_double_complex), intent(in) :: psi(dim)
-!    real (c_double) :: local_imbalance
+!    integer (ip), intent(in) :: nspin, dim
+!    complex (dcp), intent(in) :: psi(dim)
+!    real (dp) :: local_imbalance
 !
-!    integer (c_int) :: i, k, config(nspin)
-!    real (c_double) :: LI, LI_part
+!    integer (ip) :: i, k, config(nspin)
+!    real (dp) :: LI, LI_part
 !
 !    LI = 0
 !    do i = 1, dim
@@ -400,12 +400,12 @@ contains
 !
 !
 !  function local_overlap(nspin, dim, psi)
-!    integer (c_int), intent(in) :: nspin, dim
-!    complex (c_double_complex), intent(in) :: psi(dim)
-!    real (c_double) :: local_overlap
+!    integer (ip), intent(in) :: nspin, dim
+!    complex (dcp), intent(in) :: psi(dim)
+!    real (dp) :: local_overlap
 !
-!    integer (c_int) :: i, j, k, config(nspin)
-!    real (c_double) :: LO
+!    integer (ip) :: i, j, k, config(nspin)
+!    real (dp) :: LO
 !
 !    LO = 0
 !    do i = 1, dim
@@ -423,12 +423,12 @@ contains
 !  end function
 !
 !  function local_overlap_Sz0(nspin, dim_Sz0, psi)
-!    integer (c_int), intent(in) :: nspin, dim_Sz0
-!    complex (c_double_complex), intent(in) :: psi(dim_Sz0)
-!    real (c_double) :: local_overlap_Sz0
+!    integer (ip), intent(in) :: nspin, dim_Sz0
+!    complex (dcp), intent(in) :: psi(dim_Sz0)
+!    real (dp) :: local_overlap_Sz0
 !
-!    integer (c_int) :: i, j, k, r, l, config(nspin), states(dim_Sz0)
-!    real (c_double) :: LO
+!    integer (ip) :: i, j, k, r, l, config(nspin), states(dim_Sz0)
+!    real (dp) :: LO
 !
 !    call zero_mag_states(nspin, dim_Sz0, states)
 !    LO = 0
@@ -450,12 +450,12 @@ contains
 !
 !  function sigmaz_corr_c(nspin, dim, q, p, psi)
 !
-!    integer (c_int), intent(in) :: nspin, dim, q, p
-!    complex (c_double_complex), intent(in) :: psi(dim)
-!    real (c_double) :: sigmaz_corr_c
+!    integer (ip), intent(in) :: nspin, dim, q, p
+!    complex (dcp), intent(in) :: psi(dim)
+!    real (dp) :: sigmaz_corr_c
 !
-!    integer (c_int) :: i, k, config(nspin)
-!    real (c_double) :: corr, avgq, avgp
+!    integer (ip) :: i, k, config(nspin)
+!    real (dp) :: corr, avgq, avgp
 !
 !    avgq = 0
 !    avgp = 0
@@ -482,12 +482,12 @@ contains
 !
   function exact_energy(nspin, Vz, hz, sigmaz) result(E)
 
-    integer (c_int), intent(in) :: nspin
-    real (c_double), intent(in) :: Vz(nspin-1), hz(nspin)
-    integer (c_int), intent(in) :: sigmaz(nspin)
-    real (c_double) :: E
+    integer (ip), intent(in) :: nspin
+    real (dp), intent(in) :: Vz(nspin-1), hz(nspin)
+    integer (ip), intent(in) :: sigmaz(nspin)
+    real (dp) :: E
 
-    integer (c_int) :: k
+    integer (ip) :: k
 
     E = 0
     do k = 1, nspin - 1
@@ -501,11 +501,11 @@ contains
 
   function exact_energies_Sz(nspin, dim_Sz, Sz, Vz, hz) result(E)
 
-    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
-    real (c_double), intent(in) :: Vz(nspin-1), hz(nspin)
-    real (c_double) :: E(dim_Sz)
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    real (dp), intent(in) :: Vz(nspin-1), hz(nspin)
+    real (dp) :: E(dim_Sz)
 
-    integer (c_int) :: i, k, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
+    integer (ip) :: i, k, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
 
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
     do l = 1, dim_Sz
@@ -521,29 +521,29 @@ contains
 
   function exact_quasi_energy(nspin, Vz, hz, sigmaz) result(QE)
 
-    integer (c_int), intent(in) :: nspin
-    real (c_double), intent(in) :: Vz(nspin-1), hz(nspin)
-    integer (c_int), intent(in) :: sigmaz(nspin)
-    real (c_double) :: QE
+    integer (ip), intent(in) :: nspin
+    real (dp), intent(in) :: Vz(nspin-1), hz(nspin)
+    integer (ip), intent(in) :: sigmaz(nspin)
+    real (dp) :: QE
 
-    integer (c_int) :: k, sigmaz_swap(nspin)
+    integer (ip) :: k, sigmaz_swap(nspin)
 
     do k = 1, nspin/2
       sigmaz_swap(2*k-1) = sigmaz(2*k)
       sigmaz_swap(2*k) = sigmaz(2*k-1)
     enddo
     QE = ( exact_energy(nspin, Vz, hz, sigmaz) + exact_energy(nspin, Vz, hz, sigmaz_swap) ) / 2
-    QE = real( C_UNIT * log( exp(-C_UNIT*QE ) ), c_double )
+    QE = real( C_UNIT * log( exp(-C_UNIT*QE ) ), dp )
 
   end function
 
   function exact_quasi_energies_Sz(nspin, dim_Sz, Sz, Vz, hz) result(QE)
 
-    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
-    real (c_double), intent(in) :: Vz(nspin-1), hz(nspin)
-    real (c_double) :: QE(dim_Sz)
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    real (dp), intent(in) :: Vz(nspin-1), hz(nspin)
+    real (dp) :: QE(dim_Sz)
 
-    integer (c_int) :: i, k, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
+    integer (ip) :: i, k, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
 
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
     do l = 1, dim_Sz
@@ -560,12 +560,12 @@ contains
 !
 !  subroutine exact_quasi_energies_Sz0(nspin, dim_Sz0, V_int, h_z, QE) !E, Es, QE, QE_alt)
 !
-!    integer (c_int), intent(in) :: nspin, dim_Sz0
-!    real (c_double), intent(in) :: V_int(nspin-1), h_z(nspin)
-!    real (c_double), intent(out) :: QE(dim_Sz0)
+!    integer (ip), intent(in) :: nspin, dim_Sz0
+!    real (dp), intent(in) :: V_int(nspin-1), h_z(nspin)
+!    real (dp), intent(out) :: QE(dim_Sz0)
 !
-!    integer (c_int) :: i, k, l, m, config(nspin), states(dim_Sz0)
-!    !real (c_double) :: E(dim_Sz0), Es(dim_Sz0), QE_alt(dim_Sz0)
+!    integer (ip) :: i, k, l, m, config(nspin), states(dim_Sz0)
+!    !real (dp) :: E(dim_Sz0), Es(dim_Sz0), QE_alt(dim_Sz0)
 !
 !    QE = 0
 !    !QE_alt = 0
@@ -651,10 +651,10 @@ contains
 !
   subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)
     character, intent(in) :: option*1
-    integer (c_int), intent(in) :: steps, start
-    real (c_double), intent(in) :: avg(steps), sigma(steps)
-    real (c_double), intent(out) :: t_avg, t_sigma
-    integer (c_int) :: i, j, k
+    integer (ip), intent(in) :: steps, start
+    real (dp), intent(in) :: avg(steps), sigma(steps)
+    real (dp), intent(out) :: t_avg, t_sigma
+    integer (ip) :: i, j, k
     
     t_avg = 0
     t_sigma = 0
@@ -669,22 +669,23 @@ contains
         t_sigma = t_sigma + sigma(j)**2
       enddo
     endif
-    t_avg = t_avg/real(steps-start+1,c_double)
-    t_sigma = sqrt(t_sigma/real(steps-start+1,c_double))
+    t_avg = t_avg/real(steps-start+1,dp)
+    t_sigma = sqrt(t_sigma/real(steps-start+1,dp))
 
   end subroutine time_avg
 
 
   !------- Spectral Properties -------!
 
-  subroutine gap_ratio(dim, energies, r_avg, r_sq)
+  subroutine gap_ratio(energies, r_avg, r_sq)
 
-    integer, intent(in) :: dim
-    real (c_double), intent(in) :: energies(dim)
+    real (dp), intent(in) :: energies(:)
+    real (dp), intent(out) :: r_avg, r_sq
 
-    integer :: n
-    real (c_double) :: r_avg, r_sq, gap1, gap2
+    integer :: n, dim
+    real (dp) :: gap1, gap2
 
+    dim = size(energies)
     r_avg = 0
     r_sq = 0
     do n = 1, dim - 2
@@ -703,9 +704,9 @@ contains
   end subroutine gap_ratio
 
   function IPR(psi)
-    complex (c_double_complex), intent(in) :: psi(:)
-    real (c_double) :: IPR
-    integer (c_int) :: dim, i
+    complex (dcp), intent(in) :: psi(:)
+    real (dp) :: IPR
+    integer (ip) :: dim, i
 
     dim = size(psi)
     !print *, dim
@@ -886,13 +887,16 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
 
     real (dp) :: QE
-    integer (ip) :: k, j, config(nspin), config_swap(nspin)
+    integer (ip) :: k, j, config(nspin)!, config_swap(nspin)
 
     call decode(i, nspin, config)
     j = 0
     do k = 1, nspin/2
-      j = j + config(2*k) * 2**(2*k-2)  + config(2*k-1) * 2**(2*k-1)
+      j = j + config(2*k) * dimSpin1**(2*k-2)  + config(2*k-1) * dimSpin1**(2*k-1)
     enddo
+    !call decode(j, nspin, config_swap)
+    !print "(A15, *(I0))", "config = ", config(:)
+    !print "(A15, *(I0))", "config_swap = ", config_swap(:)
 
     QE = (exact_energy_LR(nspin, Vzz, hz, i) + exact_energy_LR(nspin, Vzz, hz, j)) / 2 + &
       & merge(pi,0.0_dp,j>i)
@@ -904,9 +908,9 @@ contains
 
     integer (ip), intent(in) :: nspin, dim_Sz, Sz
     real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
-    real (dp) :: QE(dim_Sz0)
+    real (dp) :: QE(dim_Sz)
 
-    integer (c_int) :: i, k, l, config(nspin), idxSz(dim_Sz)
+    integer (ip) :: i, k, l, config(nspin), idxSz(dim_Sz)
     !real (dp) :: mu
 
     QE = 0
@@ -941,16 +945,15 @@ contains
 
     integer (ip), intent(in) :: nspin, dim_Sz, Sz
     real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
-    real (dp) :: E(dim_Sz0)
+    real (dp) :: E(dim_Sz)
 
-    integer (c_int) :: i, k, l, config(nspin), idxSz(dim_Sz)
+    integer (ip) :: i, k, l, config(nspin), idxSz(dim_Sz)
 
     E = 0
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
     do l = 1, dim_Sz
 
       i = idxSz(l)
-      call decode(i, nspin, config)
       E(l) = exact_energy_LR(nspin, Vzz, hz, i)
 
     enddo

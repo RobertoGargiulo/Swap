@@ -15,18 +15,19 @@
 module functions
   
   !use ifport
-  use iso_c_binding
+  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
   use printing
   implicit none
 
-  complex (c_double_complex), private, parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
-  complex (c_double_complex), private, parameter :: C_ONE = dcmplx(1._c_double, 0._c_double) 
-  complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
+  complex (dcp), private, parameter :: C_ZERO = dcmplx(0._dp, 0._dp)
+  complex (dcp), private, parameter :: C_ONE = dcmplx(1._dp, 0._dp) 
+  complex (dcp), private, parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
-  integer (c_int), private, parameter :: dimSpin1 = 3
-  real (c_double), private, parameter :: tol = 1.0e-6
-  !integer (c_int) :: i, j, s
-  !real (c_double), parameter, private :: SigmaZ(3,3) = reshape((/ (( (2-i)*merge(1,0,i==j), j=1,3),i=1,3) /), shape(SigmaZ)) 
+  integer (ip), private, parameter :: dimSpin1 = 3
+  real (dp), private, parameter :: tol = 1.0e-6
+  real (dp), parameter, private :: pi = 4.d0 * datan(1.d0)
+  !integer (ip) :: i, j, s
+  !real (dp), parameter, private :: SigmaZ(3,3) = reshape((/ (( (2-i)*merge(1,0,i==j), j=1,3),i=1,3) /), shape(SigmaZ)) 
 
     !SigmaZ = 0
     !do i = 1, 3
@@ -42,9 +43,9 @@ contains
     ! i = sum_{k=1}^L a_k 3^{k-1} such that i + 1 = 1, ..., dim is an array index <->
     ! a_k = mod( floor(i/3^{k-1}) , 3) = 0, 1, 2 such that a_k + 1 = 1, 2, 3 is an array index (in tensor product notation, on a
     ! single Hilbert space)
-    integer (c_int), intent(in) :: decimal, ntrits
-    integer (c_int), intent(out) :: tritstring(ntrits)
-    integer (c_int) :: k, num
+    integer (ip), intent(in) :: decimal, ntrits
+    integer (ip), intent(out) :: tritstring(ntrits)
+    integer (ip) :: k, num
 
     tritstring = 0
     num = decimal
@@ -59,8 +60,8 @@ contains
 
     !Correspondence between integer configuration a_k and spin configuration:
     ! s_k = 1 - a_k = 1, 0, -1 <-> a_k = 1 - s_k = 0, 1, 2
-    integer (c_int), intent(in) :: trit
-    integer (c_int) :: trit_to_spin
+    integer (ip), intent(in) :: trit
+    integer (ip) :: trit_to_spin
     
     trit_to_spin = 1 - trit
 
@@ -70,8 +71,8 @@ contains
 
     !Correspondence between integer configuration a_k and spin configuration:
     ! s_k = 1 - a_k = 1, 0, -1 <-> a_k = 1 - s_k = 0, 1, 2
-    integer (c_int), intent(in) :: spin
-    integer (c_int) :: spin_to_trit
+    integer (ip), intent(in) :: spin
+    integer (ip) :: spin_to_trit
     
     spin_to_trit = 1 - spin
 
@@ -131,7 +132,7 @@ contains
 
 
   integer function binom(n,k)
-    integer(c_int), intent(in) :: n,k
+    integer(ip), intent(in) :: n,k
     integer, parameter :: i8 = selected_int_kind(18)
     integer, parameter :: dp = selected_real_kind(15)
 
@@ -145,8 +146,8 @@ contains
   end function
 
   integer function multinom(n,k_vec)
-    integer (c_int), intent(in) :: n
-    integer (c_int), allocatable, intent(in) :: k_vec(:)
+    integer (ip), intent(in) :: n
+    integer (ip), allocatable, intent(in) :: k_vec(:)
     
 
     integer, parameter :: i8 = selected_int_kind(18)
@@ -208,10 +209,10 @@ contains
 !
   function dimSpin1_Sz0(nspin)
 
-    integer (c_int), intent(in) :: nspin
-    integer (c_int) :: dimSpin1_Sz0
-    integer (c_int) :: n_up, ntot
-    integer (c_int), allocatable :: k_vec(:)
+    integer (ip), intent(in) :: nspin
+    integer (ip) :: dimSpin1_Sz0
+    integer (ip) :: n_up, ntot
+    integer (ip), allocatable :: k_vec(:)
 
     allocate(k_vec(dimSpin1))
 
@@ -230,10 +231,10 @@ contains
 
   function dimSpin1_Sz(nspin, Sz)
 
-    integer (c_int), intent(in) :: nspin, Sz
-    integer (c_int) :: dimSpin1_Sz
-    integer (c_int) :: n_up, ntot
-    integer (c_int), allocatable :: k_vec(:)
+    integer (ip), intent(in) :: nspin, Sz
+    integer (ip) :: dimSpin1_Sz
+    integer (ip) :: n_up, ntot
+    integer (ip), allocatable :: k_vec(:)
 
     allocate(k_vec(dimSpin1))
 
@@ -259,11 +260,11 @@ contains
   subroutine zero_mag_states(nspin, dim_Sz0, states)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz0
-    integer (c_int), intent(out) :: states(dim_Sz0)
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    integer (ip), intent(out) :: states(dim_Sz0)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, dim
+    integer (ip) :: i, j, k, dim
 
     dim = dimSpin1**nspin
     k = 0
@@ -284,11 +285,11 @@ contains
   subroutine zero_mag_states_inv(nspin, dim_Sz0, states, inverse)
  
      !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-     integer (c_int), intent(in) :: nspin, dim_Sz0
-     integer (c_int), intent(out) :: states(dim_Sz0), inverse(dimSpin1**nspin)
+     integer (ip), intent(in) :: nspin, dim_Sz0
+     integer (ip), intent(out) :: states(dim_Sz0), inverse(dimSpin1**nspin)
  
      integer :: config(nspin)
-     integer (c_int) :: i, j, l, dim
+     integer (ip) :: i, j, l, dim
  
      dim = dimSpin1**nspin
      l = 0
@@ -314,11 +315,11 @@ contains
   subroutine basis_Sz(nspin, dim_Sz, Sz, states)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
-    integer (c_int), intent(out) :: states(dim_Sz)
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    integer (ip), intent(out) :: states(dim_Sz)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, dim
+    integer (ip) :: i, j, k, dim
 
     dim = dimSpin1**nspin
     k = 0
@@ -340,11 +341,11 @@ contains
   subroutine basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
-    integer (c_int), intent(out) :: states(dim_Sz), inverse(dimSpin1**nspin)
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    integer (ip), intent(out) :: states(dim_Sz), inverse(dimSpin1**nspin)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, l, dim
+    integer (ip) :: i, j, l, dim
 
     dim = dimSpin1**nspin
     l = 0
@@ -363,126 +364,14 @@ contains
     enddo
 
   end subroutine
-!
-!  subroutine finite_imbalance_states(nspin, dim, IMB, states)
-!    integer (c_int), intent(in) :: nspin, dim
-!    real (c_double), intent(in) :: IMB
-!    integer (c_int), intent(out) :: states(dim)
-!
-!    integer (c_int) :: i, k, l, config(nspin), sum_even, sum_odd
-!    real (c_double) :: loc_imb
-!
-!    l = 0
-!    print *, "       i     l  config"
-!    do i = 0, dim-1
-!      call decode(i, nspin, config)
-!      sum_odd = 0
-!      sum_even = 0
-!      !print *, i, sum_even, sum_odd
-!      do k = 1, nspin/2
-!        sum_odd = sum_odd + config(2*k-1)
-!        sum_even = sum_even + config(2*k)
-!        !print *, k, sum_even, sum_odd
-!      enddo
-!      loc_imb = real(sum_odd - sum_even, c_double) / real(nspin - sum_odd - sum_even, c_double)
-!      !print *, loc_imb
-!      if(abs(IMB) < tol .AND. sum_odd == sum_even) then
-!        l = l+1
-!        states(l) = i
-!        print "(2(8X,I0),4X,*(I0))", i, l, config(:)
-!      else if(abs(IMB) > tol .AND. abs(loc_imb - IMB) < tol) then
-!        l = l+1
-!        states(l) = i
-!        print "(2(8X,I0),4X,*(I0))", i, l, config(:)
-!      endif
-!    enddo
-!
-!  end subroutine finite_imbalance_states
-!
-!  subroutine large_IMB_LI_states_Sz0(nspin, dim_Sz0, IMB, LI, states)
-!    integer (c_int), intent(in) :: nspin, dim_Sz0
-!    real (c_double), intent(in) :: IMB, LI
-!    integer (c_int), intent(out) :: states(dim_Sz0)
-!
-!    integer :: i, l, m, idxSz0(dim_Sz0)
-!    real (c_double) :: IMBc, LIc
-!
-!    call zero_mag_states(nspin, dim_Sz0, idxSz0)
-!    m = 0
-!    states = 0
-!    !print "( 4X,A4, 4X,A4, 4X,A6, 4X,A6 )", "m", "l", "IMB", "LI"
-!    do i = 1, dim_Sz0
-!
-!      l = idxSz0(i)
-!      IMBc = imbalance_basis(nspin, l)
-!      LIc = local_imbalance_basis(nspin, l)
-!      if (IMB >= 0) then
-!        if (IMBc >= IMB .AND. LIc >= LI) then
-!          m = m+1
-!          states(m) = l
-!          !print "(4X,I4, 4X,I4, 4X,F6.3, 4X,F6.3, 4X,F6.3)", m, l, IMBc, LIc
-!        endif
-!      else if (IMB < 0) then
-!        if (IMBc <= IMB .AND. LIc >= LI) then
-!          m = m+1
-!          states(m) = l
-!          !print "(4X,I4, 4X,I4, 4X,F6.3, 4X,F6.3)", m, l, IMBc, LIc
-!        endif
-!      endif
-!    enddo
-!
-!    !print *, "states = ", states(1:m)
-!
-!  end subroutine
-!
-!  subroutine finite_imbalance_states_Sz0(nspin, dim_Sz0, IMB, states)
-!    integer (c_int), intent(in) :: nspin, dim_Sz0
-!    real (c_double), intent(in) :: IMB
-!    integer (c_int), intent(out) :: states(dim_Sz0)
-!
-!    integer (c_int) :: i, k, m, l, config(nspin), sum_even, sum_odd, idxSz0(dim_Sz0)
-!    real (c_double) :: loc_imb
-!
-!    m = 0
-!    call zero_mag_states(nspin, dim_Sz0, idxSz0)
-!    print *, "       i     l  config"
-!    do i = 1, dim_Sz0
-!      l = idxSz0(i)
-!      call decode(l, nspin, config)
-!      sum_odd = 0
-!      sum_even = 0
-!      !print *, i, sum_even, sum_odd
-!      do k = 1, nspin/2
-!        sum_odd = sum_odd + config(2*k-1)
-!        sum_even = sum_even + config(2*k)
-!        !print *, k, sum_even, sum_odd
-!      enddo
-!      loc_imb = real(sum_odd - sum_even, c_double) / real(nspin - sum_odd - sum_even, c_double)
-!      !print *, loc_imb
-!      if(abs(IMB) < tol .AND. sum_odd == sum_even) then
-!        m = m+1
-!        states(m) = l
-!        print "(2(8X,I0),4X,*(I0))", l, m, config(:)
-!      else if(abs(IMB) > tol .AND. abs(loc_imb - IMB) < tol) then
-!        m = m+1
-!        states(m) = l
-!        print "(2(8X,I0),4X,*(I0))", l, m, config(:)
-!      endif
-!    enddo
-!
-!  end subroutine
-!
-!
-!
-!
-!
+
   subroutine buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
     !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
     !simply by constructing a vector which has zero components outside the Sz=0 subspace
 
-    integer (c_int), intent(in) :: nspin, dim, dim_Sz0
-    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
-    complex (c_double_complex), intent(out) :: psi(dim)
+    integer (ip), intent(in) :: nspin, dim, dim_Sz0
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    complex (dcp), intent(out) :: psi(dim)
 
     integer :: i, l, states(dim_Sz0)
 
@@ -503,9 +392,9 @@ contains
     !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
     !simply by constructing a vector which has zero components outside the Sz=0 subspace
 
-    integer (c_int), intent(in) :: nspin, dim, dim_Sz, Sz
-    complex (c_double_complex), intent(in) :: psi_Sz(dim_Sz)
-    complex (c_double_complex), intent(out) :: psi(dim)
+    integer (ip), intent(in) :: nspin, dim, dim_Sz, Sz
+    complex (dcp), intent(in) :: psi_Sz(dim_Sz)
+    complex (dcp), intent(out) :: psi(dim)
 
     integer :: i, l, states(dim_Sz)
 
@@ -526,10 +415,10 @@ contains
     !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
     !simply by constructing a vector which has zero components outside the Sz=0 subspace
 
-    integer (c_int), intent(in) :: nspin, dim
-    complex (c_double_complex), intent(in) :: psi(dim)
-    complex (c_double_complex), allocatable, intent(out) :: psi_Sz(:)
-    integer (c_int), intent(out) :: dim_Sz, Sz
+    integer (ip), intent(in) :: nspin, dim
+    complex (dcp), intent(in) :: psi(dim)
+    complex (dcp), allocatable, intent(out) :: psi_Sz(:)
+    integer (ip), intent(out) :: dim_Sz, Sz
 
     integer :: i, l, sigmaz(nspin), config(nspin)
     real :: mag_psi, mag_s
@@ -581,12 +470,12 @@ contains
   end subroutine
 
 
-  integer (c_int) function binsearch(val, array)
+  integer (ip) function binsearch(val, array)
   
   
     implicit none
-    integer (c_int), intent(in) :: val, array(:)
-    integer (c_int) :: mid, start, finish, range
+    integer (ip), intent(in) :: val, array(:)
+    integer (ip) :: mid, start, finish, range
     
     binsearch = -1
     start = 1
@@ -656,9 +545,9 @@ contains
     !Binary search for closest element to given value where the array contains angles in [-pi, pi]
 
     implicit none
-    real (c_double), intent(in) :: theta, array(:)
-    integer (c_int) :: indx, mid, left, right!, range
-    integer (c_int) :: prev, next, n
+    real (dp), intent(in) :: theta, array(:)
+    integer (ip) :: indx, mid, left, right!, range
+    integer (ip) :: prev, next, n
 
     indx = -1
     left = 1
