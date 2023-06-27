@@ -27,6 +27,8 @@ program prova
   complex :: cn
   complex (c_double_complex) :: cn_double_complex
 
+  real (c_double), parameter :: pi = 4._c_double * datan(1._c_double)
+
 
   do i = 0, 4
     i_size_t = 2**(8*2**i-1)-1
@@ -52,8 +54,10 @@ program prova
 
   print *, "Maximum, minimum values and errors (epsilon): "
   print *, "c_double: max = ", huge(r_double), "min = ", tiny(r_double), &
-    & "eps = ", epsilon(r_double)
+    & "eps = ", epsilon(r_double), "eps(pi) = ", epsilon(pi)
   print *,  "log(max) = ", log(huge(r_double)), "log(min) = ", log(tiny(r_double)), "log(eps) = ", log(epsilon(r_double))
+  print *,  "log10(max) = ", log10(huge(r_double)), "log10(min) = ", log10(tiny(r_double)), &
+    & "log10(eps) = ", log10(epsilon(r_double))
 
   r_double = 0
   do i = 1, 1000000
