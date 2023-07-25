@@ -439,9 +439,9 @@ contains
 
   end function int_1dto2d
 
-  real (dp) function norm(alpha, nspin)
+  function normalization_power_law(alpha, nspin) result(norm)
 
-    real (dp) :: alpha
+    real (dp) :: alpha, norm
     integer (ip) :: nspin
 
     if (alpha > 1) then

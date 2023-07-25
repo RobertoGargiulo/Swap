@@ -28,27 +28,31 @@ program test_LR
   real (dp), dimension(:), allocatable :: Jxy, hz
   real (dp), dimension(:,:), allocatable :: Vzz
   real (dp) :: T0, T1, Jxy_coupling, Vzz_coupling, hz_coupling, kick, alpha
+  complex (dcp) :: beta, delta
 
   real (dp), dimension(:), allocatable :: E
   real (dp), dimension(:,:), allocatable :: H, W_r
   complex (dcp), allocatable :: psi(:), state(:), psi_swap(:), psi_Sz(:)
   complex (dcp), dimension(:,:), allocatable :: U, USwap
 
-  real (dp), allocatable :: sigmaz_avg(:,:), sigmaz_sq(:,:)
-
   integer(ip) :: count_beginning, count_end, count_rate
 
   character(len=200) :: filestring, state_name
-  character(len=:), allocatable :: columns
-  integer (ip) :: unit_sigmaz
+  integer (ip) :: unit_decay
+
+  !integer (ip)  :: n_periods
+  real (dp), allocatable, dimension(:) :: t_decay, sigmaz_previous, sigmaz_current, &
+    & sigmaz_initial
+  real (dp)   :: imb_previous, imb_current, t_decay_avg, sigma_t_decay
+  integer (ip)   :: idecay, idecay2, n_decays
 
   logical :: SELECT
   EXTERNAL SELECT
-  !--------------- (Explicit) Interfaces ------------!
   interface
-    function column_titles(nspin) result(columns)
-      integer, intent(in) :: nspin
-      character(26*(4*nspin+3)) :: columns
+    pure function ones(n) result(arr)
+      use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
+      integer (ip), intent(in) :: n
+      real (dp) :: arr(n)
     end function
   end interface
 
@@ -61,7 +65,6 @@ program test_LR
   read (*,*) nspin
   print*,""
   dim = 2**nspin
-  dim_Sz = dimSpinHalf_Sz(nspin, Sz)
 
   write (*,*) "Number of Disorder Realizations"
   read (*,*) n_disorder
@@ -70,6 +73,10 @@ program test_LR
   write (*,*) "Number of Steps"
   read (*,*) steps
   print*,""
+
+  !write (*,*) "Number of Periods at each step"
+  !read (*,*) n_periods
+  !print*,""
 
   write (*,*) "Period T0"
   read (*,*) T0
@@ -104,13 +111,13 @@ program test_LR
 
   !DATA FILES
   
-  write(filestring,93) "data/dynamics/sigmaz_Swap_LR_" // trim(name_initial_state) // "_nspin", &
+  write(filestring,93) "data/dynamics/decay_sigmaz_Swap_LR_" // trim(name_initial_state) // "_nspin", &
     & nspin, "_steps", steps, "_period", T0, "_n_disorder", n_disorder, &
     & "_Jxy", Jxy_coupling, "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, &
     & "_alpha", int(alpha), alpha-int(alpha), ".txt"
-  open(newunit=unit_sigmaz, file=filestring)
-  call write_info(unit_sigmaz, trim(name_initial_state))
+  open(newunit=unit_decay, file=filestring)
+  call write_info(unit_decay, trim(name_initial_state))
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -120,9 +127,10 @@ program test_LR
   !------------- Initial State ------------------!
   allocate(psi(dim))
   call buildstate(nspin, dim, psi)
-  !call printstate(nspin, dim, psi, trim(name_initial_state))
+  call printstate(nspin, dim, psi, trim(name_initial_state))
   call project(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
   call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, trim(name_initial_state))
+  deallocate(psi)
 
  
   !------------------------------------------------
@@ -152,16 +160,17 @@ program test_LR
   allocate(psi_swap(dim_Sz))
 
   !Allocate for Dynamics
-  allocate(sigmaz_avg(steps,nspin), sigmaz_sq(steps,nspin))
-  sigmaz_avg = 0
-  sigmaz_sq = 0
+  allocate( t_decay(n_disorder), sigmaz_previous(nspin), sigmaz_current(nspin) )
+  n_decays = 0
+  t_decay = steps
 
   !$OMP PARALLEL
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+: sigmaz_avg, sigmaz_sq) private(i, j, hz, Vzz, norm, &
-  !$OMP & psi_swap, H, E, W_r, U )
+  !$OMP do reduction(+: n_decays) private(i, j, hz, Vzz, norm, &
+  !$OMP & psi_swap, H, E, W_r, U, idecay, &
+  !$OMP & sigmaz_previous, sigmaz_current, imb_previous, imb_current )
   do i = 1, n_disorder
  
     if (n_disorder < 10) then
@@ -208,42 +217,64 @@ program test_LR
     call diagSYM( 'V', dim_Sz, H, E, W_r )
     call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
+
     psi_swap = psi_Sz
     j = 1
-    sigmaz_avg(j,:) = sigmaz_avg(j,:) + sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
-    sigmaz_sq(j,:) = sigmaz_sq(j,:) + sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap) ** 2
-    !print *, i, j, sigmaz_avg(j,:,:)
+    idecay = 0
     do j = 2, steps
+
+      sigmaz_previous = sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
+      imb_previous = sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
+        & (sigmaz_previous(1::2) - sigmaz_previous(2::2)) )
+      !print *, j-1, sigmaz_previous
+      !print *, imb_previous
+      !print *, sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
+      !  & (sigmaz_previous(1::2) - sigmaz_previous(2::2))
+      !print *, ""
 
       if(mod(j,10)==0) then
         norm = real(dot_product(psi_swap,psi_swap))
         psi_swap = psi_swap/sqrt(norm)
       endif
       psi_swap = matmul(U, psi_swap)
-      sigmaz_avg(j,:) = sigmaz_avg(j,:) + sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
-      sigmaz_sq(j,:) = sigmaz_sq(j,:) + sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap) ** 2
-      !print *, i, j, sigmaz_avg(j,:,:)
+      sigmaz_current = sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
+      imb_current= sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
+        & (sigmaz_current(1::2) - sigmaz_current(2::2)) )
+      if (idecay==0) then
+        if(imb_previous * imb_current > 0) then
+          t_decay(i) = j * T0
+          idecay = 1
+          n_decays = n_decays + 1
+          !print *, j, sigmaz_current
+          !print *, imb_current
+          !print *, sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
+          !  & (sigmaz_current(1::2) - sigmaz_current(2::2))
+          !print *, ""
+          exit
+        endif
+      endif
 
     enddo
+    print *, ""
 
   enddo
   !$OMP END DO
   !$OMP END PARALLEL 
 
-  sigmaz_avg = sigmaz_avg / n_disorder
-  sigmaz_sq = sqrt( (sigmaz_sq/n_disorder - sigmaz_avg**2) / n_disorder )
-  columns = column_titles(nspin)
-  write (*,*) columns
-  do j = 1, steps, max(steps/100, 1)
-    write (*,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
-  enddo
-
-  write (unit_sigmaz,*) columns
-  do j = 1, steps
-    write (unit_sigmaz,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
-  enddo
  
-  close(unit_sigmaz)
+  t_decay_avg = sum(t_decay) / n_disorder
+  sigma_t_decay = sqrt( (sum(t_decay**2)/n_disorder - t_decay_avg**2) / n_disorder)
+
+  write(unit_decay,"(2(A26),A12)") "Dis. Realiz.", "t*"
+  do i = 1, n_disorder
+    write(unit_decay,*) i, t_decay(i)
+  enddo
+  write(unit_decay,"(2(A26),A12)") "<t*>", "sigma(t*)" , "n_decays"
+  write(unit_decay,*) t_decay_avg, sigma_t_decay, n_decays
+  close(unit_decay)
+
+  write(*,"(2(A26),A12)") "<t*>", "sigma(t*)" , "n_decays"
+  print*, t_decay_avg, sigma_t_decay, n_decays
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")
 
@@ -266,42 +297,25 @@ subroutine write_info(unit_file, state_name)
   character(len=*) :: state_name
 
   write (unit_file,*) "Some info: "
-  write (unit_file,*) "Dynamics of average of magnetization at integer multiples of the period."
+  write (unit_file,*) "Decay times of magnetization at integer multiples of the period."
   write (unit_file,*) "Floquet Operator U_F = U_swap e^(-i H)."
   write (unit_file,*) "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
   write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/4 + kick) * sum (sigma*sigma) )."
-  write (unit_file,*) "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  J is uniform."
+  write (unit_file,*) "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2] (OBC); &
+    &  hz is taken in [-hz, hz];  J is uniform."
   write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F."
   write (unit_file,*) "Initial state is "//trim(state_name)//trim(".")
 
 end subroutine
 
-function column_titles(nspin) result(columns)
+pure function ones(n) result(arr)
+  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
+  integer (ip), intent(in) :: n
+  real (dp) :: arr(n)
 
-  use iso_c_binding
-  implicit none
-
-  integer (c_int), intent(in) :: nspin
-  character (26*(4*nspin+3)) :: columns
-  character (nspin) :: s_index
-  integer (c_int) :: i, j1, j2, j3, j4
-
-
-  columns = ""
-  columns(2:26+2) = "j*T0"
-  do i = 1, nspin
-    write(s_index, "(I0)") i
-    j1 = 26*i+2
-    j2 = 26*(i+1)+2
-    j3 = 26*(i+nspin)+3
-    j4 = 26*(i+nspin+1)+3
-    !print *, j1, j2, j3, j4
-    columns(j1:j2) = trim("sigma_z^")//trim(s_index)
-    columns(j3:j4) = trim("err(sigma_z^")//trim(s_index)//trim(")")
-    !print *, columns
-  enddo
-  !print *, columns
-  !write(columns,"(3X,A4,20X,A)") "j*T0", trim(columns)
-  !print *, columns
+  arr = 1.0
 
 end function
+  
+
+

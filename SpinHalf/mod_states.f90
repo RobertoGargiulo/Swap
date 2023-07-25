@@ -73,7 +73,6 @@ contains
       enddo
     enddo
 
-
   end subroutine buildNayakState
 
   subroutine buildNayakState_Sz0(nspin,dim_Sz0,alpha,beta,state)
@@ -107,13 +106,13 @@ contains
   end subroutine buildNayakState_Sz0
 
 
-  subroutine buildI0LI1ProdState_Sz0(nspin, dim_Sz0, alpha, beta, state)
+  subroutine buildI0LI1ProdState(nspin, dim, alpha, beta, state)
 
-    integer (c_int), intent(in) :: nspin, dim_Sz0
+    integer (c_int), intent(in) :: nspin, dim
     complex (c_double_complex), intent(in) :: alpha, beta
-    complex (c_double_complex), intent(out) :: state(dim_Sz0)
+    complex (c_double_complex), intent(out) :: state(dim)
     
-    integer (c_int) :: config(nspin), i, k, l, indx(dim_Sz0)
+    integer (c_int) :: config(nspin), i, k
     complex (c_double_complex) :: alpha_n, beta_n
     real (c_double) :: norm
 
@@ -123,10 +122,8 @@ contains
     alpha_n = alpha/norm
     beta_n = beta/norm
     state = 1
-    call zero_mag_states(nspin, dim_Sz0, indx)
-    do i = 1, dim_Sz0
-      l = indx(i)
-      call decode(l,nspin,config)
+    do i = 1, dim
+      call decode(i-1,nspin,config)
 
       do k = 1, nspin/4
         state(i) = state(i) * ( (1-config(4*k-3)) * config(4*k-2) * alpha_n + &
@@ -170,13 +167,13 @@ contains
 
   end subroutine buildNeelState_Sz0
 
-  subroutine buildLI1ProdState_Sz0(nspin, dim_Sz0, alpha, beta, state)
+  subroutine buildLI1ProdState(nspin, dim, alpha, beta, psi)
 
-    integer (c_int), intent(in) :: nspin, dim_Sz0
+    integer (c_int), intent(in) :: nspin, dim
     complex (c_double_complex), intent(in) :: alpha, beta
-    complex (c_double_complex), intent(out) :: state(dim_Sz0)
+    complex (c_double_complex), intent(out) :: psi(dim)
     
-    integer (c_int) :: config(nspin), i, k, l, indx(dim_Sz0)
+    integer (c_int) :: config(nspin), i, k
     complex (c_double_complex) :: alpha_n, beta_n
     real (c_double) :: norm
 
@@ -185,16 +182,15 @@ contains
     norm = sqrt(abs(alpha)**2 + abs(beta)**2)
     alpha_n = alpha/norm
     beta_n = beta/norm
-    state = 1
-    call zero_mag_states(nspin, dim_Sz0, indx)
-    do i = 1, dim_Sz0
-      l = indx(i)
-      call decode(l,nspin,config)
+    psi = 1
+    do i = 1, dim
+      call decode(i-1,nspin,config)
 
       do k = 1, nspin/2
-        state(i) = state(i) * ( (1-config(2*k-1)) * config(2*k) * alpha_n + &
+        psi(i) = psi(i) * ( (1-config(2*k-1)) * config(2*k) * alpha_n + &
           &  config(2*k-1) * (1-config(2*k)) * beta_n )
       enddo
+      print "(F10.7,*(I0))", abs(psi(i)), config
 
     enddo
 
@@ -308,6 +304,7 @@ contains
     do k = 1, nspin/4
       i = i + 2**(2*k-1)
     enddo
+    !i encodes the state up, down, up, down (1<=k<=L/2), ..., (L/2+1<=k<=L) up, up, up, up
     psi(i+1) = 1
 
   end subroutine

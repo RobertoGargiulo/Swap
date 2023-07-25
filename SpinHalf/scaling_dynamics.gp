@@ -1,7 +1,7 @@
 reset session
 ########## sigmaz Dynamics wrt L #############
 
-init_state = "HalfNeel"
+init_state = "Neel"
 list_L = "4 6 8 10 12"
 list_dis = "10240 5120 2560 1280 640"
 T0 = "1.00"

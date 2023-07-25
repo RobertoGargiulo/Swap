@@ -3,7 +3,7 @@ filestring="spectrum_swap_LR"
 
 make $filestring
 
-n_threads=10
+n_threads=8
 export OMP_NUM_THREADS=$n_threads 
 
 output="Swap_LR_spectrum_kick.txt"
@@ -17,7 +17,7 @@ fi
 
 ###Choice of parameters
 iterations_2=20480
-list_nspin=$(seq 12 2 14)
+list_nspin=$(seq 4 2 10)
 list_J="0.00001 0.0001 0.001 0.01 0.1 1.0"
 list_V="3.00"
 list_hz="16.00"

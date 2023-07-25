@@ -42,22 +42,7 @@ spectrum_swap_LR: $(MOD) spectrum_swap_LR.o
 solvable_spectrum_swap_LR: $(MOD) solvable_spectrum_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
-spectrum_flip: $(MOD) spectrum_flip.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
 spectrum_Khemani: $(MOD) spectrum_Khemani.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-test_precision: $(MOD) test_precision.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-test_khemani: $(MOD) test_khemani.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-test_diag: $(MOD) test_diag.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-test_search: $(MOD) test_search.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 correlations_swap_LR: $(MOD) correlations_swap_LR.o
@@ -66,6 +51,11 @@ correlations_swap_LR: $(MOD) correlations_swap_LR.o
 dynamics_swap_LR: $(MOD) dynamics_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+spectrum_swap_PBC_LR: $(MOD) spectrum_swap_PBC_LR.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+decay_swap_LR: $(MOD) decay_swap_LR.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
 
