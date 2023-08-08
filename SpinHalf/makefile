@@ -57,6 +57,9 @@ spectrum_swap_PBC_LR: $(MOD) spectrum_swap_PBC_LR.o
 decay_swap_LR: $(MOD) decay_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
+decay_kick0_swap_LR: $(MOD) decay_kick0_swap_LR.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
 all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
 
 

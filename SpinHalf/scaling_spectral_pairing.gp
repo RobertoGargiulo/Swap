@@ -124,10 +124,10 @@ set ylabel "log10(\Delta)"
 do for [j=0:num_alpha-1] {
   do for [k=0:num_kick-1] {
 
-print j, k
-alpha = word(list_alpha,j+1) 
-kick = word(list_kick,k+1)
-print alpha, kick
+#print j, k
+#alpha = word(list_alpha,j+1) 
+#kick = word(list_kick,k+1)
+#print alpha, kick
 
 #set terminal pngcairo dashed font ",13"
 #set output "figures/Swap_Log_Gap_Difference_wrt_J_kick".kick."_alpha".alpha."_L".word(list_L,num_L)."".fmt
@@ -172,8 +172,8 @@ j = 0 #J = 0.00001
 set table $DataSelected
 plot for [j=0:num_J-1] file every :::f(i,j)::f(i,j) u 1:2:3:4:5:6:7:12:13 w table
 unset table
-print "Table"
-print $DataSelected
+#print "Table"
+#print $DataSelected
 
 #set xrange [word(list_L,1)-0.3:word(list_L,num_L)+0.3]
 #set xrange [word(list_lambda,1):word(list_L,num_L)+0.3]
@@ -189,7 +189,7 @@ i = 0 #alpha=0.50
 j = 0 #J = 0.00001
 do for [i=0:num_alpha-1] {
 
-print i
+#print i
 
 #set terminal pngcairo dashed font ",13"
 #set output "figures/Swap_Log_Gap_Difference_L_alpha".word(list_alpha,i+1)."_L".word(list_L,num_L)."".fmt
@@ -208,6 +208,71 @@ print i
 #plot for [j=0:num_J-1] file every :::f(i,j)::f(i,j) u 1:($20/log(10)):($21/log(10)) w errorlines title "J = ".word(list_J,j+1).", $\\Delta_{\pi}$" lc palette frac (j+0.0)/num_J pt 2 ,\
 #     for [j=0:num_J-1] "" every :::f(i,j)::f(i,j) u 1:($22/log(10)):($23/log(10)) w errorlines title "J = ".word(list_J,j+1).", $\\Delta_0$" lc palette frac (j+0.0)/num_J pt 4 ,\
 
+}
+
+reset session
+
+########## Gap Ratio Swap Small J wrt J #############
+
+file = "sort_col2_Swap_LR_spectrum_kick0.txt"
+
+list_L = "4 6 8 10 12 14"
+T0 = "1.00"
+V = "3.00"
+hz = "16.00"
+list_J = "0.00001 0.0001 0.001 0.01 0.1 1.0"
+list_kick = "0.0"
+list_alpha = "0.50 3.00"
+num_L = words(list_L)
+num_J = words(list_J)
+num_kick = words(list_kick)
+num_alpha = words(list_alpha)
+f(x,y,z) = x+num_L*y+num_alpha*num_L*z ### Goes through the blocks with varying J, where x,y,z change alpha, L, kick respectively
+
+#do for [j=0:num_alpha-1] {
+#  do for [k=0:num_kick-1] {
+#print j, k
+#print word(list_alpha,j+1), word(list_kick,k+1)
+#set table $DataSelected
+#plot for [i=0:num_L-1] file every :::f(i,j,k)::f(i,j,k) u 1:2:3:4:5:6:7:12:13 w table
+#unset table
+#print "Table"
+#print $DataSelected
+#  }
+#}
+
+set xrange [word(list_J,1)/1.1:word(list_J,num_J)*1.1*1.1**(num_L-1)]
+set yrange [0.33:0.6]
+set key out right box 3
+unset colorbox
+set size ratio 0.8
+set logscale x
+set xtics 1e-5, 10, 1e-0 format "$10^{%T}$"
+set xlabel "$J$"
+set ylabel "$\\langle r \\rangle$"
+
+
+set margin 0
+set key width 1.1 spacing 1.1
+set bars 0.4
+
+
+fmt = ".tex"
+#set terminal pngcairo dashed font ",13"
+set terminal tikz color standalone scale 0.7, 0.7
+
+do for [j=0:num_alpha-1] {
+  do for [k=0:num_kick-1] {
+
+print j, k
+alpha = word(list_alpha,j+1) 
+kick = word(list_kick,k+1)
+print alpha, kick
+
+set output "figures/Swap_Gap_Ratio_wrt_J_kick".kick."_alpha".alpha."_L".word(list_L,num_L)."".fmt
+plot for [i=1:num_L-1] file every :::f(i,j,k)::f(i,j,k) u ($2*1.1**(i)):8:9 w errorlines title "$L = ".word(list_L,i+1)."$" lc palette frac (i-1+0.0)/(num_L-1) pt 4 ps 0.5
+
+  }
 }
 
 reset session

@@ -708,6 +708,47 @@ contains
 
   end subroutine
 
+  subroutine buildSz_HMBL_XX_ZZ_LR(nspin, dim_Sz, Sz, Jxy, Vzz, hz, H)
+
+    !Generic all-to-all interactions for both XX+YY and ZZ interactions
+
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(in) :: Jxy(nspin,nspin), Vzz(nspin,nspin), hz(nspin)
+    real (c_double), intent(out) :: H(dim_Sz,dim_Sz)
+
+    integer :: config(nspin), states(dim_Sz), spin(nspin), inverse(dimSpinHalf**nspin)
+    integer (c_int) :: i, j, l, r, k, q 
+
+    H = 0
+    call basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)
+    do l = 1, dim_Sz
+
+      i = states(l)
+      call decode(i,nspin,config)
+      spin = 1 - 2*config
+
+      do k = 1, nspin-1
+
+        H(l,l) = H(l,l) + hz(k) * spin(k)
+
+        do q = k+1, nspin
+          H(l,l) = H(l,l) + Vzz(k,q) * spin(k) * spin(q)
+          if (spin(k)/=spin(q)) then
+            j = i + (1 - 2*config(k))*2**(k-1) + (1 - 2*config(q))*2**(q-1)
+            r = inverse(j+1)
+
+            H(r,l) = H(r,l) + Jxy(k,q) * (spin(k) - spin(q))**2/2
+          endif
+        enddo
+
+      enddo
+      k = nspin
+      H(l,l) = H(l,l) + hz(k) * spin(k)
+    enddo
+
+  end subroutine
+
+
   subroutine print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
 
     integer (c_int), intent(in) :: nspin, dim_Sz, Sz

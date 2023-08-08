@@ -12,12 +12,12 @@ mv $file_out output/
 
 ###Choice of parameters
 iterations_2=20480
-steps="10000"
-list_nspin=$(seq 4 2 12)
-list_J="0.0001 0.001 0.01 0.1 1.0"
-list_V="3.00"
-list_hz="16.00"
-list_kick="0.00 0.01"
+steps="1000000"
+list_nspin="4 6" # $(seq 4 2 12)
+list_J="1.0 0.1" # "0.0001 0.001 0.01 0.1 1.0"
+list_V="2.00"
+list_hz="5.00" #"16.00"
+list_kick="0.00" #0.01"
 list_alpha="0.50 3.00" #1.00 10.00
 list_T0="1.00"
 
