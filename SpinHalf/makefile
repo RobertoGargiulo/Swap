@@ -12,30 +12,6 @@ MOD = ${SRC:.f90=.o} #substitute .f90 with .o
 %.o : %.f90 #creation of all *.o files DEPENDS on *.f90
 	$(FC) $(FFLAGS) $(PFLAGS) -c $<
 
-swap: $(MOD) swap.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-swap_dense_Sz0: $(MOD) swap_dense_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-swap_spectrum_Sz0: $(MOD) swap_spectrum_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-swap_decay: $(MOD) swap_decay.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-swap_entanglement_Sz0: $(MOD) swap_entanglement_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-swap_corr_z_Sz0: $(MOD) swap_corr_z_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-swap_overlap: $(MOD) swap_overlap.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
-swap_degeneracies_Sz0: $(MOD) swap_degeneracies_Sz0.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
 spectrum_swap_LR: $(MOD) spectrum_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
@@ -58,6 +34,9 @@ decay_swap_LR: $(MOD) decay_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 decay_kick0_swap_LR: $(MOD) decay_kick0_swap_LR.o
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+
+comparison_kick0_skipping_swap_LR: $(MOD) comparison_kick0_skipping_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
 all: swap swap_dense_Sz0 swap_spectrum_Sz0 swap_decay swap_entanglement_Sz0 #dense_Sz0 sparse_Sz0 spectrum_Sz0
