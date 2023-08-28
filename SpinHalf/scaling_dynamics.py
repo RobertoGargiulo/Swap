@@ -11,14 +11,14 @@ plt.rcParams["figure.figsize"] = [5,3]
 
 
 # Import Files
-init_state = "Neel"
+init_state = "HalfNeel"
 Larray = np.arange(4, 13, 2)
 T = 1
-J = [0.0001, 0.001, 0.01, 0.1, 1.0]
+J = [0.01, 0.1] #[0.0001, 0.001, 0.01, 0.1, 1.0]
 V = 3
 hz = 16
 alpha = [0.50, 3.00]
-kick = 0.01 #0.01
+kick = 0.00 #0.01
 num_J = len(J)
 num_alpha = len(alpha)
 n_points = num_J * num_alpha
@@ -120,7 +120,7 @@ for i in range(num_J):
 
 
         plt.xlabel('$t$', fontsize=12)
-        plt.ylabel('$\overline{\sigma_k^z}(t)$', fontsize=12)
+        plt.ylabel('$\langle\overline{\sigma_k^z}(t)\\rangle$', fontsize=12)
         plt.xticks(fontsize=10)
         plt.yticks(fontsize=10)
         plt.xscale('log')

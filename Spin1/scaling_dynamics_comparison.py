@@ -79,7 +79,6 @@ from matplotlib.colors import to_hex
 
 cmL = cm.get_cmap('turbo', numL)
 
-s = 0
 for i in range(num_J):
     for j in range(num_alpha):
         m += 1
@@ -98,7 +97,7 @@ for i in range(num_J):
 
 
         plt.xlabel('$t$', fontsize=12)
-        plt.ylabel('$(-1)^t(\overline{\sigma_k^z}(t)-0.5)+0.5$', fontsize=12)
+        plt.ylabel('$(-1)^t(\langle\overline{S_k^z}(t)\\rangle-0.5)+0.5$', fontsize=12)
         plt.xticks(fontsize=10)
         plt.yticks(fontsize=10)
         plt.xscale('log')
@@ -109,4 +108,37 @@ for i in range(num_J):
         print(txt)
         plt.savefig(txt, dpi=600, bbox_inches='tight')
         print("\n")
+
+#end = 20
+#for i in range(num_J):
+#    for j in range(num_alpha):
+#        m += 1
+#        plt.figure(m)
+#        for q in range(numL):
+#            L = Larray[q]
+#            print([J[i], alpha[j], L])
+#
+#            #X[q, i, j] = signs * (sigmaz[q,i,j][:,2*(L//4)] - 0.5) + 0.5
+#            #Y[q, i, j] = signs * (sigmaz[q,i,j][:,L-1] - 0.5) + 0.5
+#            X[q, i, j] = sigmaz[q,i,j][:,2*(L//4)]
+#            Y[q, i, j] = sigmaz[q,i,j][:,L-1]
+#            print(sigmaz[q,i,j][0,:])
+#            print(sigmaz[q,i,j][0,2*(L//4)], sigmaz[q,i,j][0,L-1])
+#            string = '$L = %d$' % L
+#            plt.plot(range(1,end+1), X[q,i,j][0:end], label=string, color=to_hex(cmL(q)))
+#            #plt.plot(range(1,end+1), Y[q,i,j][0:end-1], label=string, linewidth=0.8, linestyle='--', color=to_hex(cmL(q)))
+#
+#
+#        plt.xlabel('$t$', fontsize=12)
+#        plt.ylabel('$(-1)^t(\overline{\sigma_k^z}(t)-0.5)+0.5$', fontsize=12)
+#        plt.xticks(fontsize=10)
+#        plt.yticks(fontsize=10)
+#        plt.xscale('log')
+#        plt.ylim([-0.1,1.1])
+#        plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.45), fancybox=True, shadow=True, ncol=numL)
+#
+#        txt = 'figures/sigmaz_PARTIAL_avg_Dynamics_%s_Comparison_wrt_L_J%.5f_alpha%.2f_kick%.3f.pdf' % (init_state, J[i], alpha[j], kick)
+#        print(txt)
+#        plt.savefig(txt, dpi=600, bbox_inches='tight')
+#        print("\n")
 

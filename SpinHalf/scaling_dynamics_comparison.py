@@ -14,11 +14,11 @@ plt.rcParams["figure.figsize"] = [5,3]
 init_state = [ "Neel" , "HalfNeel" ]
 Larray = np.arange(4, 13, 2)
 T = 1
-J = [0.0001, 0.001, 0.01, 0.1, 1.0]
+J = [0.01, 0.1, 1.0]
 V = 3
 hz = 16
 alpha = [0.50, 3.00]
-kick = 0.01 #0.01
+kick = 0.00 #0.01
 num_J = len(J)
 num_alpha = len(alpha)
 n_points = num_J * num_alpha
@@ -85,16 +85,17 @@ for i in range(num_J):
         m += 1
         plt.figure(m)
         #fig, ax = plt.subplots()
-        for q in range(numL):
-            for s in range(2):
+        for s in range(2):
+            for q in range(numL):
                 L = Larray[q]
                 print(init_state[s], [J[i], alpha[j], L])
     
                 X[s, q, i, j] = signs * Z[s, q,i,j] / Z[s, q,i,j][0]
-                string = '$L = %d$' % L
                 if (s == 1) :
+                    string = '$L = %d,\, l_{\\mathrm{AF}} = %d$' % (L, 2*(L//4))
                     plt.plot(range(1,steps+1), X[s, q,i,j], label=string, color=to_hex(cmL(q)))
                 if (s == 0) :
+                    string = '$L = l_{\\mathrm{AF}} = %d$' % L
                     plt.plot(range(1,steps+1), X[s, q,i,j], label=string, linestyle='--', color=to_hex(cmL(q)))
     
     
@@ -104,7 +105,7 @@ for i in range(num_J):
         plt.yticks(fontsize=10)
         plt.xscale('log')
         plt.ylim([-0.1,1.1])
-        plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.45), fancybox=True, shadow=True, ncol=numL)
+        plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.6), fancybox=True, shadow=True, ncol=numL-2, fontsize = 10)
         #h, l = ax.get_legend_handles_labels()
         #ph = [plt.plot([],marker="", ls="")[0]]*2
         #handles = ph + h
