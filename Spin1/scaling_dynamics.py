@@ -99,35 +99,35 @@ for i in range(num_J):
 
 
 
-#import matplotlib.cm as cm
-#from matplotlib.colors import to_hex
-#
-#cmL = cm.get_cmap('turbo', numL)
-#
-#for i in range(num_J):
-#    for j in range(num_alpha):
-#        m += 1
-#        plt.figure(m)
-#        for q in range(numL):
-#            L = Larray[q]
-#            print([J[i], alpha[j], L])
-#
-#            X[q, i, j] = signs * np.sign(sigmaz[q,i,j][0,int(L/4)]) * sigmaz[q,i,j][:,int(L/4)]
-#            Y[q,i,j] = sigmaz[q,i,j][:,int(L-L/4)]
-#            string = '$L = %d$' % L
-#            plt.plot(range(1,steps+1), X[q,i,j], label=string, color=to_hex(cmL(q)))
-#            plt.plot(range(1,steps+1), Y[q,i,j], label=string, linestyle='--', color=to_hex(cmL(q)))
-#
-#
-#        plt.xlabel('$t$', fontsize=12)
-#        plt.ylabel('$(-1)^t \overline{Z}(t)$', fontsize=12)
-#        plt.xticks(fontsize=10)
-#        plt.yticks(fontsize=10)
-#        plt.xscale('log')
-#        plt.ylim([-0.1,1.1])
-#        plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.45), fancybox=True, shadow=True, ncol=numL)
-#
-#        txt = 'figures/sigmaz_avg_Dynamics_%s_Comparison_wrt_L_J%.5f_alpha%.2f_kick%.3f.pdf' % (init_state, J[i], alpha[j], kick)
-#        print(txt)
-#        plt.savefig(txt, dpi=600, bbox_inches='tight')
-#        print("\n")
+import matplotlib.cm as cm
+from matplotlib.colors import to_hex
+
+cmL = cm.get_cmap('turbo', numL)
+
+for i in range(num_J):
+    for j in range(num_alpha):
+        m += 1
+        plt.figure(m)
+        for q in range(numL):
+            L = Larray[q]
+            print([J[i], alpha[j], L])
+
+            X[q, i, j] = signs * np.sign(sigmaz[q,i,j][0,int(L/4)]) * sigmaz[q,i,j][:,int(L/4)]
+            Y[q,i,j] = sigmaz[q,i,j][:,int(L-L/4)]
+            string = '$L = %d$' % L
+            plt.plot(range(1,steps+1), X[q,i,j], label=string, color=to_hex(cmL(q)))
+            plt.plot(range(1,steps+1), Y[q,i,j], label=string, linestyle='--', color=to_hex(cmL(q)))
+
+
+        plt.xlabel('$t$', fontsize=12)
+        plt.ylabel('$(-1)^t \overline{Z}(t)$', fontsize=12)
+        plt.xticks(fontsize=10)
+        plt.yticks(fontsize=10)
+        plt.xscale('log')
+        plt.ylim([-0.1,1.1])
+        plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.45), fancybox=True, shadow=True, ncol=numL)
+
+        txt = 'figures/sigmaz_avg_Dynamics_%s_Comparison_wrt_L_J%.5f_alpha%.2f_kick%.3f.pdf' % (init_state, J[i], alpha[j], kick)
+        print(txt)
+        plt.savefig(txt, dpi=600, bbox_inches='tight')
+        print("\n")
