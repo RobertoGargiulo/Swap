@@ -23,15 +23,15 @@ module functions
   use printing
   implicit none
 
-  complex (c_double_complex), private, parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
-  complex (c_double_complex), private, parameter :: C_ONE = dcmplx(1._c_double, 0._c_double) 
-  complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
+  complex (cp), private, parameter :: C_ZERO = dcmplx(0._dp, 0._dp)
+  complex (cp), private, parameter :: C_ONE = dcmplx(1._dp, 0._dp) 
+  complex (cp), private, parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
-  integer (c_int), private, parameter :: dimSpinHalf = 2
-  real (c_double), parameter, private :: pi = 4._c_double * atan(1._c_double)
-  real (c_double), private, parameter :: tol = 1.0e-6
-  !integer (c_int) :: i, j, s
-  !real (c_double), parameter, private :: SigmaZ(3,3) = reshape((/ (( (2-i)*merge(1,0,i==j), j=1,3),i=1,3) /), shape(SigmaZ)) 
+  integer (ip), private, parameter :: dimSpinHalf = 2
+  real (dp), parameter, private :: pi = 4._dp * atan(1._dp)
+  real (dp), private, parameter :: tol = EPSILON(1._dp)
+  !integer (ip) :: i, j, s
+  !real (dp), parameter, private :: SigmaZ(3,3) = reshape((/ (( (2-i)*merge(1,0,i==j), j=1,3),i=1,3) /), shape(SigmaZ)) 
 
     !SigmaZ = 0
     !do i = 1, 3
@@ -43,9 +43,9 @@ contains
 
   subroutine decode(decimal, nbits, bitstring)
 
-    integer (c_int), intent(in) :: decimal, nbits
-    integer (c_int), intent(out) :: bitstring(nbits)
-    integer (c_int) :: i
+    integer (ip), intent(in) :: decimal, nbits
+    integer (ip), intent(out) :: bitstring(nbits)
+    integer (ip) :: i
 
     bitstring = 0
     do i = 1, nbits
@@ -55,8 +55,8 @@ contains
 
   function swap_config(nspin, i) result(j)
 
-    integer (c_int), intent(in) :: nspin, i
-    integer (c_int) :: config(nspin), k, j
+    integer (ip), intent(in) :: nspin, i
+    integer (ip) :: config(nspin), k, j
 
     call decode(i, nspin, config)
     j = 0
@@ -119,17 +119,15 @@ contains
  end subroutine init_random_seed
 
 
-  integer function binom(n,k)
-    integer(c_int), intent(in) :: n,k
-    integer, parameter :: i8 = selected_int_kind(18)
-    integer, parameter :: dp = selected_real_kind(15)
+  integer (ip) function binom(n,k)
+    integer (ip), intent(in) :: n,k
 
     if (k == n) then
         binom = 1
     else if (k == 1) then
         binom = n
     else if ((k /= 1) .and. (k /= n)) then
-      binom = nint(exp(log_gamma(n+1.0_dp)-log_gamma(n-k+1.0_dp)-log_gamma(k+1.0_dp)),kind=i8)
+      binom = int(exp(log_gamma(n+1.0_dp)-log_gamma(n-k+1.0_dp)-log_gamma(k+1.0_dp)),kind=ip)
     end if 
   end function
 
@@ -140,9 +138,9 @@ contains
     !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
     !simply by constructing a vector which has zero components outside the Sz=0 subspace
 
-    integer (c_int), intent(in) :: nspin, dim, dim_Sz0
-    complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
-    complex (c_double_complex), intent(out) :: psi(dim)
+    integer (ip), intent(in) :: nspin, dim, dim_Sz0
+    complex (cp), intent(in) :: psi_Sz0(dim_Sz0)
+    complex (cp), intent(out) :: psi(dim)
 
     integer :: i, l, states(dim_Sz0)
 
@@ -202,11 +200,11 @@ contains
   subroutine zero_mag_states(nspin, dim_Sz0, states)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz0
-    integer (c_int), intent(out) :: states(dim_Sz0)
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    integer (ip), intent(out) :: states(dim_Sz0)
 
     integer :: config(nspin)
-    integer (c_int) :: i, k
+    integer (ip) :: i, k
 
     k = 0
     states = 0
@@ -226,11 +224,11 @@ contains
   subroutine basis_Sz0_inv(nspin, dim_Sz0, states, inverse)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz0
-    integer (c_int), intent(out) :: states(dim_Sz0), inverse(dimSpinHalf**nspin)
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    integer (ip), intent(out) :: states(dim_Sz0), inverse(dimSpinHalf**nspin)
 
     integer :: config(nspin), spin(nspin)
-    integer (c_int) :: i, l, dim
+    integer (ip) :: i, l, dim
 
     dim = dimSpinHalf**nspin
     l = 0
@@ -260,9 +258,9 @@ contains
   
   
     implicit none
-    integer (c_int), intent(in) :: val, array(:)
-    integer (c_int) :: indx
-    integer (c_int) :: mid, start, finish, range
+    integer (ip), intent(in) :: val, array(:)
+    integer (ip) :: indx
+    integer (ip) :: mid, start, finish, range
     
     indx = -1
     start = 1
@@ -293,8 +291,8 @@ contains
   function binsearch_closest_from_above(val, array) result(indx)
 
     implicit none
-    real (c_double), intent(in) :: val, array(:)
-    integer (c_int) :: indx, mid, left, right, range
+    real (dp), intent(in) :: val, array(:)
+    integer (ip) :: indx, mid, left, right, range
 
     indx = -1
     left = 1
@@ -329,9 +327,9 @@ contains
     !Binary search for closest element to given value where the array contains angles in [-pi, pi]
 
     implicit none
-    real (c_double), intent(in) :: theta, array(:)
-    integer (c_int) :: indx, mid, left, right!, range
-    integer (c_int) :: n!, prev, next
+    real (dp), intent(in) :: theta, array(:)
+    integer (ip) :: indx, mid, left, right!, range
+    integer (ip) :: n!, prev, next
 
     indx = -1
     left = 1
@@ -454,13 +452,13 @@ contains
     use iso_c_binding
     implicit none
   
-    integer (c_int), intent(in) :: n
-    real (c_double), intent(in) :: E(n) !'E' has to be sorted already
-    !real (c_double), intent(out)  :: idxuE(n)
-    integer (c_int), intent(out)  :: deg(n), idxuE(n)
+    integer (ip), intent(in) :: n
+    real (dp), intent(in) :: E(n) !'E' has to be sorted already
+    !real (dp), intent(out)  :: idxuE(n)
+    integer (ip), intent(out)  :: deg(n), idxuE(n)
   
     integer :: i, j
-    real (c_double) :: tol = EPSILON(1.0_c_double) ! 1.0e-10
+    real (dp) :: tol = EPSILON(1.0_dp) ! 1.0e-10
 
     idxuE = 0
     deg = 1
@@ -491,7 +489,7 @@ contains
   subroutine printmat_as_list_C(nspin, dim, M, t)
 
     integer, intent(in) :: nspin, dim
-    complex(c_double_complex), intent(in), dimension(dim,dim) :: M
+    complex(cp), intent(in), dimension(dim,dim) :: M
     character, intent(in) :: t*1
 
     integer :: i, j, config1(nspin), config2(nspin)
@@ -557,11 +555,11 @@ contains
   subroutine basis_Sz(nspin, dim_Sz, Sz, states)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
-    integer (c_int), intent(out) :: states(dim_Sz)
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    integer (ip), intent(out) :: states(dim_Sz)
 
     integer :: config(nspin)
-    integer (c_int) :: i, l, dim
+    integer (ip) :: i, l, dim
 
     dim = dimSpinHalf**nspin
     l = 0
@@ -583,11 +581,11 @@ contains
   subroutine basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)
 
     !dim_Sz0 is the dimension of the Sz=0 subspace, the length of 'states'
-    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
-    integer (c_int), intent(out) :: states(dim_Sz), inverse(dimSpinHalf**nspin)
+    integer (ip), intent(in) :: nspin, dim_Sz, Sz
+    integer (ip), intent(out) :: states(dim_Sz), inverse(dimSpinHalf**nspin)
 
     integer :: config(nspin)
-    integer (c_int) :: i, l, dim
+    integer (ip) :: i, l, dim
 
     dim = dimSpinHalf**nspin
     l = 0
@@ -611,9 +609,9 @@ contains
     !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
     !simply by constructing a vector which has zero components outside the Sz=0 subspace
 
-    integer (c_int), intent(in) :: nspin, dim, dim_Sz, Sz
-    complex (c_double_complex), intent(in) :: psi_Sz(dim_Sz)
-    complex (c_double_complex), intent(out) :: psi(dim)
+    integer (ip), intent(in) :: nspin, dim, dim_Sz, Sz
+    complex (cp), intent(in) :: psi_Sz(dim_Sz)
+    complex (cp), intent(out) :: psi(dim)
 
     integer :: i, l, states(dim_Sz)
 
@@ -634,13 +632,13 @@ contains
     !Goes from the state in the subspace Sz=0 to the state in the full Hilbert 
     !simply by constructing a vector which has zero components outside the Sz=0 subspace
 
-    integer (c_int), intent(in) :: nspin, dim
-    complex (c_double_complex), intent(in) :: psi(dim)
-    complex (c_double_complex), allocatable, intent(out) :: psi_Sz(:)
-    integer (c_int), intent(out) :: dim_Sz, Sz
+    integer (ip), intent(in) :: nspin, dim
+    complex (cp), intent(in) :: psi(dim)
+    complex (cp), allocatable, intent(out) :: psi_Sz(:)
+    integer (ip), intent(out) :: dim_Sz, Sz
 
     integer :: i, l, config(nspin)
-    real :: mag_psi, mag_s
+    real (dp) :: mag_psi, mag_s
     integer, allocatable :: states(:)
     logical :: flag
 

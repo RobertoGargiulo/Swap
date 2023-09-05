@@ -759,13 +759,13 @@ contains
 
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
 
-    print "(4X,1(A8,X),2(A3,3X),A4)", "H(r,l)", "i", "r/l", "conf"
+    print "(4X,1(A8,1X),2(A3,3X),A4)", "H(r,l)", "i", "r/l", "conf"
     do l = 1, dim_Sz
       i = idxSz(l)
       call decode(i,nspin,config)
 
       if(abs(H(l,l)) > tol) then
-        print "(4X,1(f8.4,X),2(I3,3X),*(I0))", H(l,l), l, i, config(:)
+        print "(4X,1(f8.4,1X),2(I3,3X),*(I0))", H(l,l), l, i, config(:)
       endif
 
       do r = 1, dim_Sz
@@ -775,8 +775,8 @@ contains
         else if (abs(H(r,l)) > tol) then
           j = idxSz(r)
           call decode(j,nspin, config2)
-          print "(4X,1(f8.4,X),2(I3,3X),*(I0))", H(r,l), l, i, config(:)
-          print "(4X,1(A8,X),2(I3,3X),*(I0))", "", r, j, config2(:)
+          print "(4X,1(f8.4,1X),2(I3,3X),*(I0))", H(r,l), l, i, config(:)
+          print "(4X,1(A8,1X),2(I3,3X),*(I0))", "", r, j, config2(:)
         endif
 
       enddo
@@ -797,13 +797,13 @@ contains
 
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
 
-    print "(4X,1(A18,X),2(A3,3X),A4)", "U(r,l)", "i", "r/l", "conf"
+    print "(4X,1(A18,1X),2(A3,3X),A4)", "U(r,l)", "i", "r/l", "conf"
     do l = 1, dim_Sz
       i = idxSz(l)
       call decode(i,nspin,config)
 
       if(abs(U(l,l)) > tol) then
-        print "(4X,1((f8.4f8.4x'i'),X),2(I3,3X),*(I0))", U(l,l), l, i, config(:)
+        print "(4X,1((f8.4f8.4,1x'i'),1X),2(I3,3X),*(I0))", U(l,l), l, i, config(:)
       endif
 
       do r = 1, dim_Sz
@@ -813,8 +813,8 @@ contains
         else if (abs(U(r,l)) > tol) then
           j = idxSz(r)
           call decode(j,nspin, config2)
-          print "(4X,1(f8.4f8.4x'i',X),2(I3,3X),*(I0))", U(r,l), l, i, config(:)
-          print "(4X,1(A18,X),2(I3,3X),*(I0))", "", r, j, config2(:)
+          print "(4X,1(f8.4f8.4,1x'i',1X),2(I3,3X),*(I0))", U(r,l), l, i, config(:)
+          print "(4X,1(A18,1X),2(I3,3X),*(I0))", "", r, j, config2(:)
         endif
 
       enddo

@@ -1,13 +1,17 @@
-FC = ifort # gfortran
-FFLAGS = -O2 -fpp -D IFORT -g -warn all -traceback -check all,bounds -pedantic #,noexternal 
-#FFLAGS = -O3 -Wall -Wextra -g -fbacktrace -fcheck=all -pedantic #-pg
+FC = gfortran
+FFLAGS = -O3 -Wall -Wextra -g -fbacktrace -fcheck=all -pedantic -cpp #-pg
 #-ffpe-trap= invalid, zero, overflow
 #-Werror -ffree-line-length-500 #-fpp -D IFORT -qopenmp 
 #-pg -> per debugging   $ gprof <program-name> <gmon.out>
+PFLAGS = -fopenmp 
+LIBS = -llapack -lblas
+
+#FC = ifort
+#FFLAGS = -O2 -fpp -D IFORT -g -warn all -traceback -check all,bounds -pedantic #,noexternal 
+#PFLAGS = -qopenmp 
+#LIBS = -mkl -Wl,-rpath=/opt/pgi-8/common/intel/lib/intel64_lin/ 
 
 SRC = mod_print.f90 mod_functions.f90 mod_obs.f90 mod_mat.f90 mod_states.f90 mod_exp.f90 sorts.f90 mod_entanglement.f90 #mataid.f90 expokit.f90 exp_sparse.f90
-LIBS = -mkl -Wl,-rpath=/opt/pgi-8/common/intel/lib/intel64_lin/ #-llapack -lblas
-PFLAGS = -qopenmp #-fopenmp 
 MOD = ${SRC:.f90=.o} #substitute .f90 with .o in all 'SRC' files
 
 #This is the first command, which is always executed. If any '.f90' files in 'SRC' have been modified, it compiles them. 
@@ -45,4 +49,4 @@ all: spectrum_swap_LR, correlations_swap_LR, dynamics_swap_LR, decay_swap_LR
 
 
 clean:
-	@mv -f *.o *.mod ../Trash
+	@mv -f *.o *.mod ../../Trash

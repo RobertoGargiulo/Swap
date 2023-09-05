@@ -27,7 +27,7 @@ module observables
 
 contains
 
-  real function imbalance(nspin, dim, state)
+  function imbalance(nspin, dim, state) result(imb)
 
     integer (ip), intent(in) :: nspin, dim
     complex (dcp), intent(in) :: state(dim)
@@ -53,7 +53,6 @@ contains
     mag = mag/nspin
     imb = imb/nspin
     imb = imb/(1+mag)
-    imbalance = imb
 
 
   end function imbalance
@@ -166,7 +165,7 @@ contains
       do k = 1, nspin/2
         if (config(2*k)/=config(2*k-1)) then
           j = i + (config(2*k-1) - config(2*k)) * (2**(2*k-1) - 2**(2*k-2))
-          LO = LO + abs(psi(i))**2 - psi(i) * dconjg(psi(j))
+          LO = LO + abs(psi(i))**2 - real(psi(i) * dconjg(psi(j)), kind=dp)
         endif
       enddo
     enddo
@@ -190,7 +189,7 @@ contains
         if(config(2*k)/=config(2*k-1)) then
           j = i + (config(2*k-1) - config(2*k)) * (2**(2*k-1) - 2**(2*k-2))
           r = binsearch(j,states)
-          LO = LO + abs(psi(i))**2 - psi(i) * dconjg(psi(r))
+          LO = LO + abs(psi(i))**2 - real(psi(i) * dconjg(psi(r)), kind=dp)
         endif
       enddo
     enddo
@@ -719,7 +718,7 @@ contains
     print *, "build Large IMB, LI basis state"
     print *, IMB, LI
     print *, imbalance_basis(nspin,l), local_imbalance_basis(nspin,l), l
-    1 format ( 4X,F6.3, 4X,F6.3, 4X,I4, 4X,I0 )
+    !1 format ( 4X,F6.3, 4X,F6.3, 4X,I4, 4X,I0 )
 
   end subroutine
 
@@ -824,7 +823,7 @@ contains
       QE(l) = exact_quasi_energy( nspin, Vzz, hz, i ) 
       QE(l) = real(C_UNIT*log(exp(-C_UNIT*QE(l))), kind=dp)
 
-      write (*,"(*(I0))",advance='no'), config(:)
+      write (*,"(*(I0))",advance='no') config(:)
       write (*,*) QE(l)
       !config = 1 - 2*config
       !do k = 1, nspin/2 - 1

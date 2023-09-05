@@ -18,7 +18,7 @@ fi
 ###Choice of parameters
 iterations_2=20480
 list_nspin=$(seq 4 2 12)
-list_J="0.01"
+list_J="0.001"
 list_V="3.00"
 list_hz="16.00"
 list_kick="0" #0.001 0.01 0.10 0.50

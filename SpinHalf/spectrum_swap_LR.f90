@@ -12,8 +12,6 @@ program test_LR
   use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
   implicit none
 
-  complex (dcp), parameter :: C_ZERO = dcmplx(0._dp, 0._dp)
-  complex (dcp), parameter :: C_ONE = dcmplx(1._dp, 0._dp)
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
   real (dp), parameter :: pi = 4._dp * atan(1._dp)

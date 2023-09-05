@@ -23,7 +23,7 @@ contains
       do i = 1,dim
         write (*,97,advance='no') M(i,:)
         print *, "|"
-        97 format('|',(*(sf8.2spf8.2x'i':x)))
+        97 format('|',(*(sf8.2,spf8.2,1x'i':1x)))
       enddo
     else if (t == 'I') then
       do i = 1, dim
@@ -182,7 +182,7 @@ contains
       do i = 1,dim
         write (*,97,advance='no') V(i)
         print *, "|"
-        97 format('|',(*(sf8.2spf8.2x'i':x)))
+        97 format('|',(*(sf8.2spf8.2,1x'i':1x)))
       enddo
     else if (t == 'I') then
       do i = 1, dim
@@ -253,13 +253,13 @@ contains
     character :: opt*1
     character (*) :: filestring
   
-    real :: time_s
+    real (c_double) :: time_s
     integer(c_int) :: time_min
   
     call system_clock(count_end)
   
     time_s = real(count_end - count_start) / real(count_rate)
-    time_min = aint(time_s/60,kind(time_min))
+    time_min = int(time_s/60,kind(time_min))
     if(opt == 'T') then
       print "(A,A,A,1X,I4,A,2X,F15.10,A)", "Elapsed Time for ", filestring, ": ", time_min, "min", time_s - 60*time_min, "sec"
     else if(opt == 'F') then
