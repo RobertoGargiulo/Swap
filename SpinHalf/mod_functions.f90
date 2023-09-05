@@ -15,6 +15,10 @@
 module functions
   
   !use ifport
+#ifdef __INTEL_COMPILER
+    USE IFPORT
+#endif
+
   use iso_c_binding, only: dp => c_double, ip => c_int, cp => c_double_complex
   use printing
   implicit none
@@ -48,19 +52,6 @@ contains
       if (btest(decimal, i - 1)) bitstring(i) = 1
     enddo
   end subroutine decode
-
-  subroutine encode(bitstring, nbits, intgr)
-
-    integer (c_int), intent(in) :: nbits
-    integer (c_int), intent(in) :: bitstring(nbits)
-    integer (c_int), intent(out) :: intgr
-    integer (c_int) :: i
-
-    intgr = 0
-    do i = 1, nbits
-      intgr = intgr !+ bistring(i) * 2**(i-1)
-    enddo
-  end subroutine encode
 
   function swap_config(nspin, i) result(j)
 
@@ -215,7 +206,7 @@ contains
     integer (c_int), intent(out) :: states(dim_Sz0)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, k
 
     k = 0
     states = 0
@@ -239,7 +230,7 @@ contains
     integer (c_int), intent(out) :: states(dim_Sz0), inverse(dimSpinHalf**nspin)
 
     integer :: config(nspin), spin(nspin)
-    integer (c_int) :: i, j, l, dim
+    integer (c_int) :: i, l, dim
 
     dim = dimSpinHalf**nspin
     l = 0
@@ -340,7 +331,7 @@ contains
     implicit none
     real (c_double), intent(in) :: theta, array(:)
     integer (c_int) :: indx, mid, left, right!, range
-    integer (c_int) :: prev, next, n
+    integer (c_int) :: n!, prev, next
 
     indx = -1
     left = 1
@@ -648,7 +639,7 @@ contains
     complex (c_double_complex), allocatable, intent(out) :: psi_Sz(:)
     integer (c_int), intent(out) :: dim_Sz, Sz
 
-    integer :: i, l, sigmaz(nspin), config(nspin)
+    integer :: i, l, config(nspin)
     real :: mag_psi, mag_s
     integer, allocatable :: states(:)
     logical :: flag

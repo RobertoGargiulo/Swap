@@ -1,6 +1,6 @@
 program test_LR
 
-  use functions, only: binom, init_random_seed, norm, disorder_average
+  use functions, only: binom, init_random_seed, norm => normalization_power_law, disorder_average
   use exponentiate, only: diagSYM, expSYM, diagUN
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
     & shift_spectral_pairing => log_gap_difference_half_spectrum_shift, &
@@ -19,7 +19,7 @@ program test_LR
   real (dp), parameter :: pi = 4._dp * atan(1._dp)
 
   integer (ip)     ::  nspin, dim, n_disorder
-  integer (ip)     ::  i, j, l, k, p, q, dim_Sz0
+  integer (ip)     ::  i, l, k, q, dim_Sz0
   integer (ip)     ::  unit_ph
 
   real(dp), dimension(:), allocatable :: Jxy, hz
@@ -29,8 +29,8 @@ program test_LR
   
   real (dp), dimension(:), allocatable :: r_avg, r_sq, r_avg2, r_sq2
 
-  integer (ip), allocatable :: deg(:), idxuE(:)
-  real (dp), dimension(:), allocatable :: E, QE_exact, E_exact
+  !integer (ip), allocatable :: deg(:), idxuE(:)
+  real (dp), dimension(:), allocatable :: E!, QE_exact, E_exact
   real (dp), dimension(:,:), allocatable :: H, W_r, QE, E_MBL
   complex(dcp), dimension(:), allocatable :: PH
   complex(dcp), dimension(:,:), allocatable :: U, W, USwap
@@ -44,12 +44,13 @@ program test_LR
   real (dp) :: shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, shift_log_near_dis_avg, &
     & shift_log_pair_dis_sigma, shift_log_near_dis_sigma
 
-  integer (ip), allocatable :: idx(:), config(:), states(:)
+  !integer (ip), allocatable :: idx(:), config(:), states(:)
 
   logical :: SELECT
   EXTERNAL SELECT
+  EXTERNAL write_info
 
-  integer(ip) :: count_beginning, count_end, count_rate, count1, count2
+  integer(ip) :: count_beginning, count_end, count_rate
   character(len=200) :: filestring
 
 
@@ -106,7 +107,7 @@ program test_LR
     & "_Jxy", Jxy_coupling, "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, &
     & "_alpha", int(alpha), alpha-int(alpha), ".txt"
-  open(newunit=unit_ph,file=filestring)
+  open(newunit=unit_ph,file=filestring) !, status="new", action="write")
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -115,6 +116,7 @@ program test_LR
   !------------------------------------------------
 
   !BUILD DRIVING PROTOCOL (NO DISORDER) USwap = exp(-i*(pi/4 + eps)*HSwap)
+  print *, "Building USwap..."
   allocate(H(dim_Sz0,dim_Sz0), E(dim_Sz0), W_r(dim_Sz0,dim_Sz0), USwap(dim_Sz0,dim_Sz0))
   call buildHSwap(nspin, dim_Sz0, H)
   call diagSYM( 'V', dim_Sz0, H, E, W_r)
@@ -123,6 +125,7 @@ program test_LR
   deallocate(H)
   call expSYM( dim_Sz0, -C_UNIT*T1, E, W_r, USwap )
   deallocate(E, W_r)
+  print *, "USwap built."
 
   !---------------------------------------------------
   !Allocate local interactions and fields
@@ -148,9 +151,9 @@ program test_LR
   allocate(W(dim_Sz0,dim_Sz0))
   allocate(E_MBL(n_disorder,dim_Sz0),QE(n_disorder,dim_Sz0))
 
-  allocate(config(nspin), states(dim_Sz0))
+  !allocate(config(nspin), states(dim_Sz0))
 
-  allocate(idxuE(dim_Sz0), deg(dim_Sz0), QE_exact(dim_Sz0), E_exact(dim_Sz0))
+  !allocate(idxuE(dim_Sz0), deg(dim_Sz0), QE_exact(dim_Sz0), E_exact(dim_Sz0))
 
   r_avg = 0
   r_sq = 0
@@ -202,16 +205,20 @@ program test_LR
     !print *, ""
  
     !---------------------------------------------------
-    !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
     call buildHMBL( nspin, dim_Sz0, Jxy, Vzz, hz, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
     E_MBL(i,:) = E
+    !print *, "H_MBL Built..."
 
     call gap_ratio(E, r_avg2(i), r_sq2(i))
 
+    print *, "Computing U_F..."
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
+    !print *, "U_MBL computed."
+    !print *, size(U), size(USwap)
     U = matmul(USwap,U)
+    print *, "U_F, computed."
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     E = real(C_UNIT*log(PH), kind=dp)
     call sort(E)
@@ -320,53 +327,5 @@ subroutine write_info(unit_file)
   write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/4 + kick) * sum (sigma*sigma) )."
   write (unit_file,*) "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  J is uniform."
   write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
-
-end subroutine
-
-subroutine find_degeneracies( n, energies, unq, deg )
-  !Finds all degeneracies of a real ordered 1D array of length n (up to a fixed tolerance)
-  !idxuE contains the indices of the unique values of E
-  !deg contains the corresponding degeneracy
-
-  use iso_c_binding
-  implicit none
-
-  integer (c_int), intent(in) :: n
-  real (c_double), intent(in) :: energies(n) !'energies' has to be sorted already
-  !real (c_double), intent(out)  :: unq(n)
-  integer (c_int), intent(out)  :: deg(n), unq(n)
-
-  integer :: i, j, tot_deg
-  real (c_double) :: tol = 1.0e-10
-
-
-  unq = 0
-  deg = 1
-
-  j = 1
-  unq(j) = 1 !energies(j)
-  do i = 2, n
-    if ( abs(energies(i) - energies(i-1)) > tol ) then
-      j = j + 1
-      !unq(j) = energies(i)
-      unq(j) = i
-    else
-      deg(j) = deg(j) + 1
-    endif
-  enddo
-  deg(j+1:n) = 0
-
-  tot_deg = 0
-  !print *, "Degenerate quasienergies: "
-  !print "(*(A15))", "i", "idxunique(i)", "unique(idx)", "deg(i)"
-  do i = 1, n
-    if (deg(i)>0) then
-      !print *, i, unq(i), energies(unq(i)), deg(i)
-      tot_deg = tot_deg + merge(deg(i), 0, deg(i) > 1)
-    endif
-  enddo
-  print *, "Total fraction of states with degeneracies: ", real(tot_deg)/real(n)
-  print *, "Maximum degeneracy of a given energy: ", maxval(deg)
-  print *, ""
 
 end subroutine

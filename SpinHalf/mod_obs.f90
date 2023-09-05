@@ -33,7 +33,7 @@ contains
     complex (dcp), intent(in) :: state(dim)
     real (dp) :: imb, imbaux, mag, magaux
     integer :: config(nspin)
-    integer (ip) :: i, j, k, m
+    integer (ip) :: i, k
 
     mag = 0
     imb = 0
@@ -64,7 +64,7 @@ contains
     complex (dcp), intent(in) :: state(dim_Sz0)
     real (dp) :: imb, imbaux
     integer :: config(nspin)
-    integer (ip) :: i, j, k, m, l, indx(dim_Sz0)
+    integer (ip) :: i, k, l, indx(dim_Sz0)
 
     imb = 0
     call zero_mag_states(nspin, dim_Sz0, indx)
@@ -204,7 +204,7 @@ contains
     complex (dcp), intent(in) :: psi(dim)
     real (dp) :: sigmaz_corr_c
 
-    integer (ip) :: i, k, config(nspin)
+    integer (ip) :: i, config(nspin)
     real (dp) :: corr, avgq, avgp
 
     avgq = 0
@@ -231,7 +231,7 @@ contains
     complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
     real (dp) :: sigmaz_corr_c_Sz0
 
-    integer (ip) :: i, k, l, config(nspin), states(dim_Sz0)
+    integer (ip) :: i, l, config(nspin), states(dim_Sz0)
     real (dp) :: corr, avgq, avgp
 
     avgq = 0
@@ -377,7 +377,7 @@ contains
     integer (ip), allocatable :: pi_paired(:)
 
     integer (ip) :: dim, alpha, beta !, beta1, beta2
-    real (dp) :: val
+    !real (dp) :: val
 
     dim = size(QE)
     allocate(pair(dim), near(dim), pi_paired(dim))
@@ -483,7 +483,7 @@ contains
     integer (ip), allocatable :: pi_paired(:)
 
     integer (ip) :: dim, alpha, beta !, beta1, beta2
-    real (dp) :: val
+    !real (dp) :: val
 
     dim = size(QE)
     allocate(pair(dim), near(dim), pi_paired(dim))
@@ -697,8 +697,6 @@ contains
     complex (dcp), intent(out) :: psi(dim_Sz0)
 
     integer (ip) :: idxSz0(dim_Sz0), nz, j, l, config(nspin)
-    integer (ip), allocatable :: idx(:)
-    real (dp) :: rand
 
     call large_IMB_LI_states_Sz0(nspin, dim_Sz0, IMB, LI, idxSz0)
 
@@ -752,7 +750,7 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1), hz(nspin)
     real (dp), intent(out) :: E(dim_Sz0)
 
-    integer (ip) :: i, k, l, config(nspin), states(dim_Sz0)
+    integer (ip) :: i, l, config(nspin), states(dim_Sz0)
 
     call zero_mag_states(nspin, dim_Sz0, states)
     do l = 1, dim_Sz0
@@ -771,7 +769,7 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1), hz(nspin)
     real (dp) :: E(dim)
 
-    integer (ip) :: i, k, config(nspin)
+    integer (ip) :: i, config(nspin)
 
     do i = 1, dim
 
@@ -807,7 +805,7 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1), hz(nspin)
     real (dp), intent(out) :: QE(dim_Sz0)
 
-    integer (ip) :: i, k, l, m, config(nspin), states(dim_Sz0)
+    integer (ip) :: i, l, config(nspin), states(dim_Sz0)
     !real (dp) :: E(dim_Sz0), Es(dim_Sz0), QE_alt(dim_Sz0)
 
     QE = 0
@@ -921,7 +919,7 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
 
     real (dp) :: E(dim_Sz0)
-    integer (ip) :: i, k, l, config(nspin), states(dim_Sz0)
+    integer (ip) :: i, l, config(nspin), states(dim_Sz0)
 
     call zero_mag_states(nspin, dim_Sz0, states)
     do i = 1, dim_Sz0
@@ -940,7 +938,7 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
 
     real (dp) :: QE
-    integer (ip) :: k, j, config(nspin), config_swap(nspin)
+    integer (ip) :: k, j, config(nspin)!, config_swap(nspin)
 
     call decode(i, nspin, config)
     j = 0
@@ -1003,7 +1001,7 @@ contains
     integer (ip), intent(in) :: steps, start
     real (dp), intent(in) :: avg(steps), sigma(steps)
     real (dp), intent(out) :: t_avg, t_sigma
-    integer (ip) :: i, j, k
+    integer (ip) :: j
     
     t_avg = 0
     t_sigma = 0
@@ -1050,7 +1048,7 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1), hz(nspin)
     real (dp) :: QE(dim)
 
-    integer (ip) :: i, config(nspin), states(dim)
+    integer (ip) :: i!, config(nspin), states(dim)
     !real (dp) :: mu
 
     QE = 0

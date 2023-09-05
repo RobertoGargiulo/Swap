@@ -22,7 +22,7 @@ contains
     real (c_double):: Sx(dim,dim)
 
     integer (c_int) :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j, k
 
     Sx = 0
     
@@ -46,7 +46,7 @@ contains
     real (c_double), intent(out) :: Hx(dim,dim)
 
     integer (c_int) :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j, k
 
 
     Hx = 0
@@ -70,7 +70,7 @@ contains
     real (c_double), intent(out) :: Sxp(dim,dim)
 
     integer (c_int) :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j
 
     Sxp = 0
     do i = 0, dim - 1
@@ -90,7 +90,7 @@ contains
     complex (c_double_complex), intent(out) :: Syp(dim,dim)
 
     integer (c_int) :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j
 
     Syp = 0
     do i = 0, dim - 1
@@ -110,7 +110,7 @@ contains
     complex (c_double_complex), intent(out) :: Sy(dim,dim)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j, k
 
     Sy = 0
     do i = 0, dim - 1
@@ -133,7 +133,7 @@ contains
 
     integer (c_int), intent(in) :: nspin, dim
     real (c_double), intent(out) :: Sz(dim,dim)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, k
 
     integer :: config(nspin)
 
@@ -156,7 +156,7 @@ contains
     real (c_double), intent(out) :: HJ(dim,dim)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, k
 
     HJ = 0
     do i = 0, dim - 1
@@ -179,7 +179,7 @@ contains
     real (c_double), intent(out) :: H(dim,dim)
 
     integer :: config(nspin), spin(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j, k
 
     H = 0
     do i = 0, dim - 1
@@ -209,7 +209,7 @@ contains
     real (c_double), intent(out) :: HSwap(dim,dim)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j, k
 
     if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
     
@@ -240,7 +240,7 @@ contains
     real (c_double), intent(out) :: H(dim,dim)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j, k
     
     H = 0
     do i = 0, dim - 1
@@ -377,7 +377,7 @@ contains
     
 
     integer :: config(nspin), states(dim_Sz0)
-    integer (c_int) :: i, j, k, m, n, l, r
+    integer (c_int) :: i, j, k, m, n, l
 
     H = 0
     ROWS = 0
@@ -429,7 +429,7 @@ contains
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
     integer :: config(nspin), states(dim_Sz0)
-    integer (c_int) :: i, j, k, m, n, l, r, rflag
+    integer (c_int) :: i, j, k, l, r
     
     H = 0
     call zero_mag_states(nspin, dim_Sz0, states)
@@ -465,7 +465,7 @@ contains
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
     integer :: config(nspin), states(dim_Sz0)
-    integer (c_int) :: i, j, k, m, n, l, r, rflag
+    integer (c_int) :: i, j, k, l, r
     
     H = 0
     call zero_mag_states(nspin, dim_Sz0, states)
@@ -554,7 +554,7 @@ contains
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
     integer :: config(nspin), states(dim_Sz0)
-    integer (c_int) :: i, j, k, m, n, l, r, rflag
+    integer (c_int) :: i, j, k, l, r
  
     H = 0
     call zero_mag_states(nspin, dim_Sz0, states)
@@ -586,7 +586,7 @@ contains
     real (c_double), intent(out) :: H(dim,dim)
 
     integer :: config(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j, k
 
     H = 0
     do i = 0, dim - 1
@@ -610,7 +610,7 @@ contains
     complex (c_double_complex), intent(out) :: H(dim,dim)
 
     integer :: config(nspin), spin(nspin)
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i, j, k
 
     H = 0
     do i = 0, dim - 1
@@ -642,7 +642,7 @@ contains
     real (c_double), intent(out) :: H(dim_Sz,dim_Sz)
 
     integer :: config(nspin), states(dim_Sz), inverse(dimSpinHalf**nspin)
-    integer (c_int) :: i, j, k, m, n, l, r, rflag
+    integer (c_int) :: i, j, k, l, r
  
     H = 0
     call basis_Sz_inv(nspin, dim_Sz, Sz, states, inverse)

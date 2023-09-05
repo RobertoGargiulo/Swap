@@ -260,12 +260,10 @@ contains
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
     real (c_double) :: mutual_information_Sz0
 
-    real (c_double) :: MI, MBEE
+    real (c_double) :: MI!, MBEE
     complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)!, rho(dim_Sz0,dim_Sz0)
     complex (c_double_complex) :: psi(dim)
-    integer :: i, l, states(dim_Sz0), config(nspin)
-
-    real (c_double) :: var1
+    !integer :: i, l, states(dim_Sz0), config(nspin)
 
     call rebuild_state(nspin, dim, dim_Sz0, psi_Sz0, psi)
 

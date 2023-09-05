@@ -47,7 +47,6 @@ contains
     real(c_double), intent(out) :: E(N), W(N,N) !Siccome H non ci serve più, non possiamo usare solo H come matrice iniziale
     !e poi ci inseriamo gli autovettori?
 
-    real(c_double) :: err
     
     integer :: iwork(5*N), ifail(N), info, M, i, j
     real(c_double) :: work(8*N), HP(N*(N+1)/2), VL, VU, DLAMCH
@@ -91,7 +90,6 @@ contains
     real(c_double), intent(out) :: E(N)
     complex (c_double_complex), intent(out) :: W(N,N) 
 
-    real(c_double) :: err
     
     real (c_double) :: rwork(7*N)
     integer :: iwork(5*N), ifail(N), info, M, i, j
@@ -133,19 +131,24 @@ contains
     complex(c_double_complex), intent(in) :: const
     complex(c_double_complex), intent(out) :: U(dim,dim)
 
-    complex(c_double_complex) :: Udiag(dim,dim), Uaux(dim,dim)
+    complex(c_double_complex) :: Udiag(dim,dim), Uaux(dim,dim), Waux(dim,dim)
     integer (c_int) :: i
 
+    Waux = cmplx(W, kind=c_double_complex)
+    !print *, "Conversion of W from real to complex, done."
     Udiag = 0
     do i = 1, dim
       Udiag(i,i) = exp( const*cmplx(E(i), kind=c_double_complex) )
     enddo
+    !print *, "Diagonal matrix Udiag, done."
 
     !U = matmul(W,matmul(Udiag,transpose(W)))
     !print *, "C_ONE = ", C_ONE, "C_ZERO = ", C_ZERO
 
-    call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim , cmplx(W, kind=c_double_complex), dim, C_ZERO, Uaux, dim)
-    call zgemm('N','N', dim, dim, dim, C_ONE, cmplx(W, kind=c_double_complex), dim , Uaux, dim, C_ZERO, U, dim)
+    call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim , Waux , dim, C_ZERO, Uaux, dim)
+    !print *, "First matrix multiplication, done."
+    call zgemm('N','N', dim, dim, dim, C_ONE, Waux, dim , Uaux, dim, C_ZERO, U, dim)
+    !print *, "Second matrix multiplication, done."
 
     !call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim , dcmplx(W), dim, C_ZERO, Uaux, dim)
     !call zgemm('N','N', dim, dim, dim, C_ONE, dcmplx(W), dim , Uaux, dim, C_ZERO, U, dim)

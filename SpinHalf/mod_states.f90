@@ -30,7 +30,7 @@ contains
     integer :: config(nspin), un_vec(nspin), n_down
     complex (c_double_complex) :: alpha_n, beta_n
     real (c_double) :: norm
-    integer (c_int) :: i, j, k, m
+    integer (c_int) :: i
 
     norm = sqrt(abs(alpha)**2 + abs(beta)**2)
     alpha_n = alpha/norm
@@ -146,7 +146,7 @@ contains
     integer (c_int), intent(in) :: nspin, dim_Sz0
     complex (c_double_complex), intent(out) :: psi(dim_Sz0)
     
-    integer :: config(nspin), i, k, indx(dim_Sz0), l
+    integer :: i, k, indx(dim_Sz0), l
 
     if (mod(nspin,2)==1) stop "Error: Number of Spins must be even"
     call zero_mag_states(nspin, dim_Sz0, indx)
