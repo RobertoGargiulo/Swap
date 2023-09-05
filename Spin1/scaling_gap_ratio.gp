@@ -1,8 +1,8 @@
 ########## Gap Ratio Swap Small J wrt J #############
 
-file = "sort_col2_Swap_LR_spectrum_kick0.txt"
+file = "sort_col2_Swap_LR_spectrum.txt"
 
-list_L = "4 6 8 10 12 14"
+list_L = "2 4 6 8"
 T0 = "1.00"
 V = "3.00"
 hz = "16.00"
@@ -76,7 +76,7 @@ set multiplot layout num_alpha,1 columns margins 0.12,1,0.12,0.95 \
   print j, k
   alpha = word(list_alpha,j+1) 
   print alpha, kick
-  set key at screen 0.6, 0. width 1 spacing 1.1 font ",9" maxrows 2 #inside top left 
+  set key at screen 0.6, 0. width 1 spacing 1.1 font ",9" maxrows 1 #inside top left 
   set xtics 1e-5, 10, 1e-0 format "$10^{%T}$"
   set xlabel "$J$"
   set title "(b) $\\alpha = ".alpha."$"

@@ -6,7 +6,7 @@ make $filestring
 n_threads=8
 export OMP_NUM_THREADS=$n_threads 
 
-output="Swap_LR_spectrum_kick.txt"
+output="Swap_LR_spectrum_non_zero_J_kick.txt"
 sorting=false
 file_out="out.txt"
 file_sort="out_sort.txt"
@@ -17,11 +17,11 @@ fi
 
 ###Choice of parameters
 iterations_2=20480
-list_nspin=$(seq 4 2 10)
-list_J="0.00001 0.0001 0.001 0.01 0.1 1.0"
+list_nspin=$(seq 4 2 12)
+list_J="0.01"
 list_V="3.00"
 list_hz="16.00"
-list_kick="0.0" #0.001 0.01 0.10 0.50
+list_kick="0" #0.001 0.01 0.10 0.50
 list_alpha="0.50 3.00" #1.00 10.00
 list_T0="1.00"
 

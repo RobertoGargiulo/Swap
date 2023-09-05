@@ -87,8 +87,8 @@ for i in range(num_J):
             L = Larray[q]
             print([J[i], alpha[j], L])
 
-            X[q, i, j] = signs * (sigmaz[q,i,j][:,2*(L//4)] - 0.5) + 0.5
-            Y[q, i, j] = signs * (sigmaz[q,i,j][:,L-1] - 0.5) + 0.5
+            X[q, i, j] = signs * (sigmaz[q,i,j][:,2*(L//4)-1] - 0.5) + 0.5
+            Y[q, i, j] = signs * (sigmaz[q,i,j][:,2*(L//4)] - 0.5) + 0.5
             print(sigmaz[q,i,j][0,:])
             print(sigmaz[q,i,j][0,2*(L//4)], sigmaz[q,i,j][0,L-1])
             string = '$L = %d$' % L
