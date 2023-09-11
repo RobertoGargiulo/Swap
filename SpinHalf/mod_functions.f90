@@ -120,6 +120,7 @@ contains
 
 
   integer (ip) function binom(n,k)
+    use iso_c_binding, only: lp => c_float128
     integer (ip), intent(in) :: n,k
 
     if (k == n) then
@@ -127,8 +128,10 @@ contains
     else if (k == 1) then
         binom = n
     else if ((k /= 1) .and. (k /= n)) then
-      binom = int(exp(log_gamma(n+1.0_dp)-log_gamma(n-k+1.0_dp)-log_gamma(k+1.0_dp)),kind=ip)
+      binom = nint(exp(log_gamma(n+1.0_lp)-log_gamma(n-k+1.0_lp)-log_gamma(k+1.0_lp)),kind=ip)
     end if 
+    !print *, "c_float_result binom =", exp(log_gamma(n+1.0_lp)-log_gamma(n-k+1.0_lp)-log_gamma(k+1.0_lp))
+    !print *, "integer result = ", binom
   end function
 
 
@@ -564,6 +567,7 @@ contains
     dim = dimSpinHalf**nspin
     l = 0
     states = 0
+    print *, "dim_Sz = ", dim_Sz, "binom(L, L/2) =", binom(nspin, nspin/2)
     !print "(2(A4,4X),A4)", "k", "i", "conf"
     do i = 0, dim-1
 
@@ -571,6 +575,10 @@ contains
 
       if (sum(1-2*config)==Sz) then
         l = l+1
+        if(l>dim_Sz) then
+          print*, "Error:"
+          print *, config(:), l
+        endif
         states(l) = i
         !print "(2(I4,4X),*(I0))", k, i, config(:)
       endif
@@ -661,7 +669,7 @@ contains
     enddo
 
 
-    Sz = int(mag_psi)
+    Sz = nint(mag_psi)
     dim_Sz = dimSpinHalf_Sz(nspin, Sz)
     if (flag) then
       print *, "The State has a definite magnetization Sz = ", Sz

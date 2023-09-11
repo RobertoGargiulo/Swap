@@ -5,7 +5,7 @@ program test_LR
   use exponentiate, only: diagSYM, expSYM
   use observables, only: sigmaz_Sz
   use matrices, only: buildHSwap => buildSz_HSwap, buildHMBL => buildSz_HMBL_LR, &
-    & print_hamiltonian_Sz, print_unitary_Sz
+    & print_hamiltonian_Sz, print_unitary_Sz, buildUMBL => buildSz_UMBL_LR
   use printing, only: take_time, printmat
   use states, only: buildstate => buildNeelState, &
     & printstate_Sz, printstate
@@ -13,38 +13,37 @@ program test_LR
   use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
   implicit none
 
-  complex (dcp), parameter :: C_ZERO = dcmplx(0._dp, 0._dp)
-  complex (dcp), parameter :: C_ONE = dcmplx(1._dp, 0._dp)
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
 
   real (dp), parameter :: pi = 4._dp * atan(1._dp)
-  real (dp), parameter :: tol = 1.0e-8
+  !real (dp), parameter :: tol = 1.0e-8
   character(len=*), parameter :: name_initial_state = "Neel"
 
-  integer (ip)     ::  nspin, dim, n_disorder, steps
-  integer (ip)     ::  i, j, l, r, k, p, q, dim_Sz, Sz
+  integer (ip)     ::  nspin, dim, n_disorder, n_pow_periods, n_periods, steps
+  integer (ip)     ::  i, j, k, q, dim_Sz, Sz
   real (dp) :: norm
 
   real (dp), dimension(:), allocatable :: Jxy, hz
   real (dp), dimension(:,:), allocatable :: Vzz
   real (dp) :: T0, T1, Jxy_coupling, Vzz_coupling, hz_coupling, kick, alpha
-  complex (dcp) :: beta, delta
+  !complex (dcp) :: beta, delta
 
   real (dp), dimension(:), allocatable :: E
   real (dp), dimension(:,:), allocatable :: H, W_r
-  complex (dcp), allocatable :: psi(:), state(:), psi_swap(:), psi_Sz(:)
-  complex (dcp), dimension(:,:), allocatable :: U, USwap
+  complex (dcp), allocatable :: psi(:), psi_swap(:), psi_Sz(:)
+  complex (dcp), dimension(:,:), allocatable :: U, USwap, UMBL
 
   integer(ip) :: count_beginning, count_end, count_rate
 
-  character(len=200) :: filestring, state_name
+  character(len=200) :: filestring
   integer (ip) :: unit_decay
 
   !integer (ip)  :: n_periods
   real (dp), allocatable, dimension(:) :: t_decay, sigmaz_previous, sigmaz_current, &
     & sigmaz_initial
-  real (dp)   :: imb_previous, imb_current, t_decay_avg, sigma_t_decay
-  integer (ip)   :: idecay, idecay2, n_decays
+  real (dp)   :: Z_previous, Z_current, t_decay_avg, sigma_t_decay
+  integer (ip)   :: idecay, n_decays
+  real (dp) :: time1, time2
 
   logical :: SELECT
   EXTERNAL SELECT
@@ -74,9 +73,9 @@ program test_LR
   read (*,*) steps
   print*,""
 
-  !write (*,*) "Number of Periods at each step"
-  !read (*,*) n_periods
-  !print*,""
+  write (*,*) "Power of 2 for the Number of Periods at each step (n_per = 2^(pow)+1 )"
+  read (*,*) n_pow_periods 
+  print*,""
 
   write (*,*) "Period T0"
   read (*,*) T0
@@ -157,6 +156,7 @@ program test_LR
   !Allocate Floquet and MBL Operators
   allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
   allocate(U(dim_Sz,dim_Sz))
+  allocate(UMBL(dim_Sz,dim_Sz))
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(psi_swap(dim_Sz))
@@ -172,7 +172,7 @@ program test_LR
   print *, "Current code segment is in parallel: ", omp_in_parallel()
   !$OMP do reduction(+: n_decays) private(i, j, hz, Vzz, norm, &
   !$OMP & psi_swap, H, E, W_r, U, idecay, &
-  !$OMP & sigmaz_previous, sigmaz_current, imb_previous, imb_current )
+  !$OMP & sigmaz_previous, sigmaz_current, Z_previous, Z_current )
   do i = 1, n_disorder
  
     if (n_disorder < 10) then
@@ -213,12 +213,38 @@ program test_LR
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
+    call cpu_time(time1)
     call buildHMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, H )
     !print *, "HMBL = "
     !call print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
     call diagSYM( 'V', dim_Sz, H, E, W_r )
     call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
     U = matmul(USwap,U)
+    call cpu_time(time2)
+    print *, "cpu_time U = ", time2 - time1
+    !print *, "Single period UF:"
+    !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
+    !print *, U
+    !U = matmul(matmul(U,U),U)
+    !do t = 2, n_pow_periods
+    !  U = matmul(U,U)
+    !enddo
+    !print *, "2^(pow)-period UF:"
+    !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
+
+    call cpu_time(time1)
+    call buildUMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, -C_UNIT*T0, UMBL )
+    UMBL = matmul(USwap,UMBL)
+    call cpu_time(time2)
+    print *, "cpu_time UMBL = ", time2 - time1
+    !print *, "Single period (with buildUMBL) UF:"
+    !call print_unitary_Sz(nspin, dim_Sz, Sz, UMBL)
+    !print *, UMBL
+
+    print *, "U - UMBL:"
+    print *, sum(abs(U - UMBL)) / size(U - UMBL), size(U-UMBL)
+    !call print_unitary_Sz(nspin, dim_Sz, Sz, U-UMBL)
+
 
     psi_swap = psi_Sz
     j = 1
@@ -226,29 +252,29 @@ program test_LR
     do j = 2, steps
 
       sigmaz_previous = sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
-      imb_previous = sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
+      Z_previous = sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
         & (sigmaz_previous(1::2) - sigmaz_previous(2::2)) )
       !print *, j-1, sigmaz_previous
-      !print *, imb_previous
+      !print *, Z_previous
       !print *, sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
       !  & (sigmaz_previous(1::2) - sigmaz_previous(2::2))
       !print *, ""
 
       if(mod(j,10)==0) then
-        norm = real(dot_product(psi_swap,psi_swap))
+        norm = real(dot_product(psi_swap,psi_swap), kind=dp)
         psi_swap = psi_swap/sqrt(norm)
       endif
       psi_swap = matmul(U, psi_swap)
       sigmaz_current = sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
-      imb_current= sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
+      Z_current= sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
         & (sigmaz_current(1::2) - sigmaz_current(2::2)) )
       if (idecay==0) then
-        if(imb_previous * imb_current > 0) then
+        if(Z_previous * Z_current < 0) then
           t_decay(i) = j * T0
           idecay = 1
           n_decays = n_decays + 1
           !print *, j, sigmaz_current
-          !print *, imb_current
+          !print *, Z_current
           !print *, sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
           !  & (sigmaz_current(1::2) - sigmaz_current(2::2))
           !print *, ""
@@ -271,12 +297,12 @@ program test_LR
   do i = 1, n_disorder
     write(unit_decay,*) i, t_decay(i)
   enddo
-  write(unit_decay,"(2(A26),A12)") "<t*>", "sigma(t*)" , "n_decays"
-  write(unit_decay,*) t_decay_avg, sigma_t_decay, n_decays
-  close(unit_decay)
+  write (unit_decay,"(2(A26),A12)") "<t*>", "sigma(t*)" , "n_decays"
+  write (unit_decay,*) t_decay_avg, sigma_t_decay, n_decays
+  close (unit_decay)
 
   print *, "Average Decay Time and Errors"
-  write(*,"(2(A26),A12)") "<t*>", "sigma(t*)" , "n_decays"
+  write (*,"(2(A26),A12)") "<t*>", "sigma(t*)" , "n_decays"
   print*, t_decay_avg, sigma_t_decay, n_decays
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")

@@ -10,7 +10,7 @@ module matrices
   complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
 
   integer (c_int), private, parameter :: dimSpinHalf = 2
-  real (c_double), private, parameter :: tol = 1.0e-10
+  real (c_double), private, parameter :: tol = EPSILON(1._c_double)
 
 
 contains
@@ -708,6 +708,43 @@ contains
 
   end subroutine
 
+  subroutine buildSz_UMBL_LR(nspin, dim_Sz, Sz, Jxy, Vzz, hz, const, U)
+
+    !Builds U = exp(const*H_MBL) with const complex, such that no remaining H is left 
+    use exponentiate, only: diagSYM
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1,nspin), hz(nspin)
+    complex (c_double_complex), intent(in) :: const
+    complex (c_double_complex), intent(out) :: U(dim_Sz,dim_Sz)
+
+    integer (c_int) :: i
+    real (c_double), allocatable :: H(:,:), E(:), W_r(:,:)
+    !complex(c_double_complex) :: Udiag(dim_Sz,dim_Sz), Uaux(dim_Sz,dim_Sz), Waux(dim_Sz,dim_Sz)
+
+
+
+    allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
+    call buildSz_HMBL_LR(nspin, dim_Sz, Sz, Jxy, Vzz, hz, H)
+    call diagSYM( 'V', dim_Sz, H, E, W_r)
+    deallocate(H)
+    U = 0
+    forall (i=1:dim_Sz) U(i,i) = exp(const*E(i))
+    U = matmul(W_r,matmul(U,transpose(W_r)))
+    !call zgemm('N','C', dim_Sz, dim_Sz, dim_Sz, C_ONE, U, dim_Sz, cmplx(W_r,kind=c_double_complex), dim_Sz, C_ZERO, U, dim_Sz)
+    !call zgemm('N','N', dim_Sz, dim_Sz, dim_Sz, C_ONE, cmplx(W_r,kind=c_double_complex), dim_Sz, U, dim_Sz, C_ZERO, U, dim_Sz)
+    !Waux = cmplx(W_r, kind=c_double_complex)
+    !Udiag = 0
+    !do i = 1, dim_Sz
+    !  Udiag(i,i) = exp( const*cmplx(E(i), kind=c_double_complex) )
+    !enddo
+
+    !call zgemm('N','C', dim_Sz, dim_Sz, dim_Sz, C_ONE, U, dim_Sz, Waux, dim_Sz, C_ZERO, U, dim_Sz)
+    !call zgemm('N','N', dim_Sz, dim_Sz, dim_Sz, C_ONE, Waux, dim_Sz, U, dim_Sz, C_ZERO, U, dim_Sz)
+
+    deallocate(W_r,E)
+
+  end subroutine
+
   subroutine buildSz_HMBL_XX_ZZ_LR(nspin, dim_Sz, Sz, Jxy, Vzz, hz, H)
 
     !Generic all-to-all interactions for both XX+YY and ZZ interactions
@@ -797,13 +834,15 @@ contains
 
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
 
-    print "(4X,1(A18,1X),2(A3,3X),A4)", "U(r,l)", "i", "r/l", "conf"
+    !print "(4X,1(A18,1X),2(A3,3X),A4)", "U(r,l)", "i", "r/l", "conf"
+    print "(4X,1(A42,1X),2(A3,3X),A4)", "U(r,l)", "i", "r/l", "conf"
     do l = 1, dim_Sz
       i = idxSz(l)
       call decode(i,nspin,config)
 
       if(abs(U(l,l)) > tol) then
-        print "(4X,1((f8.4f8.4,1x'i'),1X),2(I3,3X),*(I0))", U(l,l), l, i, config(:)
+        !print "(4X,1((f8.4f8.4,1x'i'),1X),2(I3,3X),*(I0))", U(l,l), l, i, config(:)
+        print "(4X,1((f20.16f20.16,1x'i'),1X),2(I3,3X),*(I0))", U(l,l), l, i, config(:)
       endif
 
       do r = 1, dim_Sz
@@ -813,8 +852,10 @@ contains
         else if (abs(U(r,l)) > tol) then
           j = idxSz(r)
           call decode(j,nspin, config2)
-          print "(4X,1(f8.4f8.4,1x'i',1X),2(I3,3X),*(I0))", U(r,l), l, i, config(:)
-          print "(4X,1(A18,1X),2(I3,3X),*(I0))", "", r, j, config2(:)
+          !print "(4X,1(f8.4f8.4,1x'i',1X),2(I3,3X),*(I0))", U(r,l), l, i, config(:)
+          !print "(4X,1(A18,1X),2(I3,3X),*(I0))", "", r, j, config2(:)
+          print "(4X,1((f20.16f20.16,1x'i'),1X),2(I3,3X),*(I0))", U(r,l), l, i, config(:)
+          print "(4X,1(A42,1X),2(I3,3X),*(I0))", "", r, j, config2(:)
         endif
 
       enddo
