@@ -567,7 +567,7 @@ contains
     dim = dimSpinHalf**nspin
     l = 0
     states = 0
-    print *, "dim_Sz = ", dim_Sz, "binom(L, L/2) =", binom(nspin, nspin/2)
+    !print *, "dim_Sz = ", dim_Sz, "binom(L, L/2) =", binom(nspin, nspin/2)
     !print "(2(A4,4X),A4)", "k", "i", "conf"
     do i = 0, dim-1
 
@@ -575,10 +575,10 @@ contains
 
       if (sum(1-2*config)==Sz) then
         l = l+1
-        if(l>dim_Sz) then
-          print*, "Error:"
-          print *, config(:), l
-        endif
+        !if(l>dim_Sz) then
+        !  print*, "Error:"
+        !  print *, config(:), l
+        !endif
         states(l) = i
         !print "(2(I4,4X),*(I0))", k, i, config(:)
       endif

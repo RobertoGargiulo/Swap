@@ -20,7 +20,7 @@ program test_LR
   character(len=*), parameter :: name_initial_state = "Neel"
 
   integer (ip)     ::  nspin, dim, n_disorder, n_pow_periods, n_periods, steps
-  integer (ip)     ::  i, j, k, q, dim_Sz, Sz
+  integer (ip)     ::  i, j, k, q, t, dim_Sz, Sz
   real (dp) :: norm
 
   real (dp), dimension(:), allocatable :: Jxy, hz
@@ -31,7 +31,7 @@ program test_LR
   real (dp), dimension(:), allocatable :: E
   real (dp), dimension(:,:), allocatable :: H, W_r
   complex (dcp), allocatable :: psi(:), psi_swap(:), psi_Sz(:)
-  complex (dcp), dimension(:,:), allocatable :: U, USwap, UMBL
+  complex (dcp), dimension(:,:), allocatable :: U, USwap, UMBL, UMBL2
 
   integer(ip) :: count_beginning, count_end, count_rate
 
@@ -156,7 +156,7 @@ program test_LR
   !Allocate Floquet and MBL Operators
   allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
   allocate(U(dim_Sz,dim_Sz))
-  allocate(UMBL(dim_Sz,dim_Sz))
+  allocate(UMBL(dim_Sz,dim_Sz), UMBL2(dim_Sz,dim_Sz))
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(psi_swap(dim_Sz))
@@ -213,37 +213,53 @@ program test_LR
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    call cpu_time(time1)
-    call buildHMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, H )
+    !call cpu_time(time1)
+    !call buildHMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, H )
     !print *, "HMBL = "
     !call print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
-    call diagSYM( 'V', dim_Sz, H, E, W_r )
-    call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
-    U = matmul(USwap,U)
-    call cpu_time(time2)
-    print *, "cpu_time U = ", time2 - time1
+    !call diagSYM( 'V', dim_Sz, H, E, W_r )
+    !call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
+    !U = matmul(USwap,U)
+    !call cpu_time(time2)
+    !print *, "cpu_time U = ", time2 - time1
     !print *, "Single period UF:"
     !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
     !print *, U
-    !U = matmul(matmul(U,U),U)
-    !do t = 2, n_pow_periods
-    !  U = matmul(U,U)
-    !enddo
-    !print *, "2^(pow)-period UF:"
-    !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
 
-    call cpu_time(time1)
-    call buildUMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, -C_UNIT*T0, UMBL )
-    UMBL = matmul(USwap,UMBL)
-    call cpu_time(time2)
-    print *, "cpu_time UMBL = ", time2 - time1
+    !call cpu_time(time1)
+    call buildUMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, -C_UNIT*T0, U )
+    U = matmul(USwap,U)
+    UMBL = U
+    UMBL2 = U 
+    !print *, "Single U"
+    !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
+    !call cpu_time(time2)
+    !print *, "cpu_time UMBL = ", time2 - time1
     !print *, "Single period (with buildUMBL) UF:"
     !call print_unitary_Sz(nspin, dim_Sz, Sz, UMBL)
     !print *, UMBL
 
-    print *, "U - UMBL:"
+    !print *, "U - UMBL:"
+    !print *, sum(abs(U - UMBL)) / size(U - UMBL), size(U-UMBL)
+    !call print_unitary_Sz(nspin, dim_Sz, Sz, U-UMBL)
+    do t = 1, n_pow_periods
+      U = matmul(U,U)
+      !print *, "U at n periods = ", 2**t
+      !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
+    enddo
+    do t = 2, 2**(n_pow_periods)
+      UMBL = matmul(UMBL, UMBL2)
+    enddo
+    print *, "T0 = ", T0, "J = ", Jxy_coupling, "V = ", Vzz_coupling, &
+      & "hz = ", hz_coupling, "kick = ", kick, "alpha = ", alpha
+    print *, "n_pow_periods = ", n_pow_periods
+    print *, "Multi-period U - UMBL:"
     print *, sum(abs(U - UMBL)) / size(U - UMBL), size(U-UMBL)
     !call print_unitary_Sz(nspin, dim_Sz, Sz, U-UMBL)
+    !print *, "U"
+    !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
+    !print *, "UMBL"
+    !call print_unitary_Sz(nspin, dim_Sz, Sz, UMBL)
 
 
     psi_swap = psi_Sz
@@ -345,6 +361,3 @@ pure function ones(n) result(arr)
   arr = 1.0
 
 end function
-  
-
-
