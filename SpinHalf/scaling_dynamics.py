@@ -11,10 +11,10 @@ plt.rcParams["figure.figsize"] = [5,3]
 
 
 # Import Files
-init_state = "HalfNeel"
+init_state = "Neel"
 Larray = np.arange(4, 13, 2)
 T = 1
-J = [0.01, 0.1] #[0.0001, 0.001, 0.01, 0.1, 1.0]
+J = [0.01] #[0.0001, 0.001, 0.01, 0.1, 1.0]
 V = 3
 hz = 16
 alpha = [0.50, 3.00]
@@ -23,8 +23,9 @@ num_J = len(J)
 num_alpha = len(alpha)
 n_points = num_J * num_alpha
 numL = len(Larray)
-iter2 = 20480
-steps = 10000
+iter2 = 10240
+steps = 1000000
+skip = 100
 
 m = 0
 
@@ -44,11 +45,11 @@ for i in range(num_J):
             print([J[i], alpha[j], L])
             n_iter = iter2 * 2 ** (1 - L / 2)
 
-            filename[q, i, j] = "data/dynamics/sigmaz_Swap_LR_%s_nspin%d_period%.2f_n_disorder%d_Jxy%.5f_Vzz%.2f_hz%.2f_kick%.3f_alpha%.2f.txt" % (
-                init_state, L, T, n_iter, J[i], V, hz, kick, alpha[j])
+            filename[q, i, j] = "data/dynamics/sigmaz_Swap_LR_%s_nspin%d_steps%d_period%.2f_n_disorder%d_Jxy%.5f_Vzz%.2f_hz%.2f_kick%.3f_alpha%.2f.txt" % (
+                init_state, L, steps, T, n_iter, J[i], V, hz, kick, alpha[j])
 
             print(filename[q, i, j])
-            files[q, i, j] = np.genfromtxt(filename[q, i, j], skip_header=8)
+            files[q, i, j] = np.genfromtxt(filename[q, i, j], skip_header=9)
             print(files[q, i, j])
             data[q, i, j] = files[q, i, j]
             print(data[q, i, j][0, :])
@@ -60,13 +61,13 @@ for i in range(num_J):
             print([J[i], alpha[j], L])
             n_iter = iter2 * 2 ** (1 - L / 2)
             #dim_Sz0 = comb(L, L / 2)
-            sigmaz[q, i, j] = data[q, i, j][:, 1:L+1]
+            sigmaz[q, i, j] = data[q, i, j][:, 1:L+1:skip]
             Z[q, i, j] = (np.sign(sigmaz[q,i,j][0,0::2] - sigmaz[q,i,j][0,1::2]) * (sigmaz[q,i,j][:,0::2] - sigmaz[q,i,j][:,1::2])).sum( axis=1 ) / L
             print(Z[q,i,j][0:4],"\n")
 
 X = np.empty((numL, num_J, num_alpha), dtype=object)
 Y = np.empty((numL, num_J, num_alpha), dtype=object)
-signs = np.empty((steps,))
+signs = np.empty((steps//skip,))
 signs[::2] = +1
 signs[1::2] = -1
 
@@ -127,7 +128,7 @@ for i in range(num_J):
         plt.ylim([-0.1,1.1])
         plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.45), fancybox=True, shadow=True, ncol=numL)
 
-        txt = 'figures/sigmaz_avg_Dynamics_%s_Comparison_wrt_L_J%.5f_alpha%.2f_kick%.3f.pdf' % (init_state, J[i], alpha[j], kick)
+        txt = 'figures/sigmaz_avg_Dynamics_%s_Comparison_wrt_L_J%.5f_alpha%.2f_kick%.3f_steps%d.pdf' % (init_state, J[i], alpha[j], kick, steps)
         print(txt)
         plt.savefig(txt, dpi=600, bbox_inches='tight')
         print("\n")

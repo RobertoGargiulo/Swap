@@ -6,7 +6,7 @@ make $filestring
 n_threads=10
 export OMP_NUM_THREADS=$n_threads 
 
-output="Swap_LR_dynamics.txt"
+output="Swap_LR_dynamics_long.txt"
 file_out="out.txt"
 mv $file_out output/
 
@@ -14,10 +14,10 @@ mv $file_out output/
 iterations_2=10240
 steps="1000000"
 list_nspin=$(seq 4 2 12)
-list_J="0.01 0.1 1.0"
+list_J="0.01"
 list_V="3.00"
 list_hz="16.00"
-list_kick="0.00 0.01"
+list_kick="0.00"
 list_alpha="0.50 3.00" #1.00 10.00
 list_T0="1.00"
 

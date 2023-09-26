@@ -51,7 +51,7 @@ for s in range(2):
                     init_state[s], L, T, n_iter, J[i], V, hz, kick, alpha[j])
     
                 print(filename[s, q, i, j])
-                files[s, q, i, j] = np.genfromtxt(filename[s, q, i, j], skip_header=8)
+                files[s, q, i, j] = np.genfromtxt(filename[s, q, i, j], skip_header=9, skip_footer=0)
                 print(files[s, q, i, j])
                 data[s, q, i, j] = files[s, q, i, j]
                 print(data[s, q, i, j][0, :])

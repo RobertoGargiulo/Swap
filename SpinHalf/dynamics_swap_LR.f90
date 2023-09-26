@@ -7,7 +7,7 @@ program test_LR
   use matrices, only: buildHSwap => buildSz_HSwap, buildHMBL => buildSz_HMBL_LR, &
     & print_hamiltonian_Sz, print_unitary_Sz
   use printing, only: take_time, printmat
-  use states, only: buildstate => buildHalfNeelState, &
+  use states, only: buildstate => buildNeelState, &
     & printstate_Sz, printstate
   use omp_lib
   use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
@@ -19,7 +19,7 @@ program test_LR
 
   real (dp), parameter :: pi = 4._dp * atan(1._dp)
   real (dp), parameter :: tol = 1.0e-8
-  character(len=*), parameter :: name_initial_state = "HalfNeel"
+  character(len=*), parameter :: name_initial_state = "Neel"
 
   integer (ip)     ::  nspin, dim, n_disorder, steps
   integer (ip)     ::  i, j, l, r, k, p, q, dim_Sz, Sz

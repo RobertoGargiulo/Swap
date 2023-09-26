@@ -6,6 +6,11 @@ program test_LR
   use observables, only: sigmaz_Sz
   use matrices, only: buildHSwap => buildSz_HSwap, buildHMBL => buildSz_HMBL_LR, &
     & print_hamiltonian_Sz, print_unitary_Sz, buildUMBL => buildSz_UMBL_LR
+      !print *, j-1, sigmaz_previous
+      !print *, Z_previous
+      !print *, sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
+      !  & (sigmaz_previous(1::2) - sigmaz_previous(2::2))
+      !print *, ""
   use printing, only: take_time, printmat
   use states, only: buildstate => buildNeelState, &
     & printstate_Sz, printstate
@@ -31,7 +36,7 @@ program test_LR
   real (dp), dimension(:), allocatable :: E
   real (dp), dimension(:,:), allocatable :: H, W_r
   complex (dcp), allocatable :: psi(:), psi_swap(:), psi_Sz(:)
-  complex (dcp), dimension(:,:), allocatable :: U, USwap, UMBL, UMBL2
+  complex (dcp), dimension(:,:), allocatable :: U, USwap!, UMBL, UMBL2, Id
 
   integer(ip) :: count_beginning, count_end, count_rate
 
@@ -43,7 +48,7 @@ program test_LR
     & sigmaz_initial
   real (dp)   :: Z_previous, Z_current, t_decay_avg, sigma_t_decay
   integer (ip)   :: idecay, n_decays
-  real (dp) :: time1, time2
+  !real (dp) :: time1, time2
 
   logical :: SELECT
   EXTERNAL SELECT
@@ -76,6 +81,7 @@ program test_LR
   write (*,*) "Power of 2 for the Number of Periods at each step (n_per = 2^(pow)+1 )"
   read (*,*) n_pow_periods 
   print*,""
+  n_periods = 2**(n_pow_periods)
 
   write (*,*) "Period T0"
   read (*,*) T0
@@ -111,16 +117,14 @@ program test_LR
   !DATA FILES
   
   write(filestring,93) "data/dynamics/decay_sigmaz_Swap_LR_" // trim(name_initial_state) // "_nspin", &
-    & nspin, "_steps", steps, "_period", T0, "_n_disorder", n_disorder, &
+    & nspin, "_steps", steps, "_period", T0, "_n_disorder", n_disorder, "_n_periods", n_periods, &
     & "_Jxy", Jxy_coupling, "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, &
     & "_alpha", int(alpha), alpha-int(alpha), ".txt"
   open(newunit=unit_decay, file=filestring)
   call write_info(unit_decay, trim(name_initial_state))
 
-  !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  93  format(A,I0, A,I0, A,F4.2, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
+  93  format(A,I0, A,I0, A,F4.2, A,I0, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
 
 
   !------------- Initial State ------------------!
@@ -128,10 +132,10 @@ program test_LR
   call buildstate(nspin, dim, psi)
   call printstate(nspin, dim, psi, trim(name_initial_state))
   call project(nspin, dim, psi, dim_Sz, Sz, psi_Sz)
+  deallocate(psi)
   call printstate_Sz(nspin, dim_Sz, Sz, psi_Sz, trim(name_initial_state))
   allocate(sigmaz_initial(nspin))
   sigmaz_initial = sigmaz_Sz(nspin, dim_Sz, Sz, psi_Sz)
-  deallocate(psi)
 
  
   !------------------------------------------------
@@ -156,7 +160,10 @@ program test_LR
   !Allocate Floquet and MBL Operators
   allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
   allocate(U(dim_Sz,dim_Sz))
-  allocate(UMBL(dim_Sz,dim_Sz), UMBL2(dim_Sz,dim_Sz))
+  !allocate(UMBL(dim_Sz,dim_Sz), UMBL2(dim_Sz,dim_Sz))
+  !allocate(Id(dim_Sz,dim_Sz))
+  !Id = 0
+  !forall (i=1:dim_Sz) Id(i,i) = 1
 
   !Allocate for Eigenvalues/Eigenvectors
   allocate(psi_swap(dim_Sz))
@@ -186,80 +193,32 @@ program test_LR
     !-------------------------------------------------
     !PARAMETERS
  
-    !call random_number(Jxy)
-    !Jxy = 2*Jxy_coupling*(Jxy - 0.5) !Jxy in [-J,J]
     Jxy = -Jxy_coupling
 
-    !Vzz = -Vzz_coupling
     call random_number(Vzz)
     Vzz = -Vzz_coupling + Vzz_coupling*(Vzz - 0.5) !Vzz in [-V-V/2,-V+V/2]
-    !Vzz = 1
     do k = 1, nspin-1
       Vzz(k,1:k) = 0
       do q = k+1, nspin
         Vzz(k,q) = Vzz(k,q) / ( abs(k-q)**alpha )
       enddo
-      !write (*,*) Vzz(k,:)
     enddo
     Vzz = Vzz / norm_V(alpha, nspin)
  
     call random_number(hz)
     hz = 2*hz_coupling*(hz-0.5) !hz in [-hz_coupling, hz_coupling]
  
-    !write (*,*) "Jxy = ", Jxy(:)
-    !write (*,*) "hz = ", hz(:)
-    !print *, ""
- 
     !---------------------------------------------------
     !call take_time(count_rate, count_beginning, count1, 'F', filestring)
     !BUILD FLOQUET (EVOLUTION) OPERATOR
-    !call cpu_time(time1)
-    !call buildHMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, H )
-    !print *, "HMBL = "
-    !call print_hamiltonian_Sz(nspin, dim_Sz, Sz, H)
-    !call diagSYM( 'V', dim_Sz, H, E, W_r )
-    !call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
-    !U = matmul(USwap,U)
-    !call cpu_time(time2)
-    !print *, "cpu_time U = ", time2 - time1
-    !print *, "Single period UF:"
-    !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
-    !print *, U
 
-    !call cpu_time(time1)
     call buildUMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, -C_UNIT*T0, U )
     U = matmul(USwap,U)
-    UMBL = U
-    UMBL2 = U 
-    !print *, "Single U"
-    !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
-    !call cpu_time(time2)
-    !print *, "cpu_time UMBL = ", time2 - time1
-    !print *, "Single period (with buildUMBL) UF:"
-    !call print_unitary_Sz(nspin, dim_Sz, Sz, UMBL)
-    !print *, UMBL
-
-    !print *, "U - UMBL:"
-    !print *, sum(abs(U - UMBL)) / size(U - UMBL), size(U-UMBL)
-    !call print_unitary_Sz(nspin, dim_Sz, Sz, U-UMBL)
     do t = 1, n_pow_periods
       U = matmul(U,U)
-      !print *, "U at n periods = ", 2**t
-      !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
     enddo
-    do t = 2, 2**(n_pow_periods)
-      UMBL = matmul(UMBL, UMBL2)
-    enddo
-    print *, "T0 = ", T0, "J = ", Jxy_coupling, "V = ", Vzz_coupling, &
-      & "hz = ", hz_coupling, "kick = ", kick, "alpha = ", alpha
-    print *, "n_pow_periods = ", n_pow_periods
-    print *, "Multi-period U - UMBL:"
-    print *, sum(abs(U - UMBL)) / size(U - UMBL), size(U-UMBL)
-    !call print_unitary_Sz(nspin, dim_Sz, Sz, U-UMBL)
-    !print *, "U"
-    !call print_unitary_Sz(nspin, dim_Sz, Sz, U)
-    !print *, "UMBL"
-    !call print_unitary_Sz(nspin, dim_Sz, Sz, UMBL)
+    !print *, "Error UU^dagger - Id = "
+    !print *, sum(abs( matmul(U,conjg(transpose(U))) - Id)) / size(U)
 
 
     psi_swap = psi_Sz
@@ -285,8 +244,8 @@ program test_LR
       Z_current= sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
         & (sigmaz_current(1::2) - sigmaz_current(2::2)) )
       if (idecay==0) then
-        if(Z_previous * Z_current < 0) then
-          t_decay(i) = j * T0
+        if( (-1)**(n_periods) * Z_previous * Z_current < 0) then
+          t_decay(i) = j * 2**(n_pow_periods) * T0
           idecay = 1
           n_decays = n_decays + 1
           !print *, j, sigmaz_current
@@ -342,8 +301,8 @@ subroutine write_info(unit_file, state_name)
   character(len=*) :: state_name
 
   write (unit_file,*) "Some info: "
-  write (unit_file,*) "Decay times of magnetization at integer multiples of the period."
-  write (unit_file,*) "Floquet Operator U_F = U_swap e^(-i H)."
+  write (unit_file,*) "Decay times of magnetization at integer multiples (2**n_pow_periods) of the period."
+  write (unit_file,*) "Floquet Operator U_F = U_swap e^(-i H) and with multiplication UF -> UF * UF ."
   write (unit_file,*) "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
   write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/4 + kick) * sum (sigma*sigma) )."
   write (unit_file,*) "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2] (OBC); &
