@@ -120,7 +120,7 @@ contains
 
 
   integer (ip) function binom(n,k)
-    use iso_c_binding, only: lp => c_float128
+    !use iso_c_binding, only: lp => c_float128
     integer (ip), intent(in) :: n,k
 
     if (k == n) then
@@ -128,7 +128,7 @@ contains
     else if (k == 1) then
         binom = n
     else if ((k /= 1) .and. (k /= n)) then
-      binom = nint(exp(log_gamma(n+1.0_lp)-log_gamma(n-k+1.0_lp)-log_gamma(k+1.0_lp)),kind=ip)
+      binom = nint(exp(log_gamma(n+1.0_dp)-log_gamma(n-k+1.0_dp)-log_gamma(k+1.0_dp)),kind=ip)
     end if 
     !print *, "c_float_result binom =", exp(log_gamma(n+1.0_lp)-log_gamma(n-k+1.0_lp)-log_gamma(k+1.0_lp))
     !print *, "integer result = ", binom

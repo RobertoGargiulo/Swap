@@ -157,7 +157,7 @@ program test_LR
   sigmaz_sq = 0
 
   !$OMP PARALLEL
-  call init_random_seed() 
+  call init_random_seed()
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Current code segment is in parallel: ", omp_in_parallel()
   !$OMP do reduction(+: sigmaz_avg, sigmaz_sq) private(i, j, hz, Vzz, norm, &
