@@ -4,13 +4,8 @@ program test_LR
     & project => projectState_FullHS_to_Sz, norm_V => normalization_power_law
   use exponentiate, only: diagSYM, expSYM
   use observables, only: sigmaz_Sz
-  use matrices, only: buildHSwap => buildSz_HSwap, buildHMBL => buildSz_HMBL_LR, &
-    & print_hamiltonian_Sz, print_unitary_Sz, buildUMBL => buildSz_UMBL_LR
-      !print *, j-1, sigmaz_previous
-      !print *, Z_previous
-      !print *, sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
-      !  & (sigmaz_previous(1::2) - sigmaz_previous(2::2))
-      !print *, ""
+  use matrices, only: buildHSwap => buildSz_HSwap, buildUMBL => buildSz_UMBL_LR!, buildHMBL => buildSz_HMBL_LR, &
+  !  & print_hamiltonian_Sz, print_unitary_Sz
   use printing, only: take_time, printmat
   use states, only: buildstate => buildNeelState, &
     & printstate_Sz, printstate
@@ -177,7 +172,7 @@ program test_LR
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+: n_decays) private(i, j, hz, Vzz, norm, &
+  !$OMP do reduction(+: n_decays) private(i, j, t, hz, Vzz, norm, &
   !$OMP & psi_swap, H, E, W_r, U, idecay, &
   !$OMP & sigmaz_previous, sigmaz_current, Z_previous, Z_current )
   do i = 1, n_disorder
@@ -245,7 +240,7 @@ program test_LR
         & (sigmaz_current(1::2) - sigmaz_current(2::2)) )
       if (idecay==0) then
         if( (-1)**(n_periods) * Z_previous * Z_current < 0) then
-          t_decay(i) = j * 2**(n_pow_periods) * T0
+          t_decay(i) = j * n_periods * T0
           idecay = 1
           n_decays = n_decays + 1
           !print *, j, sigmaz_current

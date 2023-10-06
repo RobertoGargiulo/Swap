@@ -1,10 +1,13 @@
 ##!/bin/bash
 filestring="dynamics_swap_LR"
 
+ulimit -s unlimited
 make $filestring
 
-n_threads=10
+n_threads=32
+stack=6G
 export OMP_NUM_THREADS=$n_threads 
+export OMP_STACKSIZE=$stack
 
 output="Swap_LR_dynamics_long.txt"
 file_out="out.txt"
@@ -12,9 +15,9 @@ mv $file_out output/
 
 ###Choice of parameters
 iterations_2=10240
-steps="1000000"
+steps="100000000"
 list_nspin=$(seq 4 2 12)
-list_J="0.01"
+list_J="0.1 0.01"
 list_V="3.00"
 list_hz="16.00"
 list_kick="0.00"
@@ -48,9 +51,13 @@ $hz
 $kick
 $alpha
 *
-  	          ./$filestring < input.txt | tee $file_out
+              echo ""
+              echo "Input: "
               echo "nspin = $nspin  J = $J  V = $V  hz = $hz  epsilon = $kick  alpha = $alpha  T0 = $T0"
               echo "iterations = $iterations  steps = $steps  n_threads = $n_threads"
+              echo ""
+              echo "Executing file: "
+  	          ./$filestring < input.txt | tee $file_out
             done
             echo ""
           done

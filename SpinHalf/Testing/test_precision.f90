@@ -14,7 +14,7 @@ program prova
   integer (c_int16_t) :: i_int16_t
   integer (c_int32_t) :: i_int32_t
   integer (c_int64_t) :: i_int64_t
-  integer (c_int128_t) :: i_int128_t
+  !integer (c_int128_t) :: i_int128_t
   integer (kind=int8) :: i8
 
 
@@ -22,7 +22,7 @@ program prova
   real (c_double) :: r_double, arr(2)
   real (c_float) :: r_float
   real (c_long_double) :: r_long_double
-  real (c_float128) :: r_float128
+  !real (c_float128) :: r_float128
 
   complex :: cn
   complex (c_double_complex) :: cn_double_complex
@@ -30,6 +30,7 @@ program prova
   real (c_double), parameter :: pi = 4._c_double * datan(1._c_double)
 
 
+  print *, "i_size_t: "
   do i = 0, 4
     i_size_t = 2**(8*2**i-1)-1
     print "(A,I0,A,I0)", "2**(", 8*2**i-1, ") - 1 = ", i_size_t
@@ -49,10 +50,10 @@ program prova
   print "(A18,I0)", "max_c_size_t = ", huge(i_size_t)
   print "(A18,I0)", "max_c_int8_t = ", huge(i_int8_t)
   print "(A18,I0)", "max_c_int64_t = ", huge(i_int64_t)
-  print "(A18,I0)", "max_c_int128_t = ", huge(i_int128_t)
+  !print "(A18,I0)", "max_c_int128_t = ", huge(i_int128_t)
 
 
-  print *, "Maximum, minimum values and errors (epsilon): "
+  print *, "Maximum, minimum values and errors (epsilon) of reals: "
   print *, "c_double: max = ", huge(r_double), "min = ", tiny(r_double), &
     & "eps = ", epsilon(r_double), "eps(pi) = ", epsilon(pi)
   print *,  "log(max) = ", log(huge(r_double)), "log(min) = ", log(tiny(r_double)), "log(eps) = ", log(epsilon(r_double))
@@ -65,15 +66,15 @@ program prova
   enddo
   r_double = r_double / 1000000
 
-  print *, r_double, log(r_double), log(r_double) - log(r_double)
+  print *, "limits of r_double after opetations: " r_double, log(r_double), log(r_double) - log(r_double)
   print *, "c_float: max = ", huge(r_float), "min = ", tiny(r_float), &
     & "eps = ", epsilon(r_float)
   print *,  "log(max) = ", log(huge(r_float)), "log(min) = ", log(tiny(r_float)), "log(eps) = ", log(epsilon(r_float))
 
   print *, "max_c_long_double = ", huge(r_long_double), "min_c_long_double = ", tiny(r_long_double), &
     & "eps_c_long_double = ", epsilon(r_long_double)
-  print *, "max_c_float128 = ", huge(r_float128), "min_c_float128 = ", tiny(r_float128), &
-    & "eps_c_float128 = ", epsilon(r_float128)
+  !print *, "max_c_float128 = ", huge(r_float128), "min_c_float128 = ", tiny(r_float128), &
+  !  & "eps_c_float128 = ", epsilon(r_float128)
 
   r_double = 0
   print *, "log(0) = ", log(r_double)
@@ -100,7 +101,7 @@ program prova
   print *, "kind(int) =", kind(i)
   print *, "kind(c_double) =", kind(r_double)
   print *, "kind(c_double_complex) = ", kind(cn_double_complex)
-  print *, "kind(c_double_complex) = ", kind(real(cn_double_complex))
+  print *, "kind(real(c_double_complex)) = ", kind(real(cn_double_complex))
   print *, "kind(real) = ", kind(r)
 
   r_double = epsilon(arr)
