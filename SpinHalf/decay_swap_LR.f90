@@ -10,7 +10,7 @@ program test_LR
   use states, only: buildstate => buildNeelState, &
     & printstate_Sz, printstate
   use omp_lib
-  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
+  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex, ilp => c_long
   implicit none
 
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
@@ -19,9 +19,10 @@ program test_LR
   !real (dp), parameter :: tol = 1.0e-8
   character(len=*), parameter :: name_initial_state = "Neel"
 
-  integer (ip)     ::  nspin, dim, n_disorder, n_pow_periods, n_periods, steps
-  integer (ip)     ::  i, j, k, q, t, dim_Sz, Sz
+  integer (ip)     ::  nspin, dim, n_disorder
+  integer (ip)     ::  i, k, q, t, dim_Sz, Sz
   real (dp) :: norm
+  integer (ilp)     :: j, n_pow_periods, n_periods, steps
 
   real (dp), dimension(:), allocatable :: Jxy, hz
   real (dp), dimension(:,:), allocatable :: Vzz
@@ -39,8 +40,9 @@ program test_LR
   integer (ip) :: unit_decay
 
   !integer (ip)  :: n_periods
-  real (dp), allocatable, dimension(:) :: t_decay, sigmaz_previous, sigmaz_current, &
+  real (dp), allocatable, dimension(:) :: sigmaz_previous, sigmaz_current, &
     & sigmaz_initial
+  integer (ilp), allocatable, dimension(:) :: t_decay
   real (dp)   :: Z_previous, Z_current, t_decay_avg, sigma_t_decay
   integer (ip)   :: idecay, n_decays
   !real (dp) :: time1, time2
@@ -49,7 +51,7 @@ program test_LR
   EXTERNAL SELECT
   interface
     pure function ones(n) result(arr)
-      use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
+      use iso_c_binding, dp => c_double, ip => c_int
       integer (ip), intent(in) :: n
       real (dp) :: arr(n)
     end function
@@ -73,10 +75,12 @@ program test_LR
   read (*,*) steps
   print*,""
 
-  write (*,*) "Power of 2 for the Number of Periods at each step (n_per = 2^(pow)+1 )"
+  write (*,*) "Power of 2 for the Number of Periods at each step (n_per = 2^(pow)+1)"
   read (*,*) n_pow_periods 
   print*,""
   n_periods = 2**(n_pow_periods)
+  j = n_periods * steps
+  print *, "Total maximum time: ", j
 
   write (*,*) "Period T0"
   read (*,*) T0
@@ -153,7 +157,7 @@ program test_LR
   allocate( Jxy(nspin-1), Vzz(nspin-1,nspin), hz(nspin))
 
   !Allocate Floquet and MBL Operators
-  allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
+  !allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
   allocate(U(dim_Sz,dim_Sz))
   !allocate(UMBL(dim_Sz,dim_Sz), UMBL2(dim_Sz,dim_Sz))
   !allocate(Id(dim_Sz,dim_Sz))
@@ -168,12 +172,14 @@ program test_LR
   n_decays = 0
   t_decay = steps
 
+  print *, "Starting disorder loop."
+
   !$OMP PARALLEL
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
   print *, "Current code segment is in parallel: ", omp_in_parallel()
   !$OMP do reduction(+: n_decays) private(i, j, t, hz, Vzz, norm, &
-  !$OMP & psi_swap, H, E, W_r, U, idecay, &
+  !$OMP & psi_swap, U, idecay, &
   !$OMP & sigmaz_previous, sigmaz_current, Z_previous, Z_current )
   do i = 1, n_disorder
  
@@ -236,11 +242,11 @@ program test_LR
       endif
       psi_swap = matmul(U, psi_swap)
       sigmaz_current = sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
-      Z_current= sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
+      Z_current = sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
         & (sigmaz_current(1::2) - sigmaz_current(2::2)) )
       if (idecay==0) then
         if( (-1)**(n_periods) * Z_previous * Z_current < 0) then
-          t_decay(i) = j * n_periods * T0
+          t_decay(i) = j * n_periods
           idecay = 1
           n_decays = n_decays + 1
           !print *, j, sigmaz_current
@@ -267,12 +273,12 @@ program test_LR
   do i = 1, n_disorder
     write(unit_decay,*) i, t_decay(i)
   enddo
-  write (unit_decay,"(2(A26),A12)") "<t*>", "sigma(t*)" , "n_decays"
+  write (unit_decay,"(2(A26),A12)") "<t*>", "sigma(t*)", "n_decays"
   write (unit_decay,*) t_decay_avg, sigma_t_decay, n_decays
   close (unit_decay)
 
   print *, "Average Decay Time and Errors"
-  write (*,"(2(A26),A12)") "<t*>", "sigma(t*)" , "n_decays"
+  write (*,"(2(A26),A12)") "<t*>", "sigma(t*)", "n_decays"
   print*, t_decay_avg, sigma_t_decay, n_decays
 
   call take_time(count_rate, count_beginning, count_end, 'T', "Program")

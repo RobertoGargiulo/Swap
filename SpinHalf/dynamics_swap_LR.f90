@@ -10,7 +10,7 @@ program test_LR
   use states, only: buildstate => buildNeelState, &
     & printstate_Sz, printstate
   use omp_lib
-  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
+  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex, ilp => c_long
   implicit none
 
   complex (dcp), parameter :: C_ZERO = dcmplx(0._dp, 0._dp)
@@ -21,9 +21,10 @@ program test_LR
   real (dp), parameter :: tol = 1.0e-8
   character(len=*), parameter :: name_initial_state = "Neel"
 
-  integer (ip)     ::  nspin, dim, n_disorder, steps, n_pow_periods, n_periods
-  integer (ip)     ::  i, j, l, r, k, p, q, t, dim_Sz, Sz
+  integer (ip)     ::  nspin, dim, n_disorder
+  integer (ip)     ::  i, k, q, t, dim_Sz, Sz
   real (dp) :: norm
+  integer (ilp)     :: j, n_pow_periods, n_periods, steps
 
   real (dp), dimension(:), allocatable :: Jxy, hz
   real (dp), dimension(:,:), allocatable :: Vzz
@@ -31,7 +32,7 @@ program test_LR
 
   real (dp), dimension(:), allocatable :: E
   real (dp), dimension(:,:), allocatable :: H, W_r
-  complex (dcp), allocatable :: psi(:), state(:), psi_swap(:), psi_Sz(:)
+  complex (dcp), allocatable :: psi(:), psi_swap(:), psi_Sz(:)
   complex (dcp), dimension(:,:), allocatable :: U, USwap
 
   real (dp), allocatable :: sigmaz_avg(:,:), sigmaz_sq(:,:)
@@ -41,6 +42,8 @@ program test_LR
   character(len=200) :: filestring
   character(len=:), allocatable :: columns
   integer (ip) :: unit_sigmaz
+
+  EXTERNAL write_info
 
   !logical :: SELECT
   !EXTERNAL SELECT
@@ -71,7 +74,7 @@ program test_LR
   read (*,*) steps
   print*,""
 
-  write (*,*) "Power of 2 for the Number of Periods at each step (n_per = 2^(pow)+1 )"
+  write (*,*) "Power of 2 for the Number of Periods at each step (n_per = 2^(pow)+1)"
   read (*,*) n_pow_periods 
   print*,""
   n_periods = 2**(n_pow_periods)
@@ -116,6 +119,7 @@ program test_LR
     & "_alpha", int(alpha), alpha-int(alpha), ".txt"
   open(newunit=unit_sigmaz, file=filestring)
   call write_info(unit_sigmaz, trim(name_initial_state))
+
 
   !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
@@ -238,13 +242,13 @@ program test_LR
   sigmaz_sq = sqrt( (sigmaz_sq/n_disorder - sigmaz_avg**2) / n_disorder )
   columns = column_titles(nspin)
   write (*,'(A)') columns
-  do j = 1, steps, max(steps/100, 1)
-    write (*,'(*(G24.16))') j*n_periods*T0, sigmaz_avg(j,1:2), sigmaz_sq(j,1:2)
+  do j = 1, steps, max(steps/20, 1)
+    write (*,'(1I24,*(G24.16))') (j-1)*n_periods + 1, sigmaz_avg(j,1:2), sigmaz_sq(j,1:2)
   enddo
 
   write (unit_sigmaz,'(A)') columns
   do j = 1, steps
-    write (unit_sigmaz,'(*(G24.16))') j*n_periods*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
+    write (unit_sigmaz,'(1I24,*(G24.16))') (j-1)*n_periods + 1, sigmaz_avg(j,:), sigmaz_sq(j,:)
   enddo
  
   close(unit_sigmaz)
@@ -270,7 +274,7 @@ subroutine write_info(unit_file, state_name)
   character(len=*) :: state_name
 
   write (unit_file,'(A)') "Some info: "
-  write (unit_file,'(A)') "Dynamics of average of magnetization at integer multiples of the period."
+  write (unit_file,'(A)') "Dynamics of average of magnetization at integer (2^(n_pow_periods)) multiples of the period."
   write (unit_file,'(A)') "Floquet Operator U_F = U_swap e^(-i H)."
   write (unit_file,'(A)') "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
   write (unit_file,'(A)') "Periodic perturbed swap, U_swap = exp(-i(pi/4 + kick) * sum (sigma*sigma) )."

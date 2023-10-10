@@ -76,7 +76,8 @@ contains
    call random_seed(size = n)
    allocate(seed(n))
    ! First try if the OS provides a random number generator
-   open(newunit=un, file="/dev/urandom", access="stream", &
+   !open(newunit=un, file="/dev/urandom", access="stream", &
+   open(newunit=un, file="/dev/random", access="stream", &
         form="unformatted", action="read", status="old", iostat=istat)
    if (istat == 0) then
       read(un) seed
