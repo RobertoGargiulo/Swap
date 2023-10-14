@@ -4,7 +4,7 @@ filestring="dynamics_swap_LR"
 ulimit -s unlimited
 make $filestring
 
-n_threads=32
+n_threads=40
 stack=6G
 export OMP_NUM_THREADS=$n_threads 
 export OMP_STACKSIZE=$stack
@@ -16,8 +16,8 @@ mv $file_out output/
 ###Choice of parameters
 n_disorder_2=10240
 steps="1000000"
-list_nspin=$(seq 4 2 12)
-list_J="0.1 0.01"
+list_nspin=$(seq 10 2 12)
+list_J="1.0"  #"0.1 0.01"
 list_V="3.00"
 list_hz="16.00"
 list_kick="0.00"

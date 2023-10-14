@@ -631,7 +631,7 @@ contains
 
     integer :: config(nspin), states(dim_Sz0), config2(nspin)
     integer :: inverse(dimSpin1**nspin)
-    integer (c_int) :: i, j, k, m, n, l, r
+    integer (c_int) :: i, j, k, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2
     real (c_double) :: OPRz(dimSpin1,dimSpin1), OPRzz(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
     real (c_double) :: OPRxy(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -707,7 +707,7 @@ contains
 
     integer :: config(nspin), idxSz(dim_Sz), config2(nspin)
     integer :: inverse(dimSpin1**nspin)
-    integer (c_int) :: i, j, k, m, n, l, r
+    integer (c_int) :: i, j, k, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2
     real (c_double) :: OPRz(dimSpin1,dimSpin1), OPRzz(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
     real (c_double) :: OPRxy(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -783,7 +783,7 @@ contains
 
     integer :: config(nspin), idxSz(dim_Sz), config2(nspin)
     integer :: inverse(dimSpin1**nspin)
-    integer (c_int) :: i, j, k, q, m, n, l, r
+    integer (c_int) :: i, j, k, q, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2
     real (c_double) :: OPRz(dimSpin1,dimSpin1), OPRzz(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
     real (c_double) :: OPRxy(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -860,7 +860,7 @@ contains
     real (c_double), intent(out) :: H(dim_Sz0,dim_Sz0)
 
     integer :: config(nspin), states(dim_Sz0), config2(nspin), inverse(dimSpin1**nspin)
-    integer (c_int) :: i, j, k, m, n, l, r
+    integer (c_int) :: i, j, k, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2, idxs1, idxs2
     real (c_double) :: OPR1(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
     real (c_double) :: OPR2(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -943,7 +943,7 @@ contains
     real (c_double), intent(out) :: H(dim_Sz,dim_Sz)
 
     integer :: config(nspin), idxSz(dim_Sz), config2(nspin), inverse(dimSpin1**nspin)
-    integer (c_int) :: i, j, k, m, n, l, r
+    integer (c_int) :: i, j, k, l, r
     integer (c_int) :: idx1, idx2, idxp1, idxp2, s1, s2, idxs1, idxs2
     real (c_double) :: OPR1(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
     real (c_double) :: OPR2(dimSpin1,dimSpin1,dimSpin1,dimSpin1)
@@ -1021,6 +1021,29 @@ contains
 
 
 
+  subroutine buildSz_UMBL_LR(nspin, dim_Sz, Sz, Jxy, Vzz, hz, const, U)
+
+    !Builds U = exp(const*H_MBL) with const complex, such that no remaining H is left 
+    use exponentiate, only: diagSYM
+    integer (c_int), intent(in) :: nspin, dim_Sz, Sz
+    real (c_double), intent(in) :: Jxy(nspin-1), Vzz(nspin-1,nspin), hz(nspin)
+    complex (c_double_complex), intent(in) :: const
+    complex (c_double_complex), intent(out) :: U(dim_Sz,dim_Sz)
+
+    integer (c_int) :: i
+    real (c_double), allocatable :: H(:,:), E(:), W_r(:,:)
+
+    allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
+    call buildSz_HMBL_LR(nspin, dim_Sz, Sz, Jxy, Vzz, hz, H)
+    call diagSYM( 'V', dim_Sz, H, E, W_r)
+    deallocate(H)
+    U = 0
+    forall (i=1:dim_Sz) U(i,i) = exp(const*E(i))
+    U = matmul(W_r,matmul(U,transpose(W_r)))
+
+    deallocate(W_r,E)
+
+  end subroutine
 
 
   !------------ Some printing subroutines -------------!
@@ -1175,10 +1198,6 @@ contains
     enddo
     print *, ""
 
-
   end subroutine
-
-
-
 
 end module matrices

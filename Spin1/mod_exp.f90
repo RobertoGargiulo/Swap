@@ -4,15 +4,15 @@ module exponentiate
 
   implicit none
 
-  complex (c_double_complex), private, parameter :: C_ZERO = dcmplx(0._c_double, 0._c_double)
-  complex (c_double_complex), private, parameter :: C_ONE = dcmplx(1._c_double, 0._c_double)
-  complex (c_double_complex), private, parameter :: C_UNIT = dcmplx(0._c_double, 1._c_double)
+  complex (c_double_complex), private, parameter :: C_ZERO = cmplx(0._c_double, 0._c_double, kind=c_double_complex)
+  complex (c_double_complex), private, parameter :: C_ONE = cmplx(1._c_double, 0._c_double, kind=c_double_complex)
+  complex (c_double_complex), private, parameter :: C_UNIT = cmplx(0._c_double, 1._c_double, kind=c_double_complex)
 
-  INTEGER, PRIVATE, PARAMETER              :: idp=KIND(1.0D0)
-  REAL(KIND=idp), PRIVATE, PARAMETER       :: ZERO = 0.0D0, ONE = 1.0D0
-  REAL(KIND=idp), PRIVATE, PARAMETER       :: Pi = 3.141592653589793D0
-  COMPLEX(KIND=idp), PRIVATE, PARAMETER    :: II = DCMPLX(0.D0,1.D0)
-  COMPLEX(KIND=idp), PRIVATE, PARAMETER    :: ZZERO = DCMPLX(0.D0,0.D0)
+  !INTEGER, PRIVATE, PARAMETER              :: idp=KIND(1._c_double)
+  !REAL(KIND=idp), PRIVATE, PARAMETER       :: ZERO = 0.0_c_double, ONE = 1.0_c_double
+  !REAL(KIND=idp), PRIVATE, PARAMETER       :: Pi = 3.141592653589793_c_double
+  !COMPLEX(KIND=idp), PRIVATE, PARAMETER    :: II = DCMPLX(0.D0,1.D0)
+  !COMPLEX(KIND=idp), PRIVATE, PARAMETER    :: ZZERO = DCMPLX(0.D0,0.D0)
   !integer (c_int), private :: i, j, !M
 
 
@@ -47,7 +47,6 @@ contains
     real(c_double), intent(out) :: E(N), W(N,N) !Siccome H non ci serve più, non possiamo usare solo H come matrice iniziale
     !e poi ci inseriamo gli autovettori?
 
-    real(c_double) :: err
     
     integer :: iwork(5*N), ifail(N), info, M, i, j
     real(c_double) :: work(8*N), HP(N*(N+1)/2), VL, VU, DLAMCH
@@ -91,7 +90,6 @@ contains
     real(c_double), intent(out) :: E(N)
     complex (c_double_complex), intent(out) :: W(N,N) 
 
-    real(c_double) :: err
     
     real (c_double) :: rwork(7*N)
     integer :: iwork(5*N), ifail(N), info, M, i, j
@@ -133,21 +131,54 @@ contains
     complex(c_double_complex), intent(in) :: const
     complex(c_double_complex), intent(out) :: U(dim,dim)
 
+    complex(c_double_complex) :: Udiag(dim,dim), Uaux(dim,dim), Waux(dim,dim)
+    integer (c_int) :: i
+
+    Waux = cmplx(W, kind=c_double_complex)
+    !print *, "Conversion of W from real to complex, done."
+    Udiag = 0
+    do i = 1, dim
+      Udiag(i,i) = exp( const*cmplx(E(i), kind=c_double_complex) )
+    enddo
+    !print *, "Diagonal matrix Udiag, done."
+
+    !U = matmul(W,matmul(Udiag,transpose(W)))
+    !print *, "C_ONE = ", C_ONE, "C_ZERO = ", C_ZERO
+
+    call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim , Waux , dim, C_ZERO, Uaux, dim)
+    !print *, "First matrix multiplication, done."
+    call zgemm('N','N', dim, dim, dim, C_ONE, Waux, dim , Uaux, dim, C_ZERO, U, dim)
+    !print *, "Second matrix multiplication, done."
+
+    !call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim , dcmplx(W), dim, C_ZERO, Uaux, dim)
+    !call zgemm('N','N', dim, dim, dim, C_ONE, dcmplx(W), dim , Uaux, dim, C_ZERO, U, dim)
+
+
+  end subroutine expSYM
+
+  subroutine expHE( dim, const, E, W, U )
+
+    integer (c_int), intent(in) :: dim
+    real(c_double), intent(in) :: E(dim)
+    complex(c_double_complex), intent(in) :: const
+    complex(c_double_complex), intent(in) :: W(dim,dim)
+    complex(c_double_complex), intent(out) :: U(dim,dim)
+
     complex(c_double_complex) :: Udiag(dim,dim), Uaux(dim,dim)
     integer (c_int) :: i
 
     Udiag = 0
     do i = 1, dim
-      Udiag(i,i) = exp(const*dcmplx(E(i)))
+      Udiag(i,i) = exp( const*cmplx(E(i), kind=c_double_complex) )
     enddo
 
     !U = matmul(W,matmul(Udiag,transpose(W)))
+    !print *, "C_ONE = ", C_ONE, "C_ZERO = ", C_ZERO
 
-    call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim , dcmplx(W), dim, C_ZERO, Uaux, dim)
-    call zgemm('N','N', dim, dim, dim, C_ONE, dcmplx(W), dim , Uaux, dim, C_ZERO, U, dim)
+    call zgemm('N','C', dim, dim, dim, C_ONE, Udiag, dim, W, dim, C_ZERO, Uaux, dim)
+    call zgemm('N','N', dim, dim, dim, C_ONE, W, dim , Uaux, dim, C_ZERO, U, dim)
 
-
-  end subroutine expSYM
+  end subroutine
 
   subroutine diagGENERAL( JOBZ, N, U, PH, WL, WR )
     

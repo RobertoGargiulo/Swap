@@ -7,11 +7,17 @@
 
 module entanglement
 
+#ifdef __INTEL_COMPILER
+    USE IFPORT
+#endif
   use iso_c_binding
-  use genmat
+  use matrices
   use exponentiate
   use printing
+  use functions, only: decode, buildState_Sz0_to_FullHS
   implicit none
+
+  integer (c_int), private, parameter :: dimSpin1 = 3
 
 
 contains
@@ -263,12 +269,10 @@ contains
     complex (c_double_complex), intent(in) :: psi_Sz0(dim_Sz0)
     real (c_double) :: mutual_information_Sz0
 
-    real (c_double) :: MI, MBEE
+    real (c_double) :: MI
     complex (c_double_complex) :: rho_A(dim_A,dim_A), rho_B(dim_A,dim_A), rho_AB(dim_A*dim_A,dim_A*dim_A)!, rho(dim_Sz0,dim_Sz0)
     complex (c_double_complex) :: psi(dim)
-    integer :: i, l, states(dim_Sz0), config(nspin)
 
-    real (c_double) :: var1
 
     call buildState_Sz0_to_FullHS(nspin, dim, dim_Sz0, psi_Sz0, psi)
 

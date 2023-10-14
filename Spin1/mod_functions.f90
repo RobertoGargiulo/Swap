@@ -14,7 +14,9 @@
 
 module functions
   
-  !use ifport
+#ifdef __INTEL_COMPILER
+    USE IFPORT
+#endif
   use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
   use printing
   implicit none
@@ -88,7 +90,7 @@ contains
    call random_seed(size = n)
    allocate(seed(n))
    ! First try if the OS provides a random number generator
-   open(newunit=un, file="/dev/urandom", access="stream", &
+   open(newunit=un, file="/dev/random", access="stream", &
         form="unformatted", action="read", status="old", iostat=istat)
    if (istat == 0) then
       read(un) seed
@@ -264,7 +266,7 @@ contains
     integer (ip), intent(out) :: states(dim_Sz0)
 
     integer :: config(nspin)
-    integer (ip) :: i, j, k, dim
+    integer (ip) :: i, k, dim
 
     dim = dimSpin1**nspin
     k = 0
@@ -289,7 +291,7 @@ contains
      integer (ip), intent(out) :: states(dim_Sz0), inverse(dimSpin1**nspin)
  
      integer :: config(nspin)
-     integer (ip) :: i, j, l, dim
+     integer (ip) :: i, l, dim
  
      dim = dimSpin1**nspin
      l = 0
@@ -319,7 +321,7 @@ contains
     integer (ip), intent(out) :: states(dim_Sz)
 
     integer :: config(nspin)
-    integer (ip) :: i, j, k, dim
+    integer (ip) :: i, k, dim
 
     dim = dimSpin1**nspin
     k = 0
@@ -345,7 +347,7 @@ contains
     integer (ip), intent(out) :: states(dim_Sz), inverse(dimSpin1**nspin)
 
     integer :: config(nspin)
-    integer (ip) :: i, j, l, dim
+    integer (ip) :: i, l, dim
 
     dim = dimSpin1**nspin
     l = 0
@@ -420,7 +422,7 @@ contains
     complex (dcp), allocatable, intent(out) :: psi_Sz(:)
     integer (ip), intent(out) :: dim_Sz, Sz
 
-    integer :: i, l, sigmaz(nspin), config(nspin)
+    integer :: i, l, config(nspin)
     real :: mag_psi, mag_s
     integer, allocatable :: states(:)
     logical :: flag
@@ -547,7 +549,7 @@ contains
     implicit none
     real (dp), intent(in) :: theta, array(:)
     integer (ip) :: indx, mid, left, right!, range
-    integer (ip) :: prev, next, n
+    integer (ip) :: n!, prev, next
 
     indx = -1
     left = 1

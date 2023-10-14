@@ -21,7 +21,7 @@ fi
 ###Choice of parameters
 n_disorder_2=20480
 steps="1000000"
-list_nspin=$(seq 4 2 10)
+list_nspin=$(seq 2 2 8)
 list_J="0.01" #"1.0 0.1 0.05 0.01" #"2.0 0.5 0.1 0.05" #0.001 0.0001 0.00001"
 list_V="3.00"
 list_hz="16.00"

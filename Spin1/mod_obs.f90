@@ -129,7 +129,7 @@ contains
     complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
     real (dp) :: sigmaz_corr_c_Sz0
 
-    integer (ip) :: i, k, l, config(nspin), states(dim_Sz0), sp, sq
+    integer (ip) :: i, l, config(nspin), states(dim_Sz0), sp, sq
     real (dp) :: corr, avgq, avgp
 
     avgq = 0
@@ -505,7 +505,7 @@ contains
     real (dp), intent(in) :: Vz(nspin-1), hz(nspin)
     real (dp) :: E(dim_Sz)
 
-    integer (ip) :: i, k, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
+    integer (ip) :: i, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
 
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
     do l = 1, dim_Sz
@@ -543,7 +543,7 @@ contains
     real (dp), intent(in) :: Vz(nspin-1), hz(nspin)
     real (dp) :: QE(dim_Sz)
 
-    integer (ip) :: i, k, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
+    integer (ip) :: i, l, config(nspin), idxSz(dim_Sz), sigmaz(nspin)
 
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
     do l = 1, dim_Sz
@@ -654,7 +654,7 @@ contains
     integer (ip), intent(in) :: steps, start
     real (dp), intent(in) :: avg(steps), sigma(steps)
     real (dp), intent(out) :: t_avg, t_sigma
-    integer (ip) :: i, j, k
+    integer (ip) :: j
     
     t_avg = 0
     t_sigma = 0
@@ -758,7 +758,7 @@ contains
     integer (ip), allocatable :: pi_paired(:)
 
     integer (ip) :: dim, alpha, beta !, beta1, beta2
-    real (dp) :: val
+    !real (dp) :: val
 
     dim = size(QE)
     allocate(pair(dim), near(dim), pi_paired(dim))
@@ -828,7 +828,7 @@ contains
     integer (ip), allocatable :: pi_paired(:)
 
     integer (ip) :: dim, alpha, beta !, beta1, beta2
-    real (dp) :: val
+    !real (dp) :: val
 
     dim = size(QE)
     allocate(pair(dim), near(dim), pi_paired(dim))
@@ -910,7 +910,7 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
     real (dp) :: QE(dim_Sz)
 
-    integer (ip) :: i, k, l, config(nspin), idxSz(dim_Sz)
+    integer (ip) :: i, l, config(nspin), idxSz(dim_Sz)
     !real (dp) :: mu
 
     QE = 0
@@ -947,7 +947,7 @@ contains
     real (dp), intent(in) :: Vzz(nspin-1,nspin), hz(nspin)
     real (dp) :: E(dim_Sz)
 
-    integer (ip) :: i, k, l, config(nspin), idxSz(dim_Sz)
+    integer (ip) :: i, l, idxSz(dim_Sz)
 
     E = 0
     call basis_Sz(nspin, dim_Sz, Sz, idxSz)
