@@ -232,9 +232,9 @@ program test_LR
       sigmaz_previous = sigmaz_Sz(nspin, dim_Sz, Sz, psi_swap)
       Z_previous = sum( sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
         & (sigmaz_previous(1::2) - sigmaz_previous(2::2)) )
-      write (*,"(1A, I0, 2X1A,*(G16.10))") "j = ", j-1, "sigma = ", sigmaz_previous(:)
-      print *, Z_previous
-      print *, ""
+      !write (*,"(1A, I0, 2X1A,*(G16.10))") "j = ", j-1, "sigma = ", sigmaz_previous(:)
+      !print *, Z_previous
+      !print *, ""
       !print *, sign(ones(nspin/2), sigmaz_initial(1::2) - sigmaz_initial(2::2)  ) * &
       !  & (sigmaz_previous(1::2) - sigmaz_previous(2::2))
       !print *, ""

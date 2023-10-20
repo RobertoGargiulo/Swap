@@ -110,6 +110,7 @@ for j in range(num_alpha):
                      
     plt.xticks(Larray)
     plt.yscale('log')
+    plt.xscale('log')
     plt.xlabel('$L$', fontsize=12)
     plt.ylabel('$\\overline{\\tau}$', fontsize=12)
     plt.legend(fontsize=9, loc='right', bbox_to_anchor=(1.3,0.5))
@@ -117,7 +118,7 @@ for j in range(num_alpha):
     plt.yticks(fontsize=10)
     plt.ylim([10**1, 10**14])
     
-    txt = 'figures/Decay_Times_avg_wrt_L_kick%.2f_alpha%.2f.pdf' % (kick, alpha[j])
+    txt = 'figures/Decay_Times_avg_wrt_L_kick%.2f_alpha%.2f_bilog.pdf' % (kick, alpha[j])
     print(txt)
     plt.savefig(txt, dpi=600, bbox_inches='tight')
 

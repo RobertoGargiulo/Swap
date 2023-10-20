@@ -15,7 +15,8 @@ plt.rcParams['figure.figsize'] = [5,3]
 
 
 # Import Files
-Larray = np.arange(4, 13, 2)
+state = "UpZero"
+Larray = np.arange(2, 9, 2)
 T = 1
 J = [0.01, 0.05, 0.1, 1.0] 
 V = 3
@@ -62,11 +63,11 @@ for i in range(num_J):
             
 
 
-            filename[q, i, j] = 'data/dynamics/decay_sigmaz_Swap_LR_Neel_nspin%d_steps%d_period%.2f_n_disorder%d_n_periods%d_Jxy%.5f_Vzz%.2f_hz%.2f_kick%.3f_alpha%.2f.txt' % (
-                L, steps, T, n_iter, n_periods[q,i,j], J[i], V, hz, kick, alpha[j])
+            filename[q, i, j] = 'data/dynamics/decay_sigmaz_Swap_LR_%s_nspin%d_steps%d_period%.2f_n_disorder%d_n_periods%d_Jxy%.5f_Vzz%.2f_hz%.2f_kick%.3f_alpha%.2f.txt' % (
+                state, L, steps, T, n_iter, n_periods[q,i,j], J[i], V, hz, kick, alpha[j])
 
             print(filename[q, i, j])
-            files[q, i, j] = np.genfromtxt(filename[q, i, j], skip_header=11, skip_footer=2)
+            files[q, i, j] = np.genfromtxt(filename[q, i, j], skip_header=12, skip_footer=2)
             print(files[q, i, j])
             data[q, i, j] = files[q, i, j]
             print(data[q, i, j][0, :])
@@ -115,7 +116,7 @@ for j in range(num_alpha):
     plt.legend(fontsize=9, loc='right', bbox_to_anchor=(1.3,0.5))
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-    plt.ylim([10**1, 10**14])
+    plt.ylim([10**1, 10**11])
     
     txt = 'figures/Decay_Times_avg_wrt_L_kick%.2f_alpha%.2f.pdf' % (kick, alpha[j])
     print(txt)
@@ -124,8 +125,6 @@ for j in range(num_alpha):
 
 
 X = np.empty((numL, num_J, num_alpha), dtype=object)
-
-
 X = tau
 
 for i in range(num_J):

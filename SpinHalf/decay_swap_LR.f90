@@ -34,7 +34,7 @@ program test_LR
   complex (dcp), allocatable :: psi(:), psi_swap(:), psi_Sz(:)
   complex (dcp), dimension(:,:), allocatable :: U, USwap!, UMBL, UMBL2, Id
 
-  integer(ip) :: count_beginning, count_end, count_rate
+  integer(ilp) :: count_beginning, count_end, count_rate
 
   character(len=200) :: filestring
   integer (ip) :: unit_decay

@@ -3,13 +3,13 @@ program test_LR
   use functions, only: binom, init_random_seed, norm => normalization_power_law, disorder_average
   use exponentiate, only: diagSYM, expSYM, diagUN
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &
-    & shift_spectral_pairing => log_gap_difference_half_spectrum_shift, &
-    & exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
+    & shift_spectral_pairing => log_gap_difference_half_spectrum_shift!, &
+    !& exact_QE => exact_quasi_energies_Sz0_LR, exact_E => exact_energies_Sz0_LR
   use matrices, only: buildHSwap => buildSz0_HSwap, buildHMBL => buildSz0_HMBL_LR
   use printing, only: take_time, printmat
   use sorts, only: sort => dpquicksort
   use omp_lib
-  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
+  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex, ilp => c_long
   implicit none
 
   complex (dcp), parameter :: C_UNIT = dcmplx(0._dp, 1._dp)
@@ -48,7 +48,7 @@ program test_LR
   EXTERNAL SELECT
   EXTERNAL write_info
 
-  integer(ip) :: count_beginning, count_end, count_rate
+  integer(ilp) :: count_beginning, count_end, count_rate
   character(len=200) :: filestring
 
 
@@ -207,16 +207,13 @@ program test_LR
     call buildHMBL( nspin, dim_Sz0, Jxy, Vzz, hz, H )
     call diagSYM( 'V', dim_Sz0, H, E, W_r )
     E_MBL(i,:) = E
-    !print *, "H_MBL Built..."
 
     call gap_ratio(E, r_avg2(i), r_sq2(i))
 
-    print *, "Computing U_F..."
     call expSYM( dim_Sz0, -C_UNIT*T0, E, W_r, U )
     !print *, "U_MBL computed."
     !print *, size(U), size(USwap)
     U = matmul(USwap,U)
-    print *, "U_F, computed."
     call diagUN( SELECT, dim_Sz0, U, PH, W)
     E = real(C_UNIT*log(PH), kind=dp)
     call sort(E)
@@ -229,7 +226,7 @@ program test_LR
     !QE_exact = exact_QE(nspin, dim_Sz0, Vzz, hz)
     !call sort(QE_exact)
     !print *, "Degeneracies of QE_exact:"
-    !call find_degeneracies( size(QE_exact), QE_exact, idxuE, deg) 
+    !call find_degeneracies( size(QE_exact), QE_exact, idxuE, deg)
     !print *, sum(deg), dim_Sz0
 
     !E_exact = exact_E(nspin, dim_Sz0, Vzz, hz)
@@ -279,18 +276,18 @@ program test_LR
 
   print *, "Average of Gap Ratio (over the spectrum and then disorder)"
   print "(*(A26))", "<r>_Flip", "sigma(r)_Flip", "<r>_MBL", "sigma(r)_MBL"
-  print *, r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
+  write (*,'*(G24.16)'), r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
   print *, "Average of pi-Logarithmic (pi-)Gap"
   print "(*(A26))", "<log(Delta_pi/Delta_0)>", "sigma(log(Delta_pi/Delta_0))", & 
     & "<log(Delta_pi)>", "sigma(log(Delta_pi))", "<log(Delta_0)>", "sigma(log(Delta_0))"
-  print *, log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_pair_dis_sigma, &
+  write (*,'*(G24.16)'), log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_pair_dis_sigma, &
    & log_near_dis_avg, log_near_dis_sigma
 
   print *, "Average of Half Shifted Logarithmic (pi-)Gap"
   print "(*(A26))", "<log(Delta_pi/Delta_0)>", "sigma(log(Delta_pi/Delta_0))", & 
     & "<log(Delta_pi)>", "sigma(log(Delta_pi))", "<log(Delta_0)>", "sigma(log(Delta_0))"
-  print *, shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, &
+  write (*,'*(G24.16)'), shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, &
     & shift_log_pair_dis_sigma, shift_log_near_dis_avg, shift_log_near_dis_sigma
 
   deallocate(Jxy, Vzz, hz)
@@ -319,11 +316,11 @@ subroutine write_info(unit_file)
 
   integer, intent(in) :: unit_file
 
-  write (unit_file,*) "Some info: "
-  write (unit_file,*) "Quasi-Energies of Floquet Operator U_F = U_swap e^(-i H)."
-  write (unit_file,*) "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
-  write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/4 + kick) * sum (sigma*sigma) )."
-  write (unit_file,*) "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  J is uniform."
-  write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
+  write (unit_file,'(A)') "Some info: "
+  write (unit_file,'(A)') "Quasi-Energies of Floquet Operator U_F = U_swap e^(-i H)."
+  write (unit_file,'(A)') "Spin-1/2 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
+  write (unit_file,'(A)') "Periodic perturbed swap, U_swap = exp(-i(pi/4 + kick) * sum (sigma*sigma) )."
+  write (unit_file,'(A)') "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2];  hz is taken in [-hz, hz];  J is uniform."
+  write (unit_file,'(A)') "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
 
 end subroutine

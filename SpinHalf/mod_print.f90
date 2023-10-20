@@ -248,20 +248,28 @@ contains
 
   subroutine take_time(count_rate, count_start, count_end, opt, filestring)
     implicit none
-    integer, intent(in) :: count_rate, count_start
-    integer, intent(out) :: count_end
+    integer (c_long), intent(in) :: count_rate, count_start
+    integer (c_long), intent(out) :: count_end
     character :: opt*1
     character (*) :: filestring
   
     real (c_double) :: time_s
-    integer(c_int) :: time_min
+    integer(c_long) :: time_min, time_hour, time_day
   
     call system_clock(count_end)
   
     time_s = real(count_end - count_start) / real(count_rate)
-    time_min = int(time_s/60,kind(time_min))
+    !print *, "time_s = ", time_s
+    time_day = int(time_s/(60*60*24),kind(time_day))
+    time_s = time_s - 60*60*24*time_day
+    time_hour = int(time_s/(60*60),kind(time_day))
+    time_s = time_s - 60*60*time_hour
+    time_min = int(time_s/(60),kind(time_day))
+    time_s = time_s - 60*time_min
+    !print *, "time_s = ", time_s
+
     if(opt == 'T') then
-      print "(A,A,A,1X,I4,A,2X,F15.10,A)", "Elapsed Time for ", filestring, ": ", time_min, "min", time_s - 60*time_min, "sec"
+      print "(A,A,A,3(1X,I0,A,1X),1X,F14.10,A)", "Elapsed Time for ", filestring, ": ", time_day, " days", time_hour, " hours", time_min, " min", time_s, " sec"
     else if(opt == 'F') then
       print *, ""
     endif

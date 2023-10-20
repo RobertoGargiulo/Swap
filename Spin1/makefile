@@ -19,7 +19,7 @@ MOD = ${SRC:.f90=.o} #substitute .f90 with .o in all 'SRC' files
 	$(FC) $(FFLAGS) $(PFLAGS) -c $<
 
 dummy: $(MOD) dummy.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
+	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $@.o $(LIBS)
 dummy2: $(MOD) dummy2.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 test_Sz: $(MOD) test_Sz.o

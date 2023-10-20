@@ -5,13 +5,14 @@ program test_LR
     & project => projectState_FullHS_to_Sz
   use exponentiate, only: diagSYM, expSYM
   use observables, only: sigmaz_Sz
-  use matrices, only: buildHSwap => buildSz_HSwap, buildHMBL => buildSz_HMBL_LR
+  use matrices, only: buildHSwap => buildSz_HSwap, buildUMBL => buildSz_UMBL_LR, &
+    & print_hamiltonian_Sz, print_unitary_Sz
   use states, only: buildstate => buildUpZeroState, &
     & printstate_sz
   use printing, only: take_time, printmat
   use sorts, only: sort => dpquicksort
   use omp_lib
-  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex
+  use iso_c_binding, dp => c_double, ip => c_int, dcp => c_double_complex, ilp => c_long
   implicit none
 
   complex (dcp), parameter :: C_ZERO = dcmplx(0._dp, 0._dp)
@@ -22,8 +23,9 @@ program test_LR
   character(len=*), parameter :: name_initial_state = "UpZero"
   real (dp), parameter :: pi = 4._dp * atan(1._dp)
 
-  integer (ip)     ::  nspin, dim, n_disorder, steps
-  integer (ip)     ::  i, j, l, k, p, q, m, dim_Sz, Sz
+  integer (ip)     ::  nspin, dim, n_disorder
+  integer (ip)     ::  i, k, q, t, dim_Sz, Sz
+  integer (ilp)     :: j, n_pow_periods, n_periods, steps
   integer (ip)     ::  unit_sigmaz
 
   real(dp), dimension(:), allocatable :: Jxy, hz
@@ -32,24 +34,26 @@ program test_LR
 
   real (dp), dimension(:), allocatable :: E
   real (dp), dimension(:,:), allocatable :: H, W_r
-  complex(dcp), dimension(:,:), allocatable :: U, W, USwap
+  complex(dcp), dimension(:,:), allocatable :: U, USwap
 
   real (dp) :: norm
-  complex (dcp), allocatable :: psi(:), state(:), psi_swap(:), psi_Sz(:)
+  complex (dcp), allocatable :: psi(:), psi_swap(:), psi_Sz(:)
   real (dp), allocatable :: sigmaz_avg(:,:), sigmaz_sq(:,:)
 
-  logical :: SELECT
-  EXTERNAL SELECT
 
   integer(ip) :: count_beginning, count_end, count_rate
   character(len=200) :: filestring
   character(len=:), allocatable :: columns
 
+  EXTERNAL write_info
   !--------------- (Explicit) Interfaces ------------!
   interface
     function column_titles(nspin) result(columns)
       integer, intent(in) :: nspin
       character(26*(4*nspin+3)) :: columns
+    end function
+    function column_titles_red() result(columns)
+      character(26*(4*2+3)) :: columns
     end function
   end interface
 
@@ -69,6 +73,13 @@ program test_LR
   write (*,*) "Number of Steps"
   read (*,*) steps
   print*,""
+
+  write (*,*) "Power of 2 for the Number of Periods at each step (n_per = 2^(pow)+1)"
+  read (*,*) n_pow_periods 
+  print*,""
+  n_periods = 2**(n_pow_periods)
+  j = n_periods * steps
+  print *, "Total maximum time: ", j
 
   write (*,*) "Period T0"
   read (*,*) T0
@@ -98,8 +109,6 @@ program test_LR
  
   dim = dimSpin1**nspin
   T1 = pi/2 + kick
-  !Sz = 0 !!!!!!! <------- Magnetization of Subspace
-  !dim_Sz = dimSpin1_Sz(nspin, Sz)
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
@@ -107,13 +116,13 @@ program test_LR
   !------------------- File Manager ------------------------!
 
   write(filestring,93) "data/dynamics/sigmaz_Swap_LR_" // trim(name_initial_state) // "_nspin", &
-    & nspin, "_steps", steps, "_period", T0, "_n_disorder", n_disorder, &
+    & nspin, "_steps", steps, "_period", T0, "_n_disorder", n_disorder, "_n_periods", n_periods, &
     & "_J", Jxy_coupling, "_V", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, &
     & "_alpha", int(alpha), alpha-int(alpha), ".txt"
   print *, "Output: ", trim(filestring)
 
-  93  format(A,I0, AI0, A,F4.2, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
+  93  format(A,I0, A,I0, A,F4.2, A,I0, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
 
   open(newunit=unit_sigmaz,file=filestring)
   call write_info(unit_sigmaz, trim(name_initial_state))
@@ -143,7 +152,7 @@ program test_LR
   allocate(psi_swap(dim_Sz))
 
   allocate( Jxy(nspin-1), Vzz(nspin-1,nspin), hz(nspin))
-  allocate(U(dim_Sz,dim_Sz), H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
+  allocate(U(dim_Sz,dim_Sz)) !, H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
 
   allocate(sigmaz_avg(steps,nspin), sigmaz_sq(steps,nspin))
   sigmaz_avg = 0
@@ -152,9 +161,9 @@ program test_LR
   !$OMP PARALLEL
   call init_random_seed() 
   print *, "Size of Thread team: ", omp_get_num_threads()
-  !print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
-  !$OMP do reduction(+: sigmaz_avg, sigmaz_sq) private(i, hz, Vzz, norm, j, &
-  !$OMP & psi_swap, H, E, W_r, U )
+  print *, "Verify if current code segment is in parallel: ", omp_in_parallel()
+  !$OMP do reduction(+: sigmaz_avg, sigmaz_sq) private(i, j, t, hz, Vzz, norm, &
+  !$OMP & psi_swap, U )
   do i = 1, n_disorder
  
     if (n_disorder < 10) then
@@ -194,10 +203,14 @@ program test_LR
     !print *, ""
  
     !------------ Floquet Operator(s) --------------!
-    call buildHMBL(nspin, dim_Sz, Sz, Jxy, Vzz, hz, H)
-    call diagSYM( 'V', dim_Sz, H, E, W_r)
-    call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
+    !call buildHMBL(nspin, dim_Sz, Sz, Jxy, Vzz, hz, H)
+    !call diagSYM( 'V', dim_Sz, H, E, W_r)
+    !call expSYM( dim_Sz, -C_UNIT*T0, E, W_r, U )
+    call buildUMBL( nspin, dim_Sz, Sz, Jxy, Vzz, hz, -C_UNIT*T0, U )
     U = matmul(USwap,U)
+    do t = 1, n_pow_periods
+      U = matmul(U,U)
+    enddo
 
     psi_swap = psi_Sz
     j = 1
@@ -221,22 +234,16 @@ program test_LR
 
   sigmaz_avg = sigmaz_avg / n_disorder
   sigmaz_sq = sqrt( (sigmaz_sq/n_disorder - sigmaz_avg**2) / n_disorder )
+  write (*,'(A)') column_titles_red()
+  do j = 1, steps, max(steps/20, 1)
+    write (*,'(1I24,*(G24.16))') (j-1)*n_periods + 1, sigmaz_avg(j,1:2), sigmaz_sq(j,1:2)
+  enddo
 
   columns = column_titles(nspin)
-  write (*,*) columns
-  do j = 1, steps, max(1,steps/100)
-    write (*,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
-  enddo
-
-  write (unit_sigmaz,*) columns
+  write (unit_sigmaz,'(A)') columns
   do j = 1, steps
-    write (unit_sigmaz,*) j*T0, sigmaz_avg(j,:), sigmaz_sq(j,:)
+    write (unit_sigmaz,'(1I24,*(G24.16))') (j-1)*n_periods + 1, sigmaz_avg(j,:), sigmaz_sq(j,:)
   enddo
-
-  deallocate(sigmaz_avg, sigmaz_sq)
-  deallocate(psi_swap, psi_Sz)
-  deallocate(USwap, H, E, W_r, U)
-  deallocate(Vzz, hz)
 
   close(unit_sigmaz)
 
@@ -244,30 +251,19 @@ program test_LR
 
 end program
 
-logical function SELECT(z)
-
-  implicit none
-
-  complex(kind=8), intent(in) :: z
-
-  SELECT = .TRUE.
-  RETURN
-
-end
-
 subroutine write_info(unit_file, state_name)
 
   integer, intent(in) :: unit_file
   character(len=*) :: state_name
 
-  write (unit_file,*) "Some info: "
-  write (unit_file,*) "Dynamics of disorder average of magnetization at integer multiples of the period."
-  write (unit_file,*) "Spin-1 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
-  write (unit_file,*) "Periodic perturbed swap, U_swap = exp(-i(pi/2 + kick) * sum (sigma*sigma)^2 + (sigma*sigma) - 2 )."
-  write (unit_file,*) "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2] (OBC); &
-  &  hz is taken in [-hz, hz];  J is uniform."
-  write (unit_file,*) "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
-  write (unit_file,*) "Initial state is "//trim(state_name)//trim(".")
+  write (unit_file,'(A)') "Some info: "
+  write (unit_file,'(A)') "Dynamics of disorder average of magnetization at integer multiples of the period."
+  write (unit_file,'(A)') "Spin-1 chain with hamiltonian H = sum hz * Z + V * ZZ + J * (XX + YY)."
+  write (unit_file,'(A)') "Periodic perturbed swap, U_swap = exp(-i(pi/2 + kick) * sum (sigma*sigma)^2 + (sigma*sigma) - 2 )."
+  write (unit_file,'(A)') "V = V_{ij}/|i-j|^alpha, with V_{ij} is taken in [-3V/2, -V/2] (OBC); &
+  &  hz is taken in'(A)'[-hz, hz];  J is uniform."
+  write (unit_file,'(A)') "Exact diagonalization of the dense matrix has been used to compute U_F and diagonalize it."
+  write (unit_file,'(A)') "Initial state is "//trim(state_name)//trim(".")
 
 end subroutine
 
@@ -279,17 +275,48 @@ function column_titles(nspin) result(columns)
   integer (c_int), intent(in) :: nspin
   character (26*(4*nspin+3)) :: columns
   character (nspin) :: s_index
-  integer (c_int) :: i, j1, j2, j3, j4
+  integer (c_int) :: i, j1, j2, j3, j4, step
 
 
   columns = ""
-  columns(2:26+2) = "j*T0"
+  step = 24
+  columns(2:step+2) = "j*T0"
   do i = 1, nspin
     write(s_index, "(I0)") i
-    j1 = 26*i+2
-    j2 = 26*(i+1)+2
-    j3 = 26*(i+nspin)+3
-    j4 = 26*(i+nspin+1)+3
+    j1 = step*i+2
+    j2 = step*(i+1)+2
+    j3 = step*(i+nspin)+3
+    j4 = step*(i+nspin+1)+3
+    !print *, j1, j2, j3, j4
+    columns(j1:j2) = trim("sigma_z^")//trim(s_index)
+    columns(j3:j4) = trim("err(sigma_z^")//trim(s_index)//trim(")")
+    !print *, columns
+  enddo
+  !print *, columns
+  !write(columns,"(3X,A4,20X,A)") "j*T0", trim(columns)
+  !print *, columns
+
+end function
+
+function column_titles_red() result(columns)
+
+  use iso_c_binding
+  implicit none
+
+  character (26*(4*2+3)) :: columns
+  character (2) :: s_index
+  integer (c_int) :: i, j1, j2, j3, j4, step
+
+
+  columns = ""
+  step = 24
+  columns(2:step+2) = "j*T0"
+  do i = 1, 2
+    write(s_index, "(I0)") i
+    j1 = step*i+2
+    j2 = step*(i+1)+2
+    j3 = step*(i+2)+3
+    j4 = step*(i+2+1)+3
     !print *, j1, j2, j3, j4
     columns(j1:j2) = trim("sigma_z^")//trim(s_index)
     columns(j3:j4) = trim("err(sigma_z^")//trim(s_index)//trim(")")

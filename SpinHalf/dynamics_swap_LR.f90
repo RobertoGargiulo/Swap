@@ -63,8 +63,6 @@ program test_LR
   write (*,*) "Number of Spins"
   read (*,*) nspin
   print*,""
-  dim = 2**nspin
-  dim_Sz = dimSpinHalf_Sz(nspin, Sz)
 
   write (*,*) "Number of Disorder Realizations"
   read (*,*) n_disorder
@@ -106,6 +104,8 @@ program test_LR
   print*,""
  
   T1 = pi/4 + kick
+  dim = 2**nspin
+  !dim_Sz = dimSpinHalf_Sz(nspin, Sz)
 
   call system_clock(count_beginning, count_rate)
   !---------------------------------------------
@@ -117,12 +117,11 @@ program test_LR
     & "_Jxy", Jxy_coupling, "_Vzz", int(Vzz_coupling), Vzz_coupling-int(Vzz_coupling), &
     & "_hz", int(hz_coupling), hz_coupling-int(hz_coupling), "_kick", kick, &
     & "_alpha", int(alpha), alpha-int(alpha), ".txt"
+  print *, "Output: ", trim(filestring)
   open(newunit=unit_sigmaz, file=filestring)
   call write_info(unit_sigmaz, trim(name_initial_state))
 
 
-  !91  format(A,I0, A,I0, A,F4.2, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
-  !92  format(A,I0, A,I0, A,I0, A,F4.2, A,F4.2, A,F4.2, A)
   93  format(A,I0, A,I0, A,F4.2, A,I0, A,I0, A,F7.5, A,I0,F0.2, A,I0,F0.2, A,F5.3, A,I0,F0.2, A)
 
 
@@ -154,7 +153,7 @@ program test_LR
   allocate( Jxy(nspin-1), Vzz(nspin-1,nspin), hz(nspin))
 
   !Allocate Floquet and MBL Operators
-  allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
+  !allocate(H(dim_Sz,dim_Sz), E(dim_Sz), W_r(dim_Sz,dim_Sz))
   allocate(U(dim_Sz,dim_Sz))
 
   !Allocate for Eigenvalues/Eigenvectors
@@ -257,17 +256,6 @@ program test_LR
 
 end program
 
-!logical function SELECT(z)
-!
-!  implicit none
-!
-!  complex(kind=8), intent(in) :: z
-!
-!  SELECT = .TRUE.
-!  RETURN
-!
-!end
-
 subroutine write_info(unit_file, state_name)
 
   integer, intent(in) :: unit_file
@@ -309,7 +297,6 @@ function column_titles(nspin) result(columns)
     columns(j3:j4) = trim("err(sigma_z^")//trim(s_index)//trim(")")
     !print *, columns
   enddo
-  print *, columns
   !write(columns,"(3X,A4,20X,A)") "j*T0", trim(columns)
   !print *, columns
 

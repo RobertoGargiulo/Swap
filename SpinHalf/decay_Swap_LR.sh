@@ -21,8 +21,8 @@ fi
 ###Choice of parameters
 n_disorder_2=20480
 steps="1000000"
-list_nspin=$(seq 4 2 10)
-list_J="0.01" #"1.0 0.1 0.05 0.01" #"2.0 0.5 0.1 0.05" #0.001 0.0001 0.00001"
+list_nspin=$(seq 14 2 14)
+list_J="0.1 0.05 0.01" #"2.0 0.5 0.1 0.05" #0.001 0.0001 0.00001"
 list_V="3.00"
 list_hz="16.00"
 list_alpha="0.50 3.00" #1.00 10.00
@@ -71,13 +71,17 @@ do
                 n_pow_periods=$(awk -v J="${J}" -v L="${nspin}" -v steps="${steps}" 'BEGIN { {res=int(log( 0.42 * (3.1*J)**(-0.38*L) )/log(2))+1 } { printf "%d", (res>=0)?res:0} }');
               elif (( $(echo "$J > 0.01 && $J <= 0.05" |bc -l) )); then
                 n_pow_periods=$(awk -v J="${J}" -v L="${nspin}" -v steps="${steps}" 'BEGIN { {res=int(log( 0.42 * (3.1*J)**(-0.38*L) )/log(2))+2 } { printf "%d", (res>=0)?res:0} }');
-                if [ $nspin -ge 8 ]; then
+                if [ $nspin -ge 8 ] && [ $nspin -lt 12 ] ; then
                   n_pow_periods=$((n_pow_periods+1))
+                elif [ $nspin -ge 12 ]; then
+                  n_pow_periods=$((n_pow_periods+2))
                 fi
               elif (( $(echo "$J <= 0.01" |bc -l) )); then
                 n_pow_periods=$(awk -v J="${J}" -v L="${nspin}" -v steps="${steps}" 'BEGIN { {res=int(log( 0.42 * (3.1*J)**(-0.38*L) )/log(2))+3 } { printf "%d", (res>=0)?res:0} }');
-                if [ $nspin -ge 8 ]; then
+                if [ $nspin -ge 8 ] && [ $nspin -lt 12 ] ; then
                   n_pow_periods=$((n_pow_periods+1))
+                elif [ $nspin -ge 12 ]; then
+                  n_pow_periods=$((n_pow_periods+2))
                 fi
               fi
               n_periods=$(( 2**(n_pow_periods) ))

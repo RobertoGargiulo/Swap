@@ -9,8 +9,8 @@ stack=6G
 export OMP_NUM_THREADS=$n_threads 
 export OMP_STACKSIZE=$stack
 
-output="Swap_LR_decay_kick0_L12.txt"
-sorting=false
+output="Swap_LR_decay_kick0.txt"
+sorting=true
 file_out="out.txt"
 file_sort="out_sort.txt"
 if [ "$sorting" = true ] ; then
@@ -21,8 +21,8 @@ fi
 ###Choice of parameters
 n_disorder_2=20480
 steps="1000000"
-list_nspin=$(seq 2 2 8)
-list_J="0.01" #"1.0 0.1 0.05 0.01" #"2.0 0.5 0.1 0.05" #0.001 0.0001 0.00001"
+list_nspin=$(seq 2 2 10)
+list_J="1.0 0.1 0.05 0.01" #"2.0 0.5 0.1 0.05" #0.001 0.0001 0.00001"
 list_V="3.00"
 list_hz="16.00"
 list_alpha="0.50 3.00" #1.00 10.00
@@ -102,6 +102,7 @@ $alpha
               echo ""
               echo "Executing file: "
               ./$filestring < input.txt | tee $file_out
+              #sleep 1.0
               decay=`grep -a -A2 "Decay Time" $file_out | tail -1`
               echo $nspin $J $V $hz $kick $alpha $T0 $decay $n_pow_periods $n_periods $total_time $steps $n_disorder >> raw_$output
             done

@@ -3,11 +3,14 @@ filestring="spectrum_swap_LR"
 
 make $filestring
 
-n_threads=8
+ulimit -s unlimited
+n_threads=40
+stack=6G
 export OMP_NUM_THREADS=$n_threads 
+export OMP_STACKSIZE=$stack
 
 output="Swap_LR_spectrum_non_zero_J_kick.txt"
-sorting=false
+sorting=true
 file_out="out.txt"
 file_sort="out_sort.txt"
 if [ "$sorting" = true ] ; then
@@ -18,10 +21,10 @@ fi
 ###Choice of parameters
 iterations_2=20480
 list_nspin=$(seq 4 2 12)
-list_J="0.001"
+list_J="0.01"
 list_V="3.00"
 list_hz="16.00"
-list_kick="0" #0.001 0.01 0.10 0.50
+list_kick="0.1 0.05 0.01 0.005" #0.001 0.01 0.10 0.50
 list_alpha="0.50 3.00" #1.00 10.00
 list_T0="1.00"
 
@@ -74,7 +77,7 @@ $alpha
   	          ./$filestring < input.txt | tee $file_out
               echo "nspin = $nspin  J = $J  V = $V  hz = $hz  epsilon = $kick  alpha = $alpha  T0 = $T0"
               echo "iterations = $iterations   n_threads = $n_threads"
-              gap_ratio=`grep -a -A2 "Ratio" $file_out | tail -1`
+              gap_ratio=`grep -a -A2 "Gap Ratio" $file_out | tail -1`
               log_gap=`grep -a -A2 "pi-Logarithmic" $file_out | tail -1`
               shift_log_gap=`grep -a -A2 "Half Shifted Logarithmic" $file_out | tail -1`
               echo $nspin $J $V $hz $kick $alpha $T0 $gap_ratio $log_gap $shift_log_gap $iterations >> raw_$output
