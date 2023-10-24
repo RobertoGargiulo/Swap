@@ -38,9 +38,6 @@ correlations_swap_LR: $(MOD) correlations_swap_LR.o
 dynamics_swap_LR: $(MOD) dynamics_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 
-spectrum_swap_PBC_LR: $(MOD) spectrum_swap_PBC_LR.o
-	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
-
 decay_swap_LR: $(MOD) decay_swap_LR.o
 	$(FC) $(FFLAGS) $(PFLAGS) -o $@ $(MOD) $@.o $(LIBS)
 

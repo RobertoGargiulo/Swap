@@ -276,18 +276,18 @@ program test_LR
 
   print *, "Average of Gap Ratio (over the spectrum and then disorder)"
   print "(*(A26))", "<r>_Flip", "sigma(r)_Flip", "<r>_MBL", "sigma(r)_MBL"
-  write (*,'*(G24.16)'), r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
+  write (*,'(*(G24.16))'), r_dis_avg, r_dis_sigma, r_dis_avg2, r_dis_sigma2
 
   print *, "Average of pi-Logarithmic (pi-)Gap"
   print "(*(A26))", "<log(Delta_pi/Delta_0)>", "sigma(log(Delta_pi/Delta_0))", & 
     & "<log(Delta_pi)>", "sigma(log(Delta_pi))", "<log(Delta_0)>", "sigma(log(Delta_0))"
-  write (*,'*(G24.16)'), log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_pair_dis_sigma, &
+  write (*,'(*(G24.16))'), log_dis_avg, log_dis_sigma, log_pair_dis_avg, log_pair_dis_sigma, &
    & log_near_dis_avg, log_near_dis_sigma
 
   print *, "Average of Half Shifted Logarithmic (pi-)Gap"
   print "(*(A26))", "<log(Delta_pi/Delta_0)>", "sigma(log(Delta_pi/Delta_0))", & 
     & "<log(Delta_pi)>", "sigma(log(Delta_pi))", "<log(Delta_0)>", "sigma(log(Delta_0))"
-  write (*,'*(G24.16)'), shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, &
+  write (*,'(*(G24.16))'), shift_log_dis_avg, shift_log_dis_sigma, shift_log_pair_dis_avg, &
     & shift_log_pair_dis_sigma, shift_log_near_dis_avg, shift_log_near_dis_sigma
 
   deallocate(Jxy, Vzz, hz)

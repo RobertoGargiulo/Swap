@@ -11,7 +11,7 @@ export OMP_STACKSIZE=$stack
 
 output="Swap_LR_spectrum_non_zero_J_kick.txt"
 sorting=true
-file_out="out.txt"
+file_out="out2.txt"
 file_sort="out_sort.txt"
 if [ "$sorting" = true ] ; then
   mv $output data/eigen/
@@ -19,12 +19,12 @@ if [ "$sorting" = true ] ; then
 fi
 
 ###Choice of parameters
-iterations_2=20480
+iterations_2=40960
 list_nspin=$(seq 4 2 12)
 list_J="0.01"
 list_V="3.00"
 list_hz="16.00"
-list_kick="0.1 0.05 0.01 0.005" #0.001 0.01 0.10 0.50
+list_kick="0.01 0.005 0.001 0.0005" #0.001 0.01 0.10 0.50
 list_alpha="0.50 3.00" #1.00 10.00
 list_T0="1.00"
 
@@ -50,7 +50,8 @@ block=0
 for nspin in $list_nspin
 do
   block=$(( $block + 1 ))
-  iterations=`echo $iterations_2 $nspin | awk '{print 2**(-$2/2+1)*$1}'`
+  #####################iterations=`echo $iterations_2 $nspin | awk '{print int( 2**(-$2/2+1)*$1 )}'`##########
+  iterations=`echo $iterations_2 $nspin $n_threads | awk '{print int( 1.6**(-$2/2+1)*$1/$3 ) * $3}'`
   #iterations=10
   for kick in $list_kick
   do
@@ -75,6 +76,7 @@ $kick
 $alpha
 *
   	          ./$filestring < input.txt | tee $file_out
+              sleep 0.5
               echo "nspin = $nspin  J = $J  V = $V  hz = $hz  epsilon = $kick  alpha = $alpha  T0 = $T0"
               echo "iterations = $iterations   n_threads = $n_threads"
               gap_ratio=`grep -a -A2 "Gap Ratio" $file_out | tail -1`
