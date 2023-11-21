@@ -100,7 +100,7 @@ program test_LR
 
   !---Read below for distributions of J, V, hz
 
-  write (*,*) "Perturbation on Kick T1 = pi/4 + kick"
+  write (*,*) "Perturbation on Kick T1 = pi/2 + kick"
   read (*,*) kick
   print*,""
 

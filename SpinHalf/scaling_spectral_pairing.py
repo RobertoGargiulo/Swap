@@ -62,7 +62,7 @@ X = np.empty((num_alpha, nparams), dtype=object)
 for j in range(num_alpha):
     m += 1
     plt.figure(m)
-    for i in [0, 1, 3, 4, 9, 10]:
+    for i in [0, 1, 3, 4, 8, 9]:
 
         J = params[j][i][0]
         kick = params[j][i][3]

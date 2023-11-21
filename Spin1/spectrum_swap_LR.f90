@@ -1,6 +1,6 @@
 program test_LR
 
-  use functions, only: binom, init_random_seed, dimSpin1_Sz, &
+  use functions, only: init_random_seed, dimSpin1_Sz, &
     & norm => normalization_power_law , disorder_average
   use exponentiate, only: diagSYM, expSYM, diagUN
   use observables, only: gap_ratio, spectral_pairing => log_gap_difference, &

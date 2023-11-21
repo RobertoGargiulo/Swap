@@ -15,7 +15,7 @@ plt.rcParams['figure.figsize'] = [5,3]
 
 
 # Import Files
-Larray = np.arange(4, 13, 2)
+Larray = np.arange(4, 15, 2)
 T = 1
 J = [0.01, 0.05, 0.1, 1.0] 
 V = 3
@@ -52,12 +52,17 @@ for i in range(num_J):
                 n_periods[q,i,j] = 2**( max(0, int(log(0.42 * (3.1*J[i])**(-0.38*L) ) / log(2))+1) )
             elif J[i] <= 0.05 and J[i] > 0.01:
                 n_periods[q,i,j] = 2**( max(0, int(log(0.42 * (3.1*J[i])**(-0.38*L) ) / log(2))+2) )
-                if L >= 8:
+                if L >= 8 and L <= 12:
                     n_periods[q,i,j] = 2*n_periods[q,i,j]
+                elif L > 12:
+                    n_periods[q,i,j] = 4*n_periods[q,i,j]
             elif J[i] <= 0.01:
                 n_periods[q,i,j] = 2**( max(0, int(log(0.42 * (3.1*J[i])**(-0.38*L) ) / log(2))+3) )
-                if L >= 8:
+                if L >= 8 and L <= 12:
                     n_periods[q,i,j] = 2*n_periods[q,i,j]
+                elif L > 12:
+                    n_periods[q,i,j] = 4*n_periods[q,i,j]
+                
             print([J[i], alpha[j], L, n_periods[q,i,j]])
             
 
@@ -110,15 +115,15 @@ for j in range(num_alpha):
                      
     plt.xticks(Larray)
     plt.yscale('log')
-    plt.xscale('log')
+    #plt.xscale('log')
     plt.xlabel('$L$', fontsize=12)
     plt.ylabel('$\\overline{\\tau}$', fontsize=12)
     plt.legend(fontsize=9, loc='right', bbox_to_anchor=(1.3,0.5))
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-    plt.ylim([10**1, 10**14])
+    plt.ylim([10**1, 10**15])
     
-    txt = 'figures/Decay_Times_avg_wrt_L_kick%.2f_alpha%.2f_bilog.pdf' % (kick, alpha[j])
+    txt = 'figures/Decay_Times_avg_wrt_L_kick%.2f_alpha%.2f.pdf' % (kick, alpha[j]) #bilog
     print(txt)
     plt.savefig(txt, dpi=600, bbox_inches='tight')
 

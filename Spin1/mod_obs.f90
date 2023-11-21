@@ -47,7 +47,6 @@ contains
 
   end function
 
-
   function sigmaz_Sz0(nspin, dim_Sz0, psi_Sz0)
     integer (ip), intent(in) :: nspin, dim_Sz0
     complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
@@ -70,34 +69,6 @@ contains
 
   end function
 
-  function imbalance_Sz0(nspin, dim_Sz0, state)
-
-    integer(ip), intent(in) :: nspin, dim_Sz0
-    complex(dcp), intent(in) :: state(dim_Sz0)
-    real (dp) :: imbalance_Sz0
-    real(dp) :: imb, imbaux
-    integer (ip) :: i, k, l, indx(dim_Sz0), config(nspin), s
-
-    imb = 0
-    call zero_mag_states(nspin, dim_Sz0, indx)
-
-    do l = 1, dim_Sz0
-
-      i = indx(l)
-      call decode(i,nspin,config)
-      imbaux = 0
-      do k = 1, nspin
-        s = 1 - config(k)
-        imbaux = imbaux + (-1)**k * s
-      enddo
-      imbaux = imbaux * abs(state(l))**2
-      imb = imb + imbaux
-    enddo
-    imb = imb/nspin
-    imbalance_Sz0 = imb
-
-  end function imbalance_Sz0
-
   function local_imbalance_Sz0(nspin, dim_Sz0, psi_Sz0)
     integer (ip), intent(in) :: nspin, dim_Sz0
     complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
@@ -115,7 +86,7 @@ contains
       do k = 1, nspin/2
         s1 = 1 - config(2*k-1)
         s2 = 1 - config(2*k)
-        LI_part = LI_part + (s2 - s1)**2
+        LI_part = LI_part + merge(1, 0, s1 .ne. s2)
       enddo
       LI = LI + abs(psi_Sz0(l))**2 * LI_part / (nspin/2)
     enddo
@@ -150,336 +121,122 @@ contains
     enddo
 
     sigmaz_corr_c_Sz0 = corr - avgq * avgp
+    !print "(2I0, *(G24.16))", q, p, corr, avgq, avgp, sigmaz_corr_c_Sz0
 
 
   end function
 
+  function sigmaz_corr_matrix_Sz0(nspin, dim_Sz0, psi_Sz0) result(CORR)
+
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    real (dp) :: CORR(nspin, nspin)
+
+    integer :: q, p
+
+    do q = 1, nspin
+      do p = 1, nspin
+        CORR(q,p) = sigmaz_corr_c_Sz0(nspin, dim_Sz0, q, p, psi_Sz0)
+      enddo
+    enddo
+    
+  end function
+
+  function sigmaz_tot_corr_Sz0(nspin, dim_Sz0, psi_Sz0) result(tot_corr)
+
+    ! tot_corr  = sum_{distinct (q,p)} C(sigma_q^z, sigma_p^z) =
+    !           = sum_{q=1}^{L-1} sum_{p=q+1}^L C(sigma_q^z, sigma_p^z)
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    real (dp) :: tot_corr
+
+    real (dp) :: CORR(nspin, nspin)
+    integer :: q, p
+
+    CORR = sigmaz_corr_matrix_Sz0(nspin, dim_Sz0, psi_Sz0)
+    
+    tot_corr = 0
+    do q = 1, nspin-1
+      do p = q+1, nspin
+        tot_corr = tot_corr + abs(CORR(q,p))
+        !print * , q, p, abs(CORR(q,p))
+      enddo
+    enddo
+
+  end function
+
+  function sigmaz2_corr_c_Sz0(nspin, dim_Sz0, q, p, psi_Sz0) result(corr_Sz0)
+
+    integer (ip), intent(in) :: nspin, dim_Sz0, q, p
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    real (dp) :: corr_Sz0
+
+    integer (ip) :: i, l, config(nspin), states(dim_Sz0), sp, sq
+    real (dp) :: corr, avgq, avgp
+
+    avgq = 0
+    avgp = 0
+    corr = 0
+    call zero_mag_states(nspin, dim_Sz0, states)
+    do l = 1, dim_Sz0
+      
+      i = states(l)
+      call decode(i,nspin,config)
+
+      sq = 1 - config(q)
+      sp = 1 - config(p)
+      corr = corr + abs(psi_Sz0(l))**2 * sq**2 * sp**2
+      avgq = avgq + abs(psi_Sz0(l))**2 * sq**2
+      avgp = avgp + abs(psi_Sz0(l))**2 * sp**2
+        
+    enddo
+
+    corr_Sz0 = corr - avgq * avgp
+
+  end function
+
+  function sigmaz2_corr_matrix_Sz0(nspin, dim_Sz0, psi_Sz0) result(CORR)
+
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    real (dp) :: CORR(nspin, nspin)
+
+    integer :: q, p
+
+    do q = 1, nspin
+      do p = 1, nspin
+        CORR(q,p) = sigmaz2_corr_c_Sz0(nspin, dim_Sz0, q, p, psi_Sz0)
+      enddo
+    enddo
+    
+  end function
+
+  function sigmaz2_tot_corr_Sz0(nspin, dim_Sz0, psi_Sz0) result(tot_corr)
+
+    ! tot_corr  = sum_{distinct (q,p)} C(sigma_q^z, sigma_p^z) =
+    !           = sum_{q=1}^{L-1} sum_{p=q+1}^L C(sigma_q^z, sigma_p^z)
+    integer (ip), intent(in) :: nspin, dim_Sz0
+    complex (dcp), intent(in) :: psi_Sz0(dim_Sz0)
+    real (dp) :: tot_corr
+
+    real (dp) :: CORR(nspin, nspin)
+    integer :: q, p
+
+    CORR = sigmaz2_corr_matrix_Sz0(nspin, dim_Sz0, psi_Sz0)
+    
+    tot_corr = 0
+    do q = 1, nspin-1
+      do p = q+1, nspin
+        tot_corr = tot_corr + abs(CORR(q,p))
+        !print * , q, p, abs(CORR(q,p))
+      enddo
+    enddo
+
+  end function
 
 
+  !----------- Exact (Quasi-)Energies ----------! 
 
-!  subroutine magntz(i, nspin, mag)
-!
-!    integer(ip), intent(in) :: i, nspin
-!    integer(ip) :: config(nspin)
-!    real(dp) :: mag
-!    integer (ip) :: j, k, m
-!
-!    call decode(i, nspin, config)
-!
-!    mag = 0
-!    do k = 1, nspin
-!      mag = mag + (1 - 2 * config(k))
-!    enddo
-!    
-!  end subroutine magntz
-!
-!
-!  real function mag_z(nspin, dim, state)
-!
-!    integer(ip), intent(in) :: nspin, dim
-!    complex(dcp), intent(in) :: state(dim)
-!    real(dp) :: mag, magaux
-!    integer :: config(nspin)
-!    integer (ip) :: i, j, k, m
-!
-!    mag = 0
-!    do i = 1, dim
-!      call decode(i-1,nspin,config)
-!      magaux = 0
-!      do k = 1, nspin
-!        magaux = magaux + (1._dp - 2._dp * config(k))
-!      enddo
-!      magaux = magaux * abs(state(i))**2
-!      mag = mag + magaux
-!    enddo
-!    mag = mag/nspin
-!    mag_z = mag
-!
-!  end function mag_z
-!
-!  real function mag_z_p(nspin, dim, state, p)
-!
-!    integer(ip), intent(in) :: nspin, dim, p
-!    complex(dcp), intent(in) :: state(dim)
-!    real(dp) :: mag
-!    integer :: config(nspin)
-!    integer (ip) :: i, j, k, m
-!
-!    mag = 0
-!    do i = 1, dim
-!      call decode(i-1,nspin,config)
-!      mag = mag + abs(state(i))**2 * (1 - 2*config(p))
-!    enddo
-!    mag_z_p = mag
-!
-!  end function mag_z_p
-!
-!  real function mag_stag_z(nspin, dim, state)
-!
-!    integer(ip), intent(in) :: nspin, dim
-!    complex(dcp), intent(in) :: state(dim)
-!    real(dp) :: mag
-!    real(dp) :: magaux
-!    integer :: config(nspin)
-!    integer (ip) :: i, j, k, m
-!
-!    mag = 0
-!    do i = 1, dim
-!      call decode(i-1,nspin,config)
-!      magaux = 0
-!      do k = 1, nspin
-!        magaux = magaux + (-1)**k * (1._dp - 2._dp * config(k))
-!      enddo
-!      magaux = magaux * abs(state(i))**2
-!      mag = mag + magaux
-!    enddo
-!    mag = mag/nspin
-!    mag_stag_z = mag
-!
-!  end function mag_stag_z
-!  
-!  real function imbalance(nspin, dim, state)
-!
-!    integer(ip), intent(in) :: nspin, dim
-!    complex(dcp), intent(in) :: state(dim)
-!    real(dp) :: imb, imbaux, mag, magaux
-!    integer :: config(nspin)
-!    integer (ip) :: i, j, k, m
-!
-!    mag = 0
-!    imb = 0
-!    do i = 1, dim
-!      call decode(i-1,nspin,config)
-!      imbaux = 0
-!      magaux = 0
-!      do k = 1, nspin
-!        imbaux = imbaux + (-1)**k * (1 - 2 * config(k))
-!        magaux = magaux + (1 - 2*config(k))
-!      enddo
-!      magaux = magaux * abs(state(i))**2
-!      imbaux = imbaux * abs(state(i))**2
-!      mag = mag + magaux
-!      imb = imb + imbaux
-!    enddo
-!    mag = mag/nspin
-!    imb = imb/nspin
-!    imb = imb/(1+mag)
-!    imbalance = imb
-!
-!
-!  end function imbalance
-!
-!  real function imbalance_Sz0(nspin, dim_Sz0, state)
-!
-!    integer(ip), intent(in) :: nspin, dim_Sz0
-!    complex(dcp), intent(in) :: state(dim_Sz0)
-!    real(dp) :: imb, imbaux
-!    integer :: config(nspin)
-!    integer (ip) :: i, j, k, m, l, indx(dim_Sz0)
-!
-!    imb = 0
-!    call zero_mag_states(nspin, dim_Sz0, indx)
-!
-!    do i = 1, dim_Sz0
-!
-!      l = indx(i)
-!      call decode(l,nspin,config)
-!      imbaux = 0
-!      do k = 1, nspin
-!        imbaux = imbaux + (-1)**k * (1 - 2 * config(k))
-!      enddo
-!      imbaux = imbaux * abs(state(i))**2
-!      imb = imb + imbaux
-!    enddo
-!    imb = imb/nspin
-!    imbalance_Sz0 = imb
-!
-!  end function imbalance_Sz0
-!
-!  real function imbalance_sq_Sz0(nspin, dim_Sz0, state)
-!
-!    integer(ip), intent(in) :: nspin, dim_Sz0
-!    complex(dcp), intent(in) :: state(dim_Sz0)
-!    real(dp) :: imb, imbaux
-!    integer :: config(nspin)
-!    integer (ip) :: i, k1, k2, l, indx(dim_Sz0)
-!
-!    imb = 0
-!    call zero_mag_states(nspin, dim_Sz0, indx)
-!
-!    do i = 1, dim_Sz0
-!
-!      l = indx(i)
-!      call decode(l,nspin,config)
-!      imbaux = 0
-!      do k1 = 1, nspin
-!        do k2 = 1, nspin
-!          imbaux = imbaux + (-1)**k1 * (1 - 2 * config(k1)) * (-1)**k2 * (1 - 2 * config(k2))
-!        enddo
-!      enddo
-!      imbaux = imbaux * abs(state(i))**2
-!      imb = imb + imbaux
-!    enddo
-!    imb = imb/nspin**2
-!    imbalance_sq_Sz0 = imb
-!
-!  end function imbalance_sq_Sz0
-!
-!  function imbalance_basis(nspin, i)
-!
-!    integer(ip), intent(in) :: nspin, i
-!    real (dp) :: imb, imbalance_basis
-!    integer :: config(nspin), k
-!
-!    call decode(i,nspin,config)
-!    imb = 0
-!    do k = 1, nspin
-!        imb = imb + (-1)**k * (1 - 2 * config(k))
-!        !print *, k, imb
-!    enddo
-!    imb = imb/(2*nspin - 2*sum(config))
-!    imbalance_basis = imb
-!
-!  end function imbalance_basis
-!
-!  function imbalance_sq_basis(nspin, i)
-!
-!    integer(ip), intent(in) :: nspin, i
-!    real (dp) :: imb, imbalance_sq_basis
-!    integer :: config(nspin), k
-!
-!    call decode(i,nspin,config)
-!    imb = 0
-!    do k = 1, nspin
-!        imb = imb + (-1)**k * (1 - 2 * config(k))
-!        !print *, k, imb
-!    enddo
-!    imb = imb/(2*nspin - 2*sum(config))
-!    imbalance_sq_basis = imb**2
-!
-!  end function imbalance_sq_basis
-!
-!  function local_imbalance_basis(nspin, i)
-!    integer (ip), intent(in) :: nspin, i
-!    real (dp) :: local_imbalance_basis
-!
-!    integer (ip) :: k, config(nspin)
-!    real (dp) :: LI
-!
-!    LI = 0
-!    call decode(i, nspin, config)
-!    do k = 1, nspin/2
-!
-!      LI = LI + (config(2*k) - config(2*k-1))**2
-!    enddo
-!    LI = 2 * LI / nspin
-!    local_imbalance_basis = LI
-!
-!  end function
-!
-!  function local_imbalance(nspin, dim, psi)
-!    integer (ip), intent(in) :: nspin, dim
-!    complex (dcp), intent(in) :: psi(dim)
-!    real (dp) :: local_imbalance
-!
-!    integer (ip) :: i, k, config(nspin)
-!    real (dp) :: LI, LI_part
-!
-!    LI = 0
-!    do i = 1, dim
-!    call decode(i-1, nspin, config)
-!      LI_part = 0
-!      do k = 1, nspin/2
-!        LI_part = LI_part + (config(2*k) - config(2*k-1))**2
-!      enddo
-!      LI = LI + abs(psi(i))**2 * 2 * LI_part / nspin
-!    enddo
-!    local_imbalance = LI
-!
-!  end function
-!
-!
-!  function local_overlap(nspin, dim, psi)
-!    integer (ip), intent(in) :: nspin, dim
-!    complex (dcp), intent(in) :: psi(dim)
-!    real (dp) :: local_overlap
-!
-!    integer (ip) :: i, j, k, config(nspin)
-!    real (dp) :: LO
-!
-!    LO = 0
-!    do i = 1, dim
-!      call decode(i-1, nspin, config)
-!      do k = 1, nspin/2
-!        if (config(2*k)/=config(2*k-1)) then
-!          j = i + (config(2*k-1) - config(2*k)) * (2**(2*k-1) - 2**(2*k-2))
-!          LO = LO + abs(psi(i))**2 - psi(i) * dconjg(psi(j))
-!        endif
-!      enddo
-!    enddo
-!    LO = LO/(nspin/2)
-!    local_overlap = LO
-!
-!  end function
-!
-!  function local_overlap_Sz0(nspin, dim_Sz0, psi)
-!    integer (ip), intent(in) :: nspin, dim_Sz0
-!    complex (dcp), intent(in) :: psi(dim_Sz0)
-!    real (dp) :: local_overlap_Sz0
-!
-!    integer (ip) :: i, j, k, r, l, config(nspin), states(dim_Sz0)
-!    real (dp) :: LO
-!
-!    call zero_mag_states(nspin, dim_Sz0, states)
-!    LO = 0
-!    do i = 1, dim_Sz0
-!      l = states(i)
-!      call decode(l, nspin, config)
-!      do k = 1, nspin/2
-!        if(config(2*k)/=config(2*k-1)) then
-!          j = i + (config(2*k-1) - config(2*k)) * (2**(2*k-1) - 2**(2*k-2))
-!          r = binsearch(j,states)
-!          LO = LO + abs(psi(i))**2 - psi(i) * dconjg(psi(r))
-!        endif
-!      enddo
-!    enddo
-!    LO = LO/(nspin/2)
-!    local_overlap_Sz0 = LO
-!
-!  end function
-!
-!  function sigmaz_corr_c(nspin, dim, q, p, psi)
-!
-!    integer (ip), intent(in) :: nspin, dim, q, p
-!    complex (dcp), intent(in) :: psi(dim)
-!    real (dp) :: sigmaz_corr_c
-!
-!    integer (ip) :: i, k, config(nspin)
-!    real (dp) :: corr, avgq, avgp
-!
-!    avgq = 0
-!    avgp = 0
-!    corr = 0
-!    do i = 1, dim
-!      
-!      call decode(i-1,nspin,config)
-!
-!      corr = corr + abs(psi(i))**2 * (1 - 2 * config(q)) * (1 - 2 * config(p))
-!      avgq = avgq + abs(psi(i))**2 * (1 - 2 * config(q))
-!      avgp = avgp + abs(psi(i))**2 * (1 - 2 * config(p))
-!        
-!    enddo
-!
-!    sigmaz_corr_c = corr - avgq * avgp
-!
-!
-!  end function
-!
-!
-!
-!
-!
-!
   function exact_energy(nspin, Vz, hz, sigmaz) result(E)
 
     integer (ip), intent(in) :: nspin
@@ -556,99 +313,7 @@ contains
     enddo
 
   end function 
-!
-!
-!  subroutine exact_quasi_energies_Sz0(nspin, dim_Sz0, V_int, h_z, QE) !E, Es, QE, QE_alt)
-!
-!    integer (ip), intent(in) :: nspin, dim_Sz0
-!    real (dp), intent(in) :: V_int(nspin-1), h_z(nspin)
-!    real (dp), intent(out) :: QE(dim_Sz0)
-!
-!    integer (ip) :: i, k, l, m, config(nspin), states(dim_Sz0)
-!    !real (dp) :: E(dim_Sz0), Es(dim_Sz0), QE_alt(dim_Sz0)
-!
-!    QE = 0
-!    !QE_alt = 0
-!    !E = 0
-!    !Es = 0
-!    call zero_mag_states(nspin, dim_Sz0, states)
-!    do i = 1, dim_Sz0
-!
-!      l = states(i)
-!      call decode(l, nspin, config)
-!      m = 0
-!      do k = 1, nspin/2
-!        m = m + 2**(2*k-2) * config(2*k) + 2**(2*k-1) * config(2*k-1)
-!      enddo
-!      QE(i) = (exact_energy(nspin, V_int, h_z, l) + exact_energy(nspin, V_int, h_z, m)) / 2
-!
-!      !print "(*(I0))", config(:)
-!      !config = 1 - 2*config
-!      !do k = 1, nspin/2 - 1
-!      !  print *, "k = ", k
-!      !  E(i) = E(i) + V_int(2*k-1) * config(2*k-1) * config(2*k) + V_int(2*k) * config(2*k) * config(2*k+1) + &
-!      !   &  h_z(2*k-1) * config(2*k-1) + h_z(2*k) * config(2*k) 
-!      !  Es(i) = Es(i) + V_int(2*k-1) * config(2*k) * config(2*k-1) + V_int(2*k) * config(2*k-1) * config(2*k+2) + &
-!      !   &  h_z(2*k-1) * config(2*k) + h_z(2*k) * config(2*k-1) 
-!
-!      !  print *, "Normal contribution V"
-!      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", V_int(2*k-1) * config(2*k-1) * config(2*k), &
-!      !    & V_int(2*k) * config(2*k) * config(2*k+1), &
-!      !    & 2*k-1, config(2*k-1), 2*k, config(2*k), 2*k+1, config(2*k+1)
-!      !  print *, "Swap contribution V"
-!      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", V_int(2*k-1) * config(2*k) * config(2*k-1), &
-!      !    & V_int(2*k) * config(2*k-1) * config(2*k+2), &
-!      !    & 2*k, config(2*k), 2*k-1, config(2*k-1), 2*k+2, config(2*k+2)
-!      !  print *, "Normal contribution h"
-!      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", h_z(2*k-1) * config(2*k-1), h_z(2*k) * config(2*k), &
-!      !    & 2*k-1, config(2*k-1), 2*k, config(2*k)
-!      !  print *, "Swap contribution h"
-!      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", h_z(2*k-1) * config(2*k), h_z(2*k) * config(2*k-1), &
-!      !    & 2*k, config(2*k), 2*k-1, config(2*k-1)
-!      !  print *, ""
-!
-!      !enddo
-!      !k = nspin/2
-!      !  print *, "k = ", k
-!      !E(i) = E(i) + V_int(2*k-1) * config(2*k-1) * config(2*k) + &
-!      !  & + h_z(2*k-1) * config(2*k-1) + h_z(2*k) * config(2*k)
-!      !Es(i) = Es(i) + V_int(2*k-1) * config(2*k) * config(2*k-1) + &
-!      !  & + h_z(2*k-1) * config(2*k) + h_z(2*k) * config(2*k-1)
-!      !  print *, "Normal contribution V"
-!      !  print "( F20.15,4X, *(2I0,2X)  )", V_int(2*k-1) * config(2*k-1) * config(2*k), &
-!      !    & 2*k-1, config(2*k-1), 2*k, config(2*k)
-!      !  print *, "Swap contribution V"
-!      !  print "( F20.15,4X, *(2I0,2X)  )", V_int(2*k-1) * config(2*k) * config(2*k-1), &
-!      !    & 2*k, config(2*k), 2*k-1, config(2*k-1)
-!      !  print *, "Normal contribution h"
-!      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", h_z(2*k-1) * config(2*k-1), h_z(2*k) * config(2*k), &
-!      !    & 2*k-1, config(2*k-1), 2*k, config(2*k)
-!      !  print *, "Swap contribution h"
-!      !  print "( F20.15,4X, F20.15,4X, *(2I0,2X)  )", h_z(2*k-1) * config(2*k), h_z(2*k) * config(2*k-1), &
-!      !    & 2*k, config(2*k), 2*k-1, config(2*k-1)
-!      !  print *, ""
-!
-!      !print "( F15.10,4X,*(I0)  )", E(i), (1 - config(:))/2
-!      !print *, E(i), Es(i), exact_energy(nspin, V_int, h_z, l), exact_energy(nspin, V_int, h_z, m)
-!
-!      !QE_alt(i) = (E(i) + Es(i)) / 2
-!
-!      !do k = 1, nspin/2 - 1
-!      !  QE(i) = QE(i) + ( ( V_int(2*k-1) * 2 * config(2*k-1) * config(2*k) + &
-!      !    & V_int(2*k) * ( config(2*k-1) * config(2*k+2) + config(2*k) * config(2*k+1) )) + &
-!      !    & ( h_z(2*k-1) + h_z(2*k) ) * (config(2*k) + config(2*k-1)) )/2
-!      !enddo
-!      !k = nspin/2
-!      !QE(i) = QE(i) + ( ( V_int(2*k-1) * 2 * config(2*k-1) * config(2*k) ) + &
-!      !  & ( h_z(2*k-1) + h_z(2*k) ) * (config(2*k) + config(2*k-1)) )/2
-!
-!      !print "( A,4X, A,4X, A  )", "(E + Esigma)/2", "QE", "config"
-!      !print "( F15.10,4X, F15.10,4X, *(I0)  )", QE_alt(i), QE(i), (1 - config(:))/2 
-!    enddo
-!
-!  end subroutine
-!
-!
+
   subroutine time_avg(option, steps, start, avg, sigma, t_avg, t_sigma)
     character, intent(in) :: option*1
     integer (ip), intent(in) :: steps, start
