@@ -14,9 +14,10 @@ plt.rcParams['font.family'] = 'STIXGeneral'
 plt.rcParams['figure.figsize'] = [5,3]
 
 # Import Files
-Larray = np.arange(4, 9, 2)
+Larray = np.arange(4, 11, 2)
 T = 1
-J = 0.005 * 2 ** np.arange(0, 11)
+#J = 0.005 * 2 ** np.arange(0, 11)
+J = np.array([0.005, 0.01, 0.04, 0.16, 0.32, 0.64, 1.28 ])
 V = 3
 hz = 16
 kick = 0.00
@@ -70,7 +71,7 @@ for i in range(num_J):
             CORR2[q, i, j] = data[q, i, j][:, 2]
             LI[q, i, j] = data[q, i, j][:, 3]
             IPR[q, i, j] = data[q, i, j][:, 4]
-            QE[q, i, j] = data[q, i, j][:, 5]
+            #QE[q, i, j] = data[q, i, j][:, 5]
 
 
 # Calculate averages and errors
@@ -166,7 +167,7 @@ for i in range(num_J):
         plt.yticks(fontsize=10)
         plt.legend()
 
-        txt = 'Figures/SpinHalf/Hist_Correlations_sigmaz_wrt_L_J%.5f_kick%.2f_alpha%.2f.pdf' % (J[i], kick, alpha[j])
+        txt = 'figures/Hist_Correlations_sigmaz_wrt_L_J%.5f_kick%.2f_alpha%.2f.pdf' % (J[i], kick, alpha[j])
         print(txt)
         plt.savefig(txt, dpi=600, bbox_inches='tight')
         print("\n")

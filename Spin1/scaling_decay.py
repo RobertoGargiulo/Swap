@@ -113,7 +113,7 @@ for j in range(num_alpha):
     plt.yscale('log')
     plt.xlabel('$L$', fontsize=12)
     plt.ylabel('$\\overline{\\tau}$', fontsize=12)
-    plt.legend(fontsize=9, loc='right', bbox_to_anchor=(1.3,0.5))
+    plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.35), fancybox=True, shadow=True, ncol=num_J, fontsize = 10)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
     plt.ylim([10**1, 10**11])

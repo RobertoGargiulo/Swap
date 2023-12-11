@@ -115,13 +115,13 @@ for j in range(num_alpha):
                      
     plt.xticks(Larray)
     plt.yscale('log')
-    #plt.xscale('log')
+    #plt.xscale('log') #Uncomment for bilog plot
     plt.xlabel('$L$', fontsize=12)
     plt.ylabel('$\\overline{\\tau}$', fontsize=12)
-    plt.legend(fontsize=9, loc='right', bbox_to_anchor=(1.3,0.5))
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
     plt.ylim([10**1, 10**15])
+    plt.legend(loc='lower center', bbox_to_anchor=(0.5, -0.35), fancybox=True, shadow=True, ncol=num_J, fontsize = 10)
     
     txt = 'figures/Decay_Times_avg_wrt_L_kick%.2f_alpha%.2f.pdf' % (kick, alpha[j]) #bilog
     print(txt)
