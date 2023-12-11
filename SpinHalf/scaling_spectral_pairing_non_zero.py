@@ -21,13 +21,14 @@ from scipy.special import comb
 
 
 # Import Files
-Larray = np.arange(4, 15, 2)
+Larray = np.arange(4, 13, 2)
 alpha = [0.5, 3.0]
 num_alpha = len(alpha)
+nparams = 11
 numL = len(Larray)
 m = 0
 
-filename = "sort_col2_Swap_LR_spectrum_kick0.txt"
+filename = 'Swap_LR_spectrum_non_zero_J_kick.txt'
 
 data = np.genfromtxt(filename)
 print(data, "\n")
