@@ -61,23 +61,23 @@ for j in range(num_alpha):
     m += 1
     plt.figure(m)
     for i in [0, 1, 3, 4, 8, 9]:
-
+    
         J = params[j][i][0]
         kick = params[j][i][3]
         alpha = params[j][i][4]
         print([J, kick, alpha])
-
+    
         X[j][i] = delta_pi[j][i]
         string = '$J = %.g$, $\epsilon = %.g$' % ( J, kick )
         plt.errorbar(Larray, delta_pi[j][i], delta_pi_err[j][i], label=string, linewidth=1, marker='o')
-
+    
     plt.xticks(Larray)
-    plt.xlabel('$L$', fontsize=13)
-    plt.ylabel('$\ell$', fontsize=13)
-    plt.legend(fontsize=9, loc='lower left', bbox_to_anchor=(0,0))
+    plt.xlabel('$L$', fontsize=12)
+    plt.ylabel('$\ell$', fontsize=12)
+    plt.legend(fontsize=8, loc='lower center', fancybox=True, shadow=True, bbox_to_anchor=(0.5,-0.4), ncol=3)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-
+    
     txt = 'figures/Log_Delta_pi_Plot_non_zero_J_kick_alpha%.2f_L%d.pdf' % (alpha, Larray[numL-1])
     print(txt)
     plt.savefig(txt, dpi=600, bbox_inches='tight')

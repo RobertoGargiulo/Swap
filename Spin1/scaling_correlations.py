@@ -17,7 +17,7 @@ plt.rcParams['figure.figsize'] = [5,3]
 Larray = np.arange(4, 11, 2)
 T = 1
 #J = 0.005 * 2 ** np.arange(0, 11)
-J = np.array([0.005, 0.01, 0.04, 0.16, 0.32, 0.64, 1.28 ])
+J = np.array([0.01, 0.04, 0.16, 0.32, 0.64, 1.28 ])
 V = 3
 hz = 16
 kick = 0.00
@@ -106,14 +106,14 @@ for j in range(num_alpha):
     for i in range(num_J):
         print([J[i], alpha[j]])
 
-        string = '$J = %.3f$' % J[i]
+        string = '$J = %.2f$' % J[i]
         plt.errorbar(Larray[:] , CORRavg[:, i, j], CORRerr[:, i, j],
                      label=string, linewidth=1, color=to_hex(cmJ(i)), marker='o')
 
     plt.xticks(Larray)
     plt.xlabel('$L$', fontsize=12)
     plt.ylabel('$\overline{\Sigma}$', fontsize=12)
-    plt.legend(fontsize=9, loc='right', bbox_to_anchor=(1.3,0.5))
+    plt.legend(fontsize=10, loc='lower center', bbox_to_anchor=(0.5,-0.4), fancybox=True, shadow=True, ncol=3)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
 
@@ -134,7 +134,7 @@ for j in range(num_alpha):
     plt.xticks(Larray)
     plt.xlabel('$L$', fontsize=12)
     plt.ylabel('$\overline{\Sigma}_2$', fontsize=12)
-    plt.legend(fontsize=9, loc='right', bbox_to_anchor=(1.3,0.5))
+    plt.legend(fontsize=10, loc='lower center', bbox_to_anchor=(0.5,-0.4), fancybox=True, shadow=True, ncol=3)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
 
