@@ -112,7 +112,7 @@ for j in range(num_alpha):
 
     plt.xticks(Larray)
     plt.xlabel('$L$', fontsize=12)
-    plt.ylabel('$\overline{\Sigma}$', fontsize=12)
+    plt.ylabel('$\langle \Sigma \\rangle$', fontsize=12)
     plt.legend(fontsize=10, loc='lower center', bbox_to_anchor=(0.5,-0.4), fancybox=True, shadow=True, ncol=3)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
@@ -133,7 +133,7 @@ for j in range(num_alpha):
 
     plt.xticks(Larray)
     plt.xlabel('$L$', fontsize=12)
-    plt.ylabel('$\overline{\Sigma}_2$', fontsize=12)
+    plt.ylabel('$\langle \Sigma_2 \\rangle$', fontsize=12)
     plt.legend(fontsize=10, loc='lower center', bbox_to_anchor=(0.5,-0.4), fancybox=True, shadow=True, ncol=3)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
@@ -193,7 +193,7 @@ for i in range(num_J):
         plt.yticks(fontsize=10)
         plt.legend()
 
-        txt = 'Figures/SpinHalf/Hist_Correlations_sigmaz2_wrt_L_J%.5f_kick%.2f_alpha%.2f.pdf' % (J[i], kick, alpha[j])
+        txt = 'Figures/Spin1/Hist_Correlations_sigmaz2_wrt_L_J%.5f_kick%.2f_alpha%.2f.pdf' % (J[i], kick, alpha[j])
         print(txt)
         plt.savefig(txt, dpi=600, bbox_inches='tight')
         print("\n")
