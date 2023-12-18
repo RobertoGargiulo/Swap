@@ -79,7 +79,7 @@ for j in range(num_alpha):
     plt.tick_params(labelbottom=False)
     plt.xscale('log')
     #plt.xlabel('$J$', fontsize=12)
-    plt.ylabel('$\ell$', fontsize=12)
+    plt.ylabel('$\ell_\Delta$', fontsize=12)
     plt.legend(loc='lower right', fancybox=True, shadow=True, fontsize = 10)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
